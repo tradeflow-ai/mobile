@@ -125,24 +125,35 @@ function RootLayoutNav() {
       />
       <Stack.Screen 
         name="profile" 
-        options={{ 
+        options={({ navigation }) => ({
+          title: 'Profile',
           presentation: 'modal',
-          headerStyle: {
-            backgroundColor: colors.card,
-          },
-          headerTintColor: colors.primary,
-        }} 
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('edit-profile')}
+            >
+              <FontAwesome 
+                name="edit" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
       />
-      <Stack.Screen 
-        name="settings" 
-        options={{ 
-          presentation: 'modal',
-          headerStyle: {
-            backgroundColor: colors.card,
-          },
-          headerTintColor: colors.primary,
-        }} 
-      />
+
       <Stack.Screen 
         name="login" 
         options={{ 

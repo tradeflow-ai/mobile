@@ -27,10 +27,6 @@ export default function HomeScreen() {
 
   const { navigate } = useAppNavigation();
 
-  const handleProfilePress = () => {
-    navigate('/profile');
-  };
-
   const handleBeginDay = () => {
     setIsDayStarted(true);
     setIsOnBreak(false);
@@ -124,11 +120,6 @@ export default function HomeScreen() {
       <View style={styles.container}>
         <Header
           title="Home"
-          profile={{
-            imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
-            name: 'John Doe',
-            onPress: handleProfilePress,
-          }}
           rightAction={{
             icon: 'bell',
             onPress: () => Alert.alert('Notifications', 'No new notifications'),

@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Avatar } from './Avatar';
+import { userProfileAtom } from '@/store/atoms';
+import { ProfileManager } from '@/services/profileManager';
+import { useAppNavigation } from '@/hooks/useNavigation';
 
 interface HeaderProps {
   title: string;
@@ -19,22 +23,25 @@ interface HeaderProps {
     onPress?: () => void;
     disabled?: boolean;
   };
-  profile?: {
-    imageUrl?: string;
-    name?: string;
-    onPress?: () => void;
-    disabled?: boolean;
-  };
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   rightAction,
   leftAction,
-  profile,
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { navigate } = useAppNavigation();
+  
+  // Get profile data directly from ProfileManager
+  const [userProfile] = useAtom(userProfileAtom);
+  const profileManager = ProfileManager.getInstance();
+  const displayName = profileManager.getDisplayName();
+  
+  const handleProfilePress = () => {
+    navigate('/profile');
+  };
 
   const renderActionButton = (action: HeaderProps['rightAction'] | HeaderProps['leftAction']) => {
     if (!action) return <View style={styles.actionPlaceholder} />;
@@ -74,24 +81,15 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const renderProfileImage = () => {
-    if (!profile) return null;
-
-    const { imageUrl, name, onPress, disabled } = profile;
-
     return (
       <TouchableOpacity
-        style={[
-          styles.profileButton,
-          disabled && styles.disabledButton,
-        ]}
-        onPress={onPress}
-        disabled={disabled}
+        style={styles.profileButton}
+        onPress={handleProfilePress}
       >
         <Avatar
-          name={name}
-          imageUri={imageUrl}
+          name={displayName}
+          imageUri={userProfile?.avatar_url}
           size="m"
-          style={disabled ? { opacity: 0.5 } : undefined}
         />
       </TouchableOpacity>
     );
@@ -99,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={styles.header}>
-      {profile ? renderProfileImage() : renderActionButton(leftAction)}
+      {renderProfileImage()}
       
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
         {title}
