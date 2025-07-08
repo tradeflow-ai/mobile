@@ -88,7 +88,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.m,
     ...spacing.helpers.paddingHorizontal('s'),
-    ...typography.body,
+    fontSize: typography.sizes.caption, // Use smaller font size for inputs
+    fontWeight: typography.weights.normal,
     minHeight: touchTargets.minimum,
     // Platform-specific text alignment and padding
     ...Platform.select({
@@ -96,11 +97,12 @@ const styles = StyleSheet.create({
         paddingTop: spacing.s + 4, // More top padding for iOS
         paddingBottom: spacing.s + 4, // Equal bottom padding for iOS
         textAlignVertical: 'center',
-        lineHeight: (typography.body.lineHeight || 24) * 0.9, // Slightly tighter line height for better centering
+        lineHeight: typography.sizes.caption * 1.2, // Tighter line height for better centering
       },
       android: {
         paddingVertical: spacing.s + 2,
         textAlignVertical: 'center',
+        lineHeight: typography.sizes.caption * 1.3, // Slightly more line height for Android
       },
     }),
   },

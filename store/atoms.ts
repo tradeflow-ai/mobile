@@ -213,10 +213,10 @@ export const jobLocationsAtom = atom<JobLocation[]>([
     jobType: 'service',
     priority: 'high',
     coordinates: {
-      latitude: 37.7749,
-      longitude: -122.4194
+      latitude: 30.2672,
+      longitude: -97.7431
     },
-    address: '123 Market Street, San Francisco, CA',
+    address: '123 Congress Avenue, Austin, TX',
     scheduledDate: new Date('2024-01-15T09:00:00'),
     status: 'pending',
     estimatedDuration: 120
@@ -228,10 +228,10 @@ export const jobLocationsAtom = atom<JobLocation[]>([
     jobType: 'delivery',
     priority: 'medium',
     coordinates: {
-      latitude: 37.7849,
-      longitude: -122.4094
+      latitude: 30.3072,
+      longitude: -97.7331
     },
-    address: '456 Oak Avenue, San Francisco, CA',
+    address: '456 Lamar Boulevard, Austin, TX',
     scheduledDate: new Date('2024-01-15T11:30:00'),
     status: 'pending',
     estimatedDuration: 90
@@ -243,10 +243,10 @@ export const jobLocationsAtom = atom<JobLocation[]>([
     jobType: 'inspection',
     priority: 'high',
     coordinates: {
-      latitude: 37.7649,
-      longitude: -122.4294
+      latitude: 30.2672,
+      longitude: -97.7131
     },
-    address: '789 Industrial Drive, San Francisco, CA',
+    address: '789 East 6th Street, Austin, TX',
     scheduledDate: new Date('2024-01-15T14:00:00'),
     status: 'pending',
     estimatedDuration: 180
@@ -258,10 +258,10 @@ export const jobLocationsAtom = atom<JobLocation[]>([
     jobType: 'pickup',
     priority: 'low',
     coordinates: {
-      latitude: 37.7549,
-      longitude: -122.4394
+      latitude: 30.2272,
+      longitude: -97.7531
     },
-    address: '321 Mission Street, San Francisco, CA',
+    address: '321 South First Street, Austin, TX',
     scheduledDate: new Date('2024-01-15T16:00:00'),
     status: 'pending',
     estimatedDuration: 60

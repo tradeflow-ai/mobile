@@ -24,7 +24,7 @@ export default function TabLayout() {
           paddingBottom: Platform.OS === 'ios' ? insets.bottom : spacing.xs,
           paddingTop: spacing.xs,
           height: Platform.OS === 'ios' 
-            ? 60 + spacing.xs + insets.bottom 
+            ? 'auto' 
             : 60 + spacing.xs, // Standard tab bar height + spacing + safe area
           ...shadows.subtle(colorScheme),
           ...Platform.select({
@@ -35,10 +35,8 @@ export default function TabLayout() {
           }),
         },
         tabBarLabelStyle: {
-          ...typography.caption,
-          fontSize: typography.sizes.caption - 1, // Slightly smaller for tab labels
-          fontWeight: typography.weights.medium,
-          marginTop: 2,
+          fontSize: Platform.OS === 'ios' ? undefined : typography.sizes.caption - 1, // Slightly smaller for tab labels
+          marginTop: Platform.OS === 'ios' ? undefined : 2,
         },
         headerShown: false,
       }}>
