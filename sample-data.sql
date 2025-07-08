@@ -10,6 +10,11 @@
 DO $$
 DECLARE
     first_user_id UUID;
+    client_john_id UUID;
+    client_maria_id UUID;
+    client_bob_id UUID;
+    client_sarah_id UUID;
+    client_mike_id UUID;
 BEGIN
     -- Get the first user ID from auth.users
     SELECT id INTO first_user_id FROM auth.users LIMIT 1;
@@ -43,37 +48,70 @@ BEGIN
           (first_user_id, 'Wire Nuts', 'Twist-on wire connectors', 45, 'each', 'Electrical', 'available', 20, 0.15, 'Ideal', 'Assorted sizes');
 
         -- =====================================================
-        -- SAMPLE JOB LOCATIONS
+        -- SAMPLE CLIENTS
         -- =====================================================
 
-        INSERT INTO public.job_locations (
+        INSERT INTO public.clients (
           user_id,
-          title,
-          description,
-          job_type,
-          priority,
-          status,
-          latitude,
-          longitude,
+          name,
+          email,
+          phone,
+          company_name,
           address,
           city,
           state,
           zip_code,
-          scheduled_date,
-          estimated_duration,
-          customer_name,
-          customer_phone,
-          instructions
+          contact_person,
+          business_type,
+          preferred_contact_method,
+          notes
         ) VALUES
-          (first_user_id, 'Downtown Office Building', 'HVAC maintenance and filter replacement', 'service', 'high', 'scheduled', 37.7749, -122.4194, '123 Market Street', 'San Francisco', 'CA', '94103', '2024-02-15 09:00:00+00', 120, 'John Smith', '(555) 123-4567', 'Check all units on floors 3-5, replace filters'),
-          
-          (first_user_id, 'Residential Complex', 'Plumbing repair - leaky faucet in unit 4B', 'service', 'medium', 'pending', 37.7849, -122.4094, '456 Oak Avenue', 'San Francisco', 'CA', '94102', '2024-02-15 11:30:00+00', 90, 'Maria Garcia', '(555) 234-5678', 'Tenant reports dripping kitchen faucet'),
-          
-          (first_user_id, 'Industrial Warehouse', 'Electrical inspection and outlet installation', 'inspection', 'high', 'pending', 37.7649, -122.4294, '789 Industrial Drive', 'San Francisco', 'CA', '94107', '2024-02-15 14:00:00+00', 180, 'Bob Wilson', '(555) 345-6789', 'Need to install GFCI outlets in wet areas'),
-          
-          (first_user_id, 'Tech Startup Office', 'Equipment pickup and disposal', 'pickup', 'low', 'pending', 37.7549, -122.4394, '321 Mission Street', 'San Francisco', 'CA', '94105', '2024-02-15 16:00:00+00', 60, 'Sarah Johnson', '(555) 456-7890', 'Old server equipment for recycling'),
-          
-          (first_user_id, 'Coffee Shop', 'Emergency plumbing - burst pipe', 'emergency', 'urgent', 'in_progress', 37.7449, -122.4194, '555 Valencia Street', 'San Francisco', 'CA', '94110', '2024-02-14 08:00:00+00', 240, 'Mike Chen', '(555) 567-8901', 'Water main break in basement, urgent!');
+          (first_user_id, 'John Smith', 'john.smith@buildingco.com', '(555) 123-4567', 'Downtown Building Management', '123 Market Street', 'San Francisco', 'CA', '94103', 'John Smith', 'Commercial', 'email', 'Regular HVAC maintenance client'),
+          (first_user_id, 'Maria Garcia', 'maria.garcia@residentialcomplex.com', '(555) 234-5678', 'Oakwood Residential Complex', '456 Oak Avenue', 'San Francisco', 'CA', '94102', 'Maria Garcia', 'Residential', 'phone', 'Property manager for 200-unit complex'),
+          (first_user_id, 'Bob Wilson', 'bob.wilson@industrialcorp.com', '(555) 345-6789', 'Industrial Corp', '789 Industrial Drive', 'San Francisco', 'CA', '94107', 'Bob Wilson', 'Industrial', 'email', 'Warehouse and factory maintenance'),
+          (first_user_id, 'Sarah Johnson', 'sarah@techstartup.com', '(555) 456-7890', 'Tech Startup Inc', '321 Mission Street', 'San Francisco', 'CA', '94105', 'Sarah Johnson', 'Commercial', 'text', 'Fast-growing tech company'),
+          (first_user_id, 'Mike Chen', 'mike.chen@coffeeshop.com', '(555) 567-8901', 'Valencia Coffee Co', '555 Valencia Street', 'San Francisco', 'CA', '94110', 'Mike Chen', 'Retail', 'phone', 'Local coffee shop chain');
+
+        -- =====================================================
+        -- SAMPLE JOB LOCATIONS
+        -- =====================================================
+
+        -- Get client IDs for job associations
+        SELECT id INTO client_john_id FROM public.clients WHERE user_id = first_user_id AND name = 'John Smith';
+        SELECT id INTO client_maria_id FROM public.clients WHERE user_id = first_user_id AND name = 'Maria Garcia';
+        SELECT id INTO client_bob_id FROM public.clients WHERE user_id = first_user_id AND name = 'Bob Wilson';
+        SELECT id INTO client_sarah_id FROM public.clients WHERE user_id = first_user_id AND name = 'Sarah Johnson';
+        SELECT id INTO client_mike_id FROM public.clients WHERE user_id = first_user_id AND name = 'Mike Chen';
+
+            INSERT INTO public.job_locations (
+              user_id,
+              client_id,
+              title,
+              description,
+              job_type,
+              priority,
+              status,
+              latitude,
+              longitude,
+              address,
+              city,
+              state,
+              zip_code,
+              scheduled_date,
+              estimated_duration,
+              customer_name,
+              customer_phone,
+              instructions
+            ) VALUES
+              (first_user_id, client_john_id, 'Downtown Office Building', 'HVAC maintenance and filter replacement', 'service', 'high', 'scheduled', 37.7749, -122.4194, '123 Market Street', 'San Francisco', 'CA', '94103', '2024-02-15 09:00:00+00', 120, 'John Smith', '(555) 123-4567', 'Check all units on floors 3-5, replace filters'),
+              
+              (first_user_id, client_maria_id, 'Residential Complex', 'Plumbing repair - leaky faucet in unit 4B', 'service', 'medium', 'pending', 37.7849, -122.4094, '456 Oak Avenue', 'San Francisco', 'CA', '94102', '2024-02-15 11:30:00+00', 90, 'Maria Garcia', '(555) 234-5678', 'Tenant reports dripping kitchen faucet'),
+              
+              (first_user_id, client_bob_id, 'Industrial Warehouse', 'Electrical inspection and outlet installation', 'inspection', 'high', 'pending', 37.7649, -122.4294, '789 Industrial Drive', 'San Francisco', 'CA', '94107', '2024-02-15 14:00:00+00', 180, 'Bob Wilson', '(555) 345-6789', 'Need to install GFCI outlets in wet areas'),
+              
+              (first_user_id, client_sarah_id, 'Tech Startup Office', 'Equipment pickup and disposal', 'pickup', 'low', 'pending', 37.7549, -122.4394, '321 Mission Street', 'San Francisco', 'CA', '94105', '2024-02-15 16:00:00+00', 60, 'Sarah Johnson', '(555) 456-7890', 'Old server equipment for recycling'),
+              
+              (first_user_id, client_mike_id, 'Coffee Shop', 'Emergency plumbing - burst pipe', 'emergency', 'urgent', 'in_progress', 37.7449, -122.4194, '555 Valencia Street', 'San Francisco', 'CA', '94110', '2024-02-14 08:00:00+00', 240, 'Mike Chen', '(555) 567-8901', 'Water main break in basement, urgent!');
 
         RAISE NOTICE 'Sample data inserted successfully for user: %', first_user_id;
         

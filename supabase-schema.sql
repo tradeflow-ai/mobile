@@ -37,7 +37,31 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- =====================================================
--- 3. INVENTORY ITEMS TABLE
+-- 3. CLIENTS TABLE
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.clients (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  company_name TEXT,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  contact_person TEXT,
+  business_type TEXT,
+  preferred_contact_method TEXT DEFAULT 'phone' CHECK (preferred_contact_method IN ('phone', 'email', 'text')),
+  notes TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- 4. INVENTORY ITEMS TABLE
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.inventory_items (
@@ -67,12 +91,13 @@ CREATE TABLE IF NOT EXISTS public.inventory_items (
 );
 
 -- =====================================================
--- 4. JOB LOCATIONS TABLE
+-- 5. JOB LOCATIONS TABLE
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.job_locations (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  client_id UUID REFERENCES public.clients(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
   description TEXT,
   job_type TEXT NOT NULL CHECK (job_type IN ('delivery', 'pickup', 'service', 'inspection', 'maintenance', 'emergency')),
@@ -93,7 +118,7 @@ CREATE TABLE IF NOT EXISTS public.job_locations (
   actual_start_time TIMESTAMP WITH TIME ZONE,
   actual_end_time TIMESTAMP WITH TIME ZONE,
   
-  -- Contact information
+  -- Contact information (legacy fields - use client_id instead)
   customer_name TEXT,
   customer_phone TEXT,
   customer_email TEXT,
@@ -110,7 +135,7 @@ CREATE TABLE IF NOT EXISTS public.job_locations (
 );
 
 -- =====================================================
--- 5. ROUTES TABLE
+-- 6. ROUTES TABLE
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.routes (
@@ -137,7 +162,7 @@ CREATE TABLE IF NOT EXISTS public.routes (
 );
 
 -- =====================================================
--- 6. INVENTORY MOVEMENTS TABLE (for tracking changes)
+-- 7. INVENTORY MOVEMENTS TABLE (for tracking changes)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS public.inventory_movements (
@@ -155,7 +180,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_movements (
 );
 
 -- =====================================================
--- 7. TRIGGERS FOR UPDATED_AT
+-- 8. TRIGGERS FOR UPDATED_AT
 -- =====================================================
 
 -- Function to update the updated_at column
@@ -172,6 +197,10 @@ CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON public.profiles 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_clients_updated_at 
+  BEFORE UPDATE ON public.clients 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_inventory_items_updated_at 
   BEFORE UPDATE ON public.inventory_items 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -185,11 +214,12 @@ CREATE TRIGGER update_routes_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
--- 8. ROW LEVEL SECURITY (RLS) POLICIES
+-- 9. ROW LEVEL SECURITY (RLS) POLICIES
 -- =====================================================
 
 -- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.routes ENABLE ROW LEVEL SECURITY;
@@ -204,6 +234,19 @@ CREATE POLICY "Users can update own profile" ON public.profiles
 
 CREATE POLICY "Users can insert own profile" ON public.profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Clients policies
+CREATE POLICY "Users can view own clients" ON public.clients
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own clients" ON public.clients
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own clients" ON public.clients
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own clients" ON public.clients
+  FOR DELETE USING (auth.uid() = user_id);
 
 -- Inventory items policies
 CREATE POLICY "Users can view own inventory" ON public.inventory_items
@@ -252,16 +295,19 @@ CREATE POLICY "Users can insert own movements" ON public.inventory_movements
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- =====================================================
--- 9. INDEXES FOR PERFORMANCE
+-- 10. INDEXES FOR PERFORMANCE
 -- =====================================================
 
 -- User-based indexes for fast filtering
+CREATE INDEX IF NOT EXISTS idx_clients_user_id ON public.clients(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_items_user_id ON public.inventory_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_locations_user_id ON public.job_locations(user_id);
+CREATE INDEX IF NOT EXISTS idx_job_locations_client_id ON public.job_locations(client_id);
 CREATE INDEX IF NOT EXISTS idx_routes_user_id ON public.routes(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_user_id ON public.inventory_movements(user_id);
 
 -- Status and type indexes for filtering
+CREATE INDEX IF NOT EXISTS idx_clients_is_active ON public.clients(is_active);
 CREATE INDEX IF NOT EXISTS idx_inventory_items_status ON public.inventory_items(status);
 CREATE INDEX IF NOT EXISTS idx_job_locations_status ON public.job_locations(status);
 CREATE INDEX IF NOT EXISTS idx_job_locations_type ON public.job_locations(job_type);
@@ -275,7 +321,7 @@ CREATE INDEX IF NOT EXISTS idx_routes_planned_date ON public.routes(planned_date
 CREATE INDEX IF NOT EXISTS idx_job_locations_lat_lng ON public.job_locations(latitude, longitude);
 
 -- =====================================================
--- 10. FUNCTIONS FOR AUTOMATIC PROFILE CREATION
+-- 11. FUNCTIONS FOR AUTOMATIC PROFILE CREATION
 -- =====================================================
 
 -- Function to create user profile when a new user signs up

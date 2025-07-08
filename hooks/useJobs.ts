@@ -16,6 +16,8 @@ export interface JobLocation {
   id: string;
   user_id: string;
   client_id?: string;
+  title: string;
+  description?: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -31,12 +33,18 @@ export interface JobLocation {
   required_items?: string[]; // inventory item IDs
   notes?: string;
   completion_notes?: string;
+  // Legacy customer fields (use client_id instead)
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateJobData {
   client_id?: string;
+  title: string;
+  description?: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -52,6 +60,8 @@ export interface CreateJobData {
 
 export interface UpdateJobData {
   client_id?: string;
+  title?: string;
+  description?: string;
   address?: string;
   latitude?: number;
   longitude?: number;
@@ -182,6 +192,38 @@ export const useJobsByType = (job_type: JobLocation['job_type']) => {
  */
 export const useJobsByBusinessCategory = (business_category: JobLocation['business_category']) => {
   return useJobs({ business_category });
+};
+
+/**
+ * Get jobs by client
+ * MVP Feature: View all jobs for a specific client
+ */
+export const useJobsByClient = (clientId: string) => {
+  const [user] = useAtom(userAtom);
+
+  return useQuery({
+    queryKey: ['jobs', 'client', clientId],
+    queryFn: async (): Promise<JobLocation[]> => {
+      if (!user?.id) {
+        throw new Error('No authenticated user');
+      }
+
+      const { data, error } = await supabase
+        .from('job_locations')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    },
+    enabled: !!user?.id && !!clientId,
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
 };
 
 // ==================== MUTATION HOOKS ====================
