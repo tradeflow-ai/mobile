@@ -37,6 +37,45 @@ A React Native/Expo job management and route planning app with comprehensive GPS
    - Android: `npm run android`
    - Web: `npm run web`
 
+## Development Mode
+
+### Start Development Server
+
+For both Expo Go and simulators, start the development server:
+```bash
+npm start
+```
+
+### Run the App
+
+#### Expo Go (Physical Device)
+1. Install Expo Go on your mobile device:
+   - iOS: Download from App Store
+   - Android: Download from Google Play Store
+
+2. Scan the QR code with:
+   - iOS: Camera app or Expo Go app
+
+#### Simulators/Emulators
+After starting the development server (`npm start`), you can:
+
+- **iOS Simulator** (macOS only): Press `i` in the terminal
+- **Android Emulator**: Press `a` in the terminal  
+- **Web Browser**: Press `w` in the terminal
+
+#### Development Build (iOS)
+To run in development mode with native code:
+```bash
+npx expo run:ios
+```
+
+### Development Features
+
+- **Hot Reload**: Changes are automatically reflected in the app
+- **Error Overlay**: Development errors are displayed in the app
+- **Metro Bundler**: Fast JavaScript bundling and serving
+- **Cross-Platform**: Same codebase runs on iOS, Android, and web
+
 ## Documentation
 
 For detailed technical information, architecture, and implementation details, see [TECH_STACK.md](./TECH_STACK.md).
