@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, touchTargets, radius } from '@/constants/Theme';
 
 interface CustomTextInputProps extends TextInputProps {
   label?: string;
@@ -73,31 +74,29 @@ export const TextInput: React.FC<CustomTextInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: spacing.m,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
+    ...typography.h4,
+    marginBottom: spacing.xs,
   },
   required: {
-    fontSize: 16,
-    fontWeight: '500',
+    ...typography.h4,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    minHeight: 44,
+    borderRadius: radius.m,
+    ...spacing.helpers.paddingHorizontal('s'),
+    paddingVertical: spacing.s + 2, // 10px
+    ...typography.body,
+    minHeight: touchTargets.minimum,
   },
   errorText: {
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
   helperText: {
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
 }); 

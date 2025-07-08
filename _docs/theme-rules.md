@@ -1,36 +1,38 @@
 # TradeFlow: Theme & Style Guide
 
 ## 🎯 Guiding Philosophy
-This document is the single source of truth for all visual styling in the TradeFlow application. It provides the design tokens needed to implement the "Friendly Professional" aesthetic consistently. All UI components must use these tokens.
+This document is the single source of truth for all visual styling in the TradeFlow application. It provides the design tokens needed to implement the "Warm Professional" aesthetic consistently, using a wooden color palette that reflects the craftsmanship and reliability of the trades industry. All UI components must use these tokens.
 
 ---
 
 ## 1. Color Palette
-Colors are organized by function: Primary for actions, Neutrals for the interface, and Semantics for communicating status.
+Colors are organized by function: Primary (wooden tones) for actions, Neutrals for the interface, Semantics for communicating status, and Secondary colors for variety and accent elements.
 
 ### Primary Colors
 Used for primary buttons, active states, and key highlights.
-- `primary`: `#2F80ED` (A friendly, confident blue)
+- `primary`: `#F4A460` (Sandy Brown - warm, professional wood tone)
 - `primary-foreground`: `#FFFFFF` (Text/icons on a primary background)
 
 ### Neutral Colors
 Used for backgrounds, text, borders, and card surfaces.
-- `background`: `#F4F7FA` (Slightly off-white page background)
-- `card`: `#FFFFFF` (The surface color for all cards)
-- `card-foreground`: `#111827` (Primary text color)
-- `muted-foreground`: `#6B7280` (Secondary/placeholder text color)
-- `border`: `#E5E7EB` (Borders for cards and inputs)
+- `background`: `#FFFFFF` (Clean white page background)
+- `card`: `#F8F9FA` (Light card surface with subtle warmth)
+- `card-foreground`: `#000000` (Primary text color)
+- `muted-foreground`: `#6C757D` (Secondary/placeholder text color)
+- `border`: `#E9ECEF` (Borders for cards and inputs)
 
 ### Semantic Colors
 Used to provide at-a-glance meaning for UI elements.
-- `urgent-background`: `#FEE2E2` (Red for urgent/danger items)
-- `urgent-foreground`: `#B91C1C`
-- `warning-background`: `#FEF3C7` (Yellow for warnings/in-progress)
-- `warning-foreground`: `#B45309`
-- `info-background`: `#DBEAFE` (Blue for informational items)
-- `info-foreground`: `#1E40AF`
-- `success-background`: `#D1FAE5` (Green for completed/success states)
-- `success-foreground`: `#065F46`
+- `error`: `#DC3545` (Red for urgent/danger items)
+- `warning`: `#FFC107` (Yellow for warnings/in-progress)
+- `info`: `#17A2B8` (Teal for informational items)
+- `success`: `#28A745` (Green for completed/success states)
+
+### Secondary Colors
+Additional colors used for variety and accent elements.
+- `secondary`: `#F5DEB3` (Wheat - light wood tone)
+- `accent`: `#CD853F` (Peru - medium wood accent)
+- `disabled`: `#ADB5BD` (Muted gray for disabled states)
 
 ---
 
