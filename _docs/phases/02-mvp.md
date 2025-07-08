@@ -92,6 +92,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 ---
 
 ## Team Task Allocation
+
 This is the most complex phase where the swimlanes become critical. The work is divided into four distinct, feature-based packages, allowing the team to build the app's core value proposition in parallel with minimal overlap.
 
 | Package & Features | Domain | Owner | Rationale |
