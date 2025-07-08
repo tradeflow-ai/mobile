@@ -38,9 +38,9 @@ export async function stepNode(state: AgentState): Promise<Partial<AgentState>> 
  */
 export function createAgentGraph() {
   const workflow = new StateGraph(AgentStateAnnotation)
-    .addNode("step", stepNode)
-    .addEdge(START, "step")
-    .addEdge("step", END);
+    .addNode("demo", stepNode)
+    .addEdge(START, "demo")
+    .addEdge("demo", END);
 
   return workflow.compile();
 } 
