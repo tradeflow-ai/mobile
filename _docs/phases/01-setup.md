@@ -16,16 +16,17 @@ To establish the project's technical foundation. This phase focuses on creating 
 1.  **Initialize Expo App:** Create a new React Native project using `npx create-expo-app`.
 2.  **Set up Git Repository:** Initialize a Git repository and create the `main` branch.
 3.  **Establish Directory Structure:** Create the complete folder structure as defined in `_docs/project-rules.md` (`/components`, `/hooks`, `/services`, etc.).
-4.  **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, and `supabase-js`.
+4.  **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, `supabase-js`, and `react-native-big-calendar`.
 5.  **Configure TypeScript:** Set up `tsconfig.json` with strict typing rules and path aliases (`@/*`).
+6.  **Create Open Source Documentation:** Create initial versions of `README.md`, `CONTRIBUTING.md`, and issue templates for bug reports and feature requests.
 
 ### Feature 2: Backend & Database Setup (Supabase)
 
 1.  **Create Supabase Project:** Set up a new project in the Supabase dashboard.
-2.  **Define Database Schema:** Write and execute SQL scripts to create the initial tables: `users`, `jobs`, `inventory_items`, `clients`.
+2.  **Define Database Schema:** Write and execute SQL scripts to create the initial tables. This must include the relational schema (e.g., `job_type_parts` join tables) required to establish a **"Bill of Materials"** for different job types.
 3.  **Enable Row Level Security (RLS):** Define and enable RLS policies for all tables to ensure data is only accessible by the correct user.
 4.  **Implement Auth Service:** Create the initial `services/auth.ts` file to handle user sign-up, sign-in, and session management.
-5.  **Seed Initial Data:** Create a seed script to populate the database with sample jobs and inventory for development.
+5.  **Seed Initial Data:** Create a seed script to populate the database with a rich and varied set of sample data, including multiple job types (`Demand`, `Maintenance`), priorities, clients, and a comprehensive Bill of Materials, to support the development and testing of the agentic crew.
 
 ### Feature 3: Design System Implementation
 
@@ -45,14 +46,11 @@ To establish the project's technical foundation. This phase focuses on creating 
 ---
 
 ## Team Task Allocation
-This phase is about building the bedrock of the application. The goal is to work in parallel on the core pillars of the stack.
+This phase is about building the bedrock of the application. The goal is to work in parallel on the core pillars of the stack, with each developer taking sole ownership of a distinct domain to maximize velocity and prevent merge conflicts.
 
-*   **Lead Developer(s):** Jack & Trevor (Frontend), Josh (Backend), Jeremiah (Platform)
-*   **Rationale:** This split allows the entire foundation to be built concurrently. The frontend team isn't waiting for the backend to be done, and vice-versa.
-
-| Task / Feature | Swimlane | Suggested Owner(s) | Rationale & Collaboration |
+| Task / Feature | Swimlane | Owner | Rationale & Collaboration |
 | :--- | :--- | :--- | :--- |
-| **Feature 1: Project & Repo Init** | Platform | **Jeremiah** | This is a foundational task that everyone else's work depends on. Assigning it to one person (the "Platform Lead") ensures consistency in project setup, dependency versions, and TS configuration from day one. |
-| **Feature 2: Backend & DB Setup** | Backend & Data | **Josh** | This is a self-contained unit of backend work. Josh can focus entirely on creating the Supabase project, writing the schema, and implementing the core auth service. This keeps all the critical database work with one owner. |
-| **Feature 3: Design System Impl.** | Frontend & UI/UX | **Jack** | Jack can focus purely on translating `theme-rules.md` into code: creating `Colors.ts` and building the primitive UI components in `/components/ui`. This work can be done in isolation on a style guide screen. |
-| **Feature 4: Core App Shell & Nav** | Frontend & UI/UX | **Trevor** | While Jack builds the UI primitives, Trevor can build the application's skeleton: setting up the root layouts and tab navigators. He can use simple `<View>` and `<Text>` components as placeholders, and then easily swap in Jack's styled components once they're ready. | 
+| **Feature 1: Project & Repo Init** | Platform | **Jeremiah** | This is a foundational task that everyone else's work depends on. Jeremiah will establish the repository, directory structure, all configuration files (`package.json`, `tsconfig.json`), and the core open source documentation. |
+| **Feature 2: Backend & DB Setup** | Backend & Data | **Josh** | This is a self-contained unit of backend work. Josh will own the entire Supabase setup, including writing the detailed schema (with BoM), creating rich seed data, and implementing the initial authentication service. His work is isolated to the backend. |
+| **Feature 3: Design System Impl.** | Frontend & UI/UX | **Jack** | Jack will own the visual foundation of the app. He will translate the theme rules into the `Colors.ts` constant and build all the primitive UI components (Button, Card, etc.) in the `/components/ui` directory, working in isolation. |
+| **Feature 4: Core App Shell & Nav** | Frontend & UI/UX | **Trevor** | Trevor will own the application's skeleton and navigation. He will build the root layouts and tab navigators in the `/app` directory, using placeholder components until Jack's UI primitives are ready, ensuring no overlap. | 

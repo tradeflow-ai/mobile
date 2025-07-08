@@ -19,13 +19,13 @@ To elevate the MVP into a polished, delightful, and production-ready application
 4.  **Enhance Error Handling:** Implement user-friendly error messages and modals for all potential failure points (e.g., network errors, API failures), providing clear guidance on how to resolve the issue.
 5.  **Haptic Feedback:** Add subtle haptic feedback for key actions like confirming a schedule or completing a job to make interactions more tactile and satisfying.
 
-### Feature 2: The "Autonomy Sliders" (Advanced Preferences)
+### Feature 2: The "Autonomy Sliders" (Settings & Preferences UI)
 
-1.  **Build Settings UI:** Create a dedicated Settings screen where users can manage their preferences.
-2.  **Implement Priority Customization:** Allow users to define their own rules for what constitutes a `Demand` vs. `Maintenance` job, giving them control over the `Dispatch Strategist` agent's logic.
-3.  **Implement Buffer Time Controls:** Add settings for users to specify their preferred buffers for travel time and job duration (e.g., "Always add 15% to Google Maps travel time").
-4.  **Implement Work Schedule Manager:** Build a UI for users to define their exact working hours and break times for each day of the week, which the routing engine will honor.
-5.  **Persist All Settings:** Ensure all these preferences are saved to Supabase and are used by the agentic crew during the planning process.
+1.  **Build Settings UI:** Create a dedicated, polished Settings screen where users can view and **edit** all the preferences that were initially set during the Phase 2 onboarding flow.
+2.  **Implement Priority Customization UI:** Build the interface for users to modify their rules for `Demand` vs. `Maintenance` jobs.
+3.  **Implement Buffer Time Controls UI:** Build the interface for users to adjust their preferred buffers for travel and job durations.
+4.  **Implement Work Schedule Manager UI:** Build a polished UI for users to update their working hours and break times for each day of the week.
+5.  **Persist All Settings:** Ensure any changes made in the Settings UI are correctly saved to Supabase and are immediately available to the agentic crew.
 
 ### Feature 3: Real-Time Inventory & Third-Party Integrations
 
@@ -43,17 +43,33 @@ To elevate the MVP into a polished, delightful, and production-ready application
 4.  **Bundle Size Analysis:** Use tools to analyze the final app bundle size and identify opportunities to reduce it by removing unused code or dependencies.
 5.  **Image Optimization:** Implement an image optimization pipeline to ensure any user-uploaded images are resized and compressed appropriately.
 
+### Feature 5: AI-Powered Job Creation
+
+1.  **Build NLP Service:** Create a new service that takes a natural language string from the user.
+2.  **Implement LLM-based Parsing:** Use an LLM (e.g., GPT-4o) within the service to parse the string and extract structured data (e.g., address, client name, parts required, requested time).
+3.  **Integrate into Job Creation UI:** Update the "Add New Job" screen. Allow the user to type their request in a single text field.
+4.  **Auto-populate and Verify:** When the user is done typing, call the NLP service and use the structured output to auto-populate the form fields. The user can then verify and correct the data before saving, keeping them in the loop.
+
+### Feature 6: Implement Offline-First Data Synchronization
+
+1.  **Select Offline Strategy:** Research and select an appropriate offline-first library or strategy (e.g., WatermelonDB, or a custom optimistic UI with a queueing system using MMKV).
+2.  **Refactor Core Services:** Update the core data services to write changes (job status updates, inventory usage) to a local queue first before attempting to sync with Supabase.
+3.  **Implement Background Sync Service:** Create a background service that detects when the device is online and automatically pushes the queued changes to the backend.
+4.  **Handle Sync Conflicts:** Implement a basic strategy for handling potential data synchronization conflicts.
+
+### Feature 7: Advanced Schedule Management Interface
+
+1.  **Upgrade to Calendar UI:** Replace the list-based schedule view with a full, interactive calendar interface using `react-native-big-calendar`.
+2.  **Enable Advanced Views:** Implement weekly and monthly planning views to provide users with a broader look at their schedule.
+
 ---
 
 ## Team Task Allocation
-With a functional MVP in place, this phase is about refinement and adding layers of value. The tasks are more independent and can be distributed based on interest and context.
+With a functional MVP in place, this phase is about refinement and adding layers of value. The tasks are more independent and can be distributed based on individual ownership of a distinct feature, allowing for parallel, conflict-free development.
 
-*   **Lead Developer(s):** Jack (UI Polish), Trevor (Settings), Jeremiah (Integrations), Josh (Performance)
-*   **Rationale:** The team is now solidifying the product. Each developer takes ownership of a distinct feature that enhances the user experience or technical robustness.
-
-| Task / Feature | Swimlane | Suggested Owner(s) | Rationale & Collaboration |
+| Feature & Core Task | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
-| **Feature 1: UI/UX Refinement & Polish** | Frontend & UI/UX | **Jack** | This is a pure frontend task focused on making the application *feel* great. Jack can focus on animations, loaders, and haptics across the entire app, building on the components he and Trevor created. |
-| **Feature 2: The "Autonomy Sliders"** | Frontend & Backend | **Trevor** | This is a perfect "full-stack" feature. Trevor would build the UI for the settings screen and also the logic to save these preferences to Supabase and ensure the agents use them. It's a self-contained feature that touches both front and back ends. |
-| **Feature 3: Real-Time Inventory & 3rd-Party APIs** | AI & Routing | **Jeremiah** | This task builds directly on the agentic work from Phase 2. Jeremiah can extend the `Inventory & Prep Specialist` agent with new tools for calling external APIs, keeping all agent-related logic with one owner. |
-| **Feature 4: Performance & Optimization** | Platform | **Josh** | Having built the data layer, Josh has a deep understanding of where potential bottlenecks might be. He can focus on profiling the app, optimizing lists with `FlashList`, implementing map clustering, and ensuring the app is fast and efficient. | 
+| **F1: UI/UX Refinement & Polish** | Frontend & UI/UX | **Jack** | This is a pure frontend task focused on making the application *feel* great. Jack will conduct an app-wide pass to implement all micro-interactions, skeleton loaders, and haptic feedback, touching many components but in a superficial way that avoids deep logic conflicts. |
+| **F2 & F7: Advanced UI Features** <br/> • Settings/Autonomy Sliders <br/> • Calendar Schedule View | Frontend & UI/UX | **Trevor** | This package combines two major, self-contained UI feature upgrades. Trevor will own the creation of the complex "Settings" screen and the replacement of the MVP's schedule list with the full, interactive calendar component. |
+| **F3 & F5: Advanced AI Services** <br/> • 3rd-Party API Integration <br/> • AI-Powered Job Creation | AI & Backend | **Jeremiah** | This package focuses on enhancing the app's intelligence. Jeremiah will own the extension of the `Inventory` agent with a real API tool and the creation of the new NLP service for parsing unstructured text when creating jobs. |
+| **F4 & F6: Platform & Architecture** <br/> • Performance & Optimization <br/> • Offline-First Sync | Platform & Backend | **Josh** | This package contains deep, architectural work critical for a production app. Josh will own the app-wide performance optimization efforts and the implementation of the complex offline-first data synchronization strategy. | 
