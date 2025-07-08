@@ -12,6 +12,7 @@ import Colors from '@/constants/Colors';
 import { AuthGuard } from '@/components/AuthGuard';
 import { DeepLinkHandler } from '@/components/DeepLinkHandler';
 import { ProfileManager } from '@/services/profileManager';
+import { typography, spacing, touchTargets } from '@/constants/Theme';
 
 // ErrorBoundary will be handled by the default expo-router behavior
 
@@ -68,7 +69,7 @@ function RootLayoutNav() {
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          ...typography.h4,
           color: colors.text,
         },
         contentStyle: {
@@ -85,6 +86,11 @@ function RootLayoutNav() {
           headerLeft: () => (
             <TouchableOpacity 
               onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
             >
               <FontAwesome 
                 name="arrow-left" 
@@ -103,6 +109,11 @@ function RootLayoutNav() {
           headerLeft: () => (
             <TouchableOpacity 
               onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
             >
               <FontAwesome 
                 name="arrow-left" 
@@ -132,6 +143,11 @@ function RootLayoutNav() {
           headerLeft: () => (
             <TouchableOpacity 
               onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
             >
               <FontAwesome 
                 name="arrow-left" 
@@ -143,6 +159,11 @@ function RootLayoutNav() {
           headerRight: () => (
             <TouchableOpacity 
               onPress={() => navigation.navigate('edit-profile')}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
             >
               <FontAwesome 
                 name="edit" 

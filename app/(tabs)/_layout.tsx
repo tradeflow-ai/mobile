@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { typography, spacing, shadows } from '@/constants/Theme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -18,12 +19,22 @@ export default function TabLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
+          paddingBottom: spacing.xs,
+          paddingTop: spacing.xs,
+          height: 60 + spacing.xs, // Standard tab bar height + spacing
+          ...shadows.subtle(colorScheme),
           ...Platform.select({
             ios: {
               position: 'absolute',
             },
             default: {},
           }),
+        },
+        tabBarLabelStyle: {
+          ...typography.caption,
+          fontSize: typography.sizes.caption - 1, // Slightly smaller for tab labels
+          fontWeight: typography.weights.medium,
+          marginTop: 2,
         },
         headerShown: false,
       }}>

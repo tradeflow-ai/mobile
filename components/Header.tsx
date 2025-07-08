@@ -8,6 +8,7 @@ import { Avatar } from './Avatar';
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
 import { useAppNavigation } from '@/hooks/useNavigation';
+import { typography, spacing, radius, touchTargets } from '@/constants/Theme';
 
 interface HeaderProps {
   title: string;
@@ -113,36 +114,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 4,
+    marginBottom: spacing.l,
+    paddingHorizontal: spacing.xs,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...typography.h1,
     flex: 1,
     textAlign: 'center',
   },
   actionButton: {
-    padding: 8,
-    borderRadius: 8,
-    minWidth: 40,
+    padding: spacing.xs,
+    borderRadius: radius.s,
+    ...touchTargets.styles.minimum,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionPlaceholder: {
-    width: 40,
-    height: 40,
+    width: touchTargets.minimum,
+    height: touchTargets.minimum,
   },
   disabledButton: {
     opacity: 0.5,
   },
   actionText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.h4,
   },
   profileButton: {
-    padding: 4,
-    borderRadius: 20,
+    padding: spacing.xs,
+    borderRadius: radius.l,
+    ...touchTargets.styles.minimum,
     alignItems: 'center',
     justifyContent: 'center',
   },
