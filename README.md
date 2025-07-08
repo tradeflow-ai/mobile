@@ -12,15 +12,22 @@ The application's intelligence is powered by a collaborative crew of specialized
 -   **The Route Optimizer:** Takes the approved job list and calculates the most time and fuel-efficient travel route using a self-hosted VROOM routing engine.
 -   **The Inventory & Prep Specialist:** Creates a manifest of all required parts for the day's jobs, cross-references it with on-hand inventory, and generates a precise shopping list.
 
+### Agent Architecture
+The AI agents are implemented in the `/agent` directory:
+- **Graph Definition**: `agent/graph.ts` - LangGraph state machine
+- **Agent Implementations**: `agent/agents/` - Individual agent logic
+- **Prompts**: `agent/prompts/` - LLM prompt templates
+- **Tools**: `agent/tools/` - External integrations (VROOM, APIs)
+
 ## 🛠️ Tech Stack
 Our architecture is designed to be robust, scalable, and AI-first.
 
 - **Framework:** TypeScript, Node.js, React Native (with Expo)
 - **State Management:** Jotai (UI State) & TanStack Query (Server State)
 - **Backend & Database:** Supabase
-- **AI Orchestration:** LangGraph
-- **Language Model:** OpenAI GPT-4o
-- **Proprietary Routing Engine:** VROOM & OSRM
+- **AI Orchestration:** LangGraph with OpenAI GPT-4o
+- **AI Dependencies:** `@langchain/langgraph`, `@langchain/core`, `@langchain/openai`
+- **Proprietary Routing Engine:** VROOM & OSRM (Docker containerized)
 - **Deployment:** Docker & AWS Lightsail (Routing Engine), EAS (Mobile App)
 
 ## 📜 Project Conventions
@@ -53,12 +60,18 @@ For a complete overview of our coding standards, UI/theme rules, and development
     ```
 3.  **Set up environment variables:**
     -   Create a `.env` file in the root directory.
-    -   Add your Supabase URL and Anon Key.
+    -   Add your required environment variables:
         ```
         EXPO_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
         EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+        OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+        VROOM_API_URL=http://localhost:3000/vroom
         ```
-4.  **Start the development server:**
+4.  **Start the routing engine (optional for Phase 1):**
+    ```bash
+    docker-compose up -d
+    ```
+5.  **Start the development server:**
     ```bash
     npm start
     ```
