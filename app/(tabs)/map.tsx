@@ -374,7 +374,7 @@ export default function MapScreen() {
                     style={[styles.directionsButton, { backgroundColor: colors.primary }]}
                     onPress={() => openDirectionsToJob(job)}
                   >
-                    <FontAwesome name="map-marker" size={16} color={colors.background} />
+                    <FontAwesome name="location-arrow" size={16} color={colors.background} />
                     <Text style={[styles.directionsButtonText, { color: colors.background }]}>
                       Get Directions
                     </Text>

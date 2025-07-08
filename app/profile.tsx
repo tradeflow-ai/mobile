@@ -10,11 +10,13 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Header } from '@/components/Header';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -27,11 +29,7 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    Alert.alert(
-      'Settings',
-      'This will open the settings screen.',
-      [{ text: 'OK' }]
-    );
+    router.push('/settings');
   };
 
   const handleLogout = () => {

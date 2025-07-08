@@ -1,5 +1,9 @@
 import { atom } from 'jotai';
 
+// Theme types
+export type ThemeMode = 'light' | 'dark' | 'system';
+export type ColorScheme = 'light' | 'dark';
+
 // Types for inventory management
 export interface InventoryItem {
   id: string;
@@ -157,6 +161,22 @@ export const selectedItemAtom = atom<InventoryItem | null>(null);
 export const isLoadingAtom = atom<boolean>(false);
 export const searchQueryAtom = atom<string>('');
 export const selectedCategoryAtom = atom<string>('all');
+
+// Theme atoms
+export const themeModeAtom = atom<ThemeMode>('system');
+export const systemColorSchemeAtom = atom<ColorScheme>('light');
+
+// Derived theme atom that respects user preference
+export const effectiveColorSchemeAtom = atom((get) => {
+  const themeMode = get(themeModeAtom);
+  const systemColorScheme = get(systemColorSchemeAtom);
+  
+  if (themeMode === 'system') {
+    return systemColorScheme;
+  }
+  
+  return themeMode as ColorScheme;
+});
 
 // Job-related atoms
 export const jobLocationsAtom = atom<JobLocation[]>([
