@@ -1,9 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import Constants from 'expo-constants';
+import { getEmailConfirmationURL } from './authConfig';
 
-// Replace with your actual Supabase URL and anon key
-const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl || 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = Constants.expoConfig?.extra?.supabaseAnonKey || 'YOUR_SUPABASE_ANON_KEY';
+// Supabase configuration from app.json
+const SUPABASE_URL = Constants.expoConfig?.extra?.supabaseUrl;
+const SUPABASE_ANON_KEY = Constants.expoConfig?.extra?.supabaseAnonKey;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing Supabase configuration. Please add your Supabase URL and anon key to app.json extra configuration.'
+  );
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -19,6 +26,9 @@ export class AuthService {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: getEmailConfirmationURL(),
+        },
       });
 
       if (error) throw error;

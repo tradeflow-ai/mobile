@@ -7,7 +7,20 @@
     "icon": "./assets/images/icon.png",
     "scheme": "tradeflowapp",
     "userInterfaceStyle": "automatic",
+    "linking": {
+      "prefixes": ["tradeflowapp://"],
+      "config": {
+        "screens": {
+          "confirm": "confirm",
+          "reset": "reset"
+        }
+      }
+    },
     "newArchEnabled": true,
+    "extra": {
+      "supabaseUrl": "https://kcdmucgiefxwpxnfonoo.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtjZG11Y2dpZWZ4d3B4bmZvbm9vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE5OTE5ODQsImV4cCI6MjA2NzU2Nzk4NH0.lzAkTd6T2Q63EcWnUAoCUSvpKRe_-CNXs-YttFjmGAI"
+    },
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
