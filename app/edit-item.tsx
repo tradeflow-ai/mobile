@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { TextInput, Button } from '@/components/ui';
+import { QuantitySelector } from '@/components/QuantitySelector';
 import { updateInventoryItemAtom, deleteInventoryItemAtom, InventoryItem } from '@/store/atoms';
 
 export default function EditItemScreen() {
@@ -265,31 +266,18 @@ export default function EditItemScreen() {
 
           {/* Quantity with Plus/Minus Buttons */}
           <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Quantity *</Text>
-            <View style={styles.quantityContainer}>
-              <TouchableOpacity
-                style={[styles.quantityButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={handleQuantityDecrease}
-              >
-                <FontAwesome name="minus" size={16} color={colors.text} />
-              </TouchableOpacity>
-              
-              <TextInput
-                value={formData.quantity}
-                onChangeText={(text) => setFormData({ ...formData, quantity: text })}
-                placeholder="0"
-                keyboardType="numeric"
-                style={styles.quantityInput}
-                containerStyle={styles.quantityInputContainer}
-              />
-              
-              <TouchableOpacity
-                style={[styles.quantityButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={handleQuantityIncrease}
-              >
-                <FontAwesome name="plus" size={16} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>
+              Quantity
+              <Text style={[styles.required, { color: colors.error }]}> *</Text>
+            </Text>
+            <QuantitySelector
+              value={formData.quantity}
+              onChangeText={(text) => setFormData({ ...formData, quantity: text })}
+              onIncrease={handleQuantityIncrease}
+              onDecrease={handleQuantityDecrease}
+              placeholder="0"
+              disabled={loading}
+            />
           </View>
 
         </View>
@@ -344,6 +332,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
+  required: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
   actions: {
     gap: 12,
     marginBottom: 24,
@@ -391,26 +383,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontWeight: '500',
   },
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 0,
-  },
-  quantityButton: {
-    width: 40,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 6,
-  },
-  quantityInput: {
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  quantityInputContainer: {
-    flex: 1,
-    marginHorizontal: 2,
-  },
+
 }); 

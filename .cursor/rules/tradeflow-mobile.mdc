@@ -113,6 +113,8 @@ export default function ScreenName() {
   - `TextInput` - Form inputs with validation and labels
   - `Header` - Reusable header with actions and profile support
   - `ExpoLink` - Navigation link component
+  - `QuantitySelector` - Quantity input with plus/minus buttons for numeric values, supports decimal/integer mode
+  - `QuickActionButton` - Reusable quick action button with icon and title for home screen actions
 - **IF** component doesn't exist, create it in `@/components/` folder
 - **IF** it's a UI component, create it in `@/components/ui/` folder and export from `@/components/ui/index.ts`
 
@@ -186,6 +188,7 @@ const styles = StyleSheet.create({
   - `<StatusBadge>` - Use for status indicators
   - `<Avatar>` - Use for user profile images
   - `<Header>` - Use for screen headers with actions
+  - `<QuantitySelector>` - Use for numeric quantity input with plus/minus buttons, supports decimal/integer mode
 
 ### 10. Error Handling
 - **ALWAYS** wrap async operations in try-catch blocks
@@ -245,6 +248,8 @@ Before creating new components, check these existing ones:
 - **Avatar** - Profile images with letter fallbacks, multiple sizes (xs, s, m, l, xl)
 - **Header** - Reusable header with left/right actions, profile support, and proper theming (uses Button from ui)
 - **ExpoLink** - Navigation link component with expo-router integration
+- **QuantitySelector** - Quantity input with plus/minus buttons, proper alignment, disabled state support, and decimal/integer mode (uses TextInput from ui)
+- **QuickActionButton** - Reusable quick action button with icon and title, uses consistent primary color for all icons (uses Card from ui)
 - **useColorScheme** - Hook for consistent color theming across app
 
 ## Do Not:
