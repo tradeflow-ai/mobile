@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { Provider as JotaiProvider } from 'jotai';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -39,7 +40,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <JotaiProvider>
+      <RootLayoutNav />
+    </JotaiProvider>
+  );
 }
 
 function RootLayoutNav() {
@@ -75,6 +80,16 @@ function RootLayoutNav() {
       />
       <Stack.Screen 
         name="profile" 
+        options={{ 
+          presentation: 'modal',
+          headerStyle: {
+            backgroundColor: colors.card,
+          },
+          headerTintColor: colors.primary,
+        }} 
+      />
+      <Stack.Screen 
+        name="settings" 
         options={{ 
           presentation: 'modal',
           headerStyle: {
