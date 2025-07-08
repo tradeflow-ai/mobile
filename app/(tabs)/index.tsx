@@ -64,12 +64,6 @@ export default function HomeScreen() {
       icon: 'plus',
       onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
     },
-    {
-      id: 'settings',
-      title: 'Settings',
-      icon: 'cog',
-      onPress: () => navigate('/settings'),
-    },
   ];
 
   const renderQuickAction = (action: typeof quickActions[0]) => (
