@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { typography, spacing, shadows } from '@/constants/Theme';
@@ -9,6 +10,7 @@ import { typography, spacing, shadows } from '@/constants/Theme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -19,9 +21,11 @@ export default function TabLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          paddingBottom: spacing.xs,
+          paddingBottom: Platform.OS === 'ios' ? insets.bottom : spacing.xs,
           paddingTop: spacing.xs,
-          height: 60 + spacing.xs, // Standard tab bar height + spacing
+          height: Platform.OS === 'ios' 
+            ? 60 + spacing.xs + insets.bottom 
+            : 60 + spacing.xs, // Standard tab bar height + spacing + safe area
           ...shadows.subtle(colorScheme),
           ...Platform.select({
             ios: {

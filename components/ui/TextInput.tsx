@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -87,9 +88,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.m,
     ...spacing.helpers.paddingHorizontal('s'),
-    paddingVertical: spacing.s + 2, // 10px
     ...typography.body,
     minHeight: touchTargets.minimum,
+    // Platform-specific text alignment and padding
+    ...Platform.select({
+      ios: {
+        paddingTop: spacing.s + 4, // More top padding for iOS
+        paddingBottom: spacing.s + 4, // Equal bottom padding for iOS
+        textAlignVertical: 'center',
+        lineHeight: (typography.body.lineHeight || 24) * 0.9, // Slightly tighter line height for better centering
+      },
+      android: {
+        paddingVertical: spacing.s + 2,
+        textAlignVertical: 'center',
+      },
+    }),
   },
   errorText: {
     ...typography.caption,
