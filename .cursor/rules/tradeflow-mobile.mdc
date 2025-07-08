@@ -1,0 +1,271 @@
+---
+description: TradeFlow Mobile App development patterns and conventions
+globs: 
+alwaysApply: true
+---
+
+# TradeFlow Mobile App - Development Rules
+
+## Project Overview
+React Native Expo app with TypeScript for intelligent tradesmen tracking with maps, GPS tracking, and user routes. Uses Jotai for state management, expo-router for navigation, and Supabase for backend.
+
+## Core Patterns & Conventions
+
+### 1. Navigation & Headers
+- **ALWAYS** use custom header configurations in app/_layout.tsx
+- **NEVER** use default back buttons - always implement custom TouchableOpacity wrapped icons
+- **REQUIRED** header pattern for new screens:
+```typescript
+<Stack.Screen 
+  name="screen-name"
+  options={({ navigation }) => ({
+    title: 'Screen Title',
+    headerBackTitle: '',
+    headerLeft: () => (
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()}
+      >
+        <FontAwesome 
+          name="arrow-left" 
+          size={20} 
+          color={colors.primary} 
+        />
+      </TouchableOpacity>
+    ),
+  })}
+/>
+```
+
+### 2. Colors & Theming
+- **ALWAYS** import colors from `@/constants/Colors`
+- **NEVER** use hardcoded colors - always reference the color system
+- **REQUIRED** color imports:
+```typescript
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
+
+// In component:
+const colorScheme = useColorScheme();
+const colors = Colors[colorScheme ?? 'light'];
+```
+
+### 3. Tab Routes & Headers
+- **ALWAYS** set `headerShown: false` in tab layout to disable default navigation headers
+- **ALWAYS** use the Header component from `@/components/Header` in all tab screens
+- **DEFAULT**: All tab routes should use the Header component instead of native navigation headers
+- **REQUIRED** tab screen structure with Header:
+```typescript
+export default function TabScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  const { navigate } = useAppNavigation();
+
+  const handleProfilePress = () => {
+    navigate('/profile');
+  };
+  
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.container}>
+        <Header
+          title="Screen Title"
+          profile={{
+            imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
+            name: 'John Doe',
+            onPress: handleProfilePress,
+          }}
+          rightAction={{
+            icon: 'action-icon',
+            onPress: handleRightAction,
+          }}
+        />
+        {/* Screen content */}
+      </View>
+    </SafeAreaView>
+  );
+}
+```
+
+### 4. Component Structure
+- **ALWAYS** use SafeAreaView for screen containers
+- **REQUIRED** screen structure:
+```typescript
+export default function ScreenName() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Screen content */}
+    </SafeAreaView>
+  );
+}
+```
+
+### 5. Component Reuse & Creation
+- **ALWAYS** check `@/components/` and `@/components/ui/` for existing shared components before creating new ones
+- **REQUIRED** existing components to check first:
+  - `Avatar` - User profile images with fallback letters
+  - `Button` - Multi-variant buttons (primary, secondary, outline, ghost)
+  - `Card` - Container cards with shadows and theming
+  - `SearchBar` - Search input with clear functionality
+  - `StatusBadge` - Status indicators (available, low_stock, out_of_stock)
+  - `TextInput` - Form inputs with validation and labels
+  - `Header` - Reusable header with actions and profile support
+  - `ExpoLink` - Navigation link component
+- **IF** component doesn't exist, create it in `@/components/` folder
+- **IF** it's a UI component, create it in `@/components/ui/` folder and export from `@/components/ui/index.ts`
+
+### 5.1. Component Architecture & Folder Structure
+- **@/components/ui/** - Contains primitive, low-level UI components (building blocks)
+  - These are pure, reusable components with minimal dependencies
+  - Examples: Button, TextInput, Card, SearchBar, StatusBadge
+  - Should NOT import from `@/components/` (only from React Native, icons, colors, etc.)
+  - Must be exported from `@/components/ui/index.ts`
+- **@/components/** - Contains higher-level, composed components
+  - These components are built using `@/components/ui/` components
+  - Examples: Header (uses Button from ui), Avatar (uses Card styling)
+  - Can import from both `@/components/ui/` and other utilities
+  - Should compose multiple UI components to create complex functionality
+
+### 5.2. Rule File Maintenance
+- **CRITICAL**: When creating new components in `@/components/` or `@/components/ui/`:
+  - **ALWAYS** update this rules file (.cursor/rules/tradeflow-mobile.mdc)
+  - Add the new component to the appropriate section in "Existing Component Inventory"
+  - Include component description, key features, and usage guidance
+  - Update the component lists in sections 5, 9, and the inventory section
+- **WHEN** to update:
+  - Creating any new reusable component
+  - Modifying existing component functionality significantly
+  - Adding new component variants or props
+
+### 6. Imports & Dependencies
+- **ALWAYS** import TouchableOpacity from 'react-native' when creating custom headers
+- **ALWAYS** import FontAwesome from '@expo/vector-icons/FontAwesome' for icons
+- **PREFER** UI components from `@/components/ui` over native components
+- **REQUIRED** navigation imports:
+```typescript
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+```
+
+### 7. State Management
+- **ALWAYS** use Jotai atoms for global state from `@/store/atoms`
+- **PATTERN** for state usage:
+```typescript
+import { useAtom } from 'jotai';
+import { someAtom } from '@/store/atoms';
+
+const [someState, setSomeState] = useAtom(someAtom);
+```
+
+### 8. Styling Patterns
+- **ALWAYS** use StyleSheet.create for styles
+- **ALWAYS** apply dynamic colors using the colors object
+- **PATTERN** for responsive styling:
+```typescript
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+});
+```
+
+### 9. UI Components Usage
+- **ALWAYS** use existing UI components from `@/components/ui` before creating new ones
+- **AVAILABLE** components:
+  - `<Button>` - Use instead of TouchableOpacity for actions
+  - `<TextInput>` - Use instead of RN TextInput for forms
+  - `<Card>` - Use for content containers
+  - `<SearchBar>` - Use for search functionality
+  - `<StatusBadge>` - Use for status indicators
+  - `<Avatar>` - Use for user profile images
+  - `<Header>` - Use for screen headers with actions
+
+### 10. Error Handling
+- **ALWAYS** wrap async operations in try-catch blocks
+- **ALWAYS** show user-friendly error messages using Alert
+- **PATTERN** for error handling:
+```typescript
+try {
+  // Operation
+} catch (error) {
+  console.error('Error description:', error);
+  Alert.alert('Error', 'User-friendly message');
+}
+```
+
+### 11. File Organization
+- Place screens in `app/` directory
+- Place reusable components in `components/`
+- Place UI components in `components/ui/`
+- Place utilities in `utils/`
+- Place services in `services/`
+
+### 12. TypeScript
+- **ALWAYS** use proper TypeScript types
+- **ALWAYS** define interfaces for props and state
+- **PREFER** type inference over explicit typing where clear
+
+## Color System Reference
+Primary colors available in Colors.ts:
+- `colors.primary` - Main brand color (Sea Green)
+- `colors.secondary` - Secondary brand color
+- `colors.accent` - Accent color
+- `colors.background` - Screen background
+- `colors.card` - Card background
+- `colors.text` - Primary text
+- `colors.placeholder` - Placeholder text
+- `colors.border` - Border color
+- `colors.error` - Error color
+- `colors.success` - Success color
+- `colors.warning` - Warning color
+
+## Icons
+- **ALWAYS** use FontAwesome icons from '@expo/vector-icons/FontAwesome'
+- **STANDARD** icon size is 20px for headers, 24px for content
+- **ALWAYS** use `colors.primary` for icon colors unless specific use case
+
+## Existing Component Inventory
+Before creating new components, check these existing ones:
+
+### UI Components (`@/components/ui/`) - Building Blocks
+- **Button** - Multi-variant buttons (primary, secondary, outline, ghost) with loading states
+- **Card** - Container with shadows, theming, and customizable padding
+- **SearchBar** - Search input with clear functionality and proper theming
+- **StatusBadge** - Status indicators (available, low_stock, out_of_stock)
+- **TextInput** - Form inputs with labels, validation, error states, and focus handling
+
+### Composed Components (`@/components/`) - Built using UI components
+- **Avatar** - Profile images with letter fallbacks, multiple sizes (xs, s, m, l, xl)
+- **Header** - Reusable header with left/right actions, profile support, and proper theming (uses Button from ui)
+- **ExpoLink** - Navigation link component with expo-router integration
+- **useColorScheme** - Hook for consistent color theming across app
+
+## Do Not:
+- Use default navigation headers without customization
+- Use default navigation headers for tab routes (always use Header component instead)
+- Use hardcoded colors anywhere in the app
+- Create new screens without proper SafeAreaView structure
+- Use inline styles instead of StyleSheet.create
+- Ignore error handling in async operations
+- Use react-navigation directly (use expo-router instead)
+- Create new components without checking existing ones first
+- Use native components when UI library components exist
+
+## Always:
+- Follow the established header pattern with TouchableOpacity
+- Use the Header component from `@/components/Header` as the default for all tab routes
+- Use the color system from Colors.ts
+- Check `@/components/` and `@/components/ui/` for existing components first
+- Implement proper TypeScript typing
+- Use Jotai for state management
+- Maintain consistent component structure
+- Include proper error handling and user feedback
+- Export new UI components from `@/components/ui/index.ts`
+- **ALWAYS** update this rules file when creating new components

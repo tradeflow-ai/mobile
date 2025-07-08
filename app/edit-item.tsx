@@ -131,8 +131,6 @@ export default function EditItemScreen() {
     }
   };
 
-
-
   const handleSave = async () => {
     if (!formData.name.trim()) {
       Alert.alert('Error', 'Please enter an item name');
@@ -214,10 +212,6 @@ export default function EditItemScreen() {
     );
   };
 
-
-
-
-
   if (!item) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -231,15 +225,6 @@ export default function EditItemScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <FontAwesome name="arrow-left" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Edit Item</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         {/* Form */}
         <View style={styles.form}>
           {/* Photo Section */}
@@ -347,23 +332,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 36,
   },
   form: {
     marginBottom: 32,
