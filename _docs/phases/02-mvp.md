@@ -11,7 +11,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 ---
 
-### Feature 1: User Authentication & Onboarding
+### Feature 1: User Authentication & Onboarding (Josh)
 
 1.  **Build Auth Screens:** Create the UI for the Sign In and Sign Up screens.
 2.  **Integrate Auth Service:** Connect the UI to the `services/auth.ts` functions.
@@ -23,7 +23,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
     *   Preferred Hardware Suppliers.
 5.  **Store User Preferences:** Save all onboarding data to the appropriate tables in Supabase.
 
-### Feature 2: Data Fetching & Management (TanStack Query)
+### Feature 2: Data Fetching & Management (Trevor)
 
 **Architectural Rule:** TanStack Query will be the single source of truth for all **asynchronous server state** (e.g., jobs, inventory, clients). Jotai will be used exclusively for **synchronous, client-side state** (e.g., UI theme, modal visibility, or managing the state of complex, multi-step forms before submission).
 
@@ -32,7 +32,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 3.  **Refactor Screens for Server State:** Replace any placeholder or Jotai-managed server data with live data from the `useJobs` hook.
 4.  **Implement Mutations:** Build hooks for data modification (e.g., `useUpdateJob()`, `useCreateJob()`) and integrate them.
 
-### Feature 3: The AI Agent Crew (LangGraph & OpenAI)
+### Feature 3: The AI Agent Crew (Jeremiah)
 
 1.  **Architect Communication Layer:** The state of the agentic workflow will be persisted to a `daily_plans` table in Supabase. The LangGraph agent will update this record as it transitions between states. The client will use a **Supabase real-time subscription** to listen for changes to this record and update the UI accordingly.
 2.  **Define Agent Prompts & Integrate Preferences:** Define detailed prompts for all three agents. Critically, update these prompts and the agent logic to **utilize the user's preferences** (Work Schedule, Buffers, Priority Rules) captured during onboarding.
@@ -41,14 +41,17 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 5.  **Implement Route Optimizer Agent Node:** Write the logic for the `Route Optimizer`, ensuring it gathers and uses advanced constraints (`time windows`, `breaks`) from user preferences and job data when calling the routing tool.
 6.  **Implement Inventory Agent Node:** Write the logic for the `Inventory & Prep Specialist` using a mock/simulated API for external stock checks.
 
-### Feature 4: The Proprietary Routing Engine (VROOM & Docker)
+### Feature 4: The Proprietary Routing Engine (Jeremiah + Trevor)
 
+**Jeremiah - Routing Engine Deployment:**
 1.  **Build Docker Image:** Create a `Dockerfile` for the VROOM/OSRM routing engine.
 2.  **Deploy to AWS Lightsail:** Deploy the container to AWS Lightsail.
+
+**Trevor - Routing Engine Client Service:**
 3.  **Create Routing Service:** In `/services`, create `routing.ts`. This service must accept and pass advanced constraints like **`time windows`**, **`technician breaks`**, and **`vehicle capacity`** to the VROOM engine.
 4.  **Integrate Engine as a Tool:** Make the `routing.ts` function available as a "tool" for the `Route Optimizer` agent.
 
-### Feature 5: The "Plan Your Day" UI
+### Feature 5: The "Plan Your Day" UI (Josh)
 
 1.  **Build Schedule Review UI:** Create the screen where the user is presented with the AI-generated job list. Implement drag-and-drop functionality using a **list-based component (e.g., `react-native-draggable-flatlist`)** for the user to reorder the list.
 2.  **Handle User Approval:** When the user hits "Confirm Schedule," send the (potentially reordered) list back to the LangGraph agent to proceed to the next step.
@@ -57,33 +60,33 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 5.  **Connect the Full Flow:** Tie all the UI steps together, driven by the state of the LangGraph agent via the Supabase real-time subscription.
 6.  **Implement Error Handling UI:** Design and build a generic error state component for the AI planning flow. The UI must catch errors from the agent execution and display this state, providing a clear message and a "Retry" option for the user.
 
-### Feature 6: Full Data Management (CRUD)
+### Feature 6: Full Data Management (Jack)
 
 1.  **Build Job Management UI:** Create a dedicated screen for full CRUD operations on jobs.
 2.  **Build Inventory Management UI:** Create a dedicated screen for full CRUD operations on inventory items.
 3.  **Implement Image Upload:** In the Inventory Management UI, add functionality for users to upload an image for each inventory item.
 4.  **Integrate Data Mutations:** Connect the new UIs to the necessary TanStack Query mutation hooks.
 
-### Feature 7: Dynamic Replanning & In-Field Updates
+### Feature 7: Dynamic Replanning & In-Field Updates (Jack)
 
 1.  **Develop Change Detection Trigger:** Implement a listener that detects when a job in an active daily plan is created, updated (e.g., rescheduled), or cancelled.
 2.  **Build Re-planning UI Flow:** Create the UI prompts to ask the user if they want to re-plan their day when a change is detected.
 3.  **Implement Re-planning Logic:** Connect the trigger to the LangGraph agent, allowing it to re-run the dispatch and routing sequence with the updated job list while preserving the state of completed jobs.
 4.  **Integrate with Map View:** Ensure the map view dynamically updates to reflect the new, re-optimized route.
 
-### Feature 8: Basic Client Management
+### Feature 8: Basic Client Management (Trevor)
 
 1.  **Create Client Management UI:** Build a simple UI to allow users to list and add new clients.
 2.  **Update Job Forms:** In the 'Add/Edit Job' UI, add a feature to associate a job with a client from the user's client list.
 
-### Feature 9: In-Field Execution UI & Logic
+### Feature 9: In-Field Execution UI & Logic (Josh)
 
 1.  **Build Active Job UI:** Create the primary in-field screen that shows the current job destination, details, and required parts.
 2.  **Integrate Native Navigation:** Add a "Navigate" button that hands off the destination coordinates to the user's default mapping application (e.g., Apple Maps, Google Maps).
 3.  **Implement Job Completion Logic:** Add functionality for the user to "Mark as Complete".
 4.  **Implement Parts Usage Logging:** Upon job completion, create a UI for the user to confirm which parts were used. This action should automatically decrement the quantities in the user's inventory via a call to Supabase.
 
-### Feature 10: Bill of Materials Management
+### Feature 10: Bill of Materials Management (Trevor)
 
 1.  **Build Job Types UI:** Create a UI for users to define and manage the types of jobs they perform (e.g., "Leaky Faucet Repair," "HVAC Tune-up").
 2.  **Implement BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.

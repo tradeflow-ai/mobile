@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/gauntlet-ai/tradeflow/tree/main/_docs
+    about: Check our comprehensive documentation for setup guides, architecture, and development conventions
+  - name: 💬 Discussions
+    url: https://github.com/gauntlet-ai/tradeflow/discussions
+    about: Ask questions, share ideas, and discuss features with the community
+  - name: 🚀 Project Overview
+    url: https://github.com/gauntlet-ai/tradeflow/blob/main/_docs/project-overview.md
+    about: Learn about TradeFlow's mission to optimize workflows for independent tradespeople 
