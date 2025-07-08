@@ -70,6 +70,7 @@ export const queryKeys = {
   jobTypes: () => ['job-types'] as const,
   jobType: (jobTypeId: string) => ['job-types', jobTypeId] as const,
   partTemplates: () => ['part-templates'] as const,
+  partTemplate: (partTemplateId: string) => ['part-templates', partTemplateId] as const,
   jobTypeParts: (jobTypeId: string) => ['job-types', jobTypeId, 'parts'] as const,
 } as const;
 
@@ -134,6 +135,15 @@ export const invalidateQueries = {
     queryClient.invalidateQueries({ queryKey: queryKeys.jobTypeParts(jobTypeId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.jobTypes() });
   },
+  
+  allPartTemplates: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.partTemplates() });
+  },
+  
+  partTemplate: (partTemplateId: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.partTemplate(partTemplateId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.partTemplates() });
+  },
 } as const;
 
 // Error handler for global query errors
@@ -151,6 +161,176 @@ export const handleQueryError = (error: any, queryKey: readonly unknown[]) => {
   } else if (error?.code === 'NETWORK_ERROR') {
     console.log('Network error - check connection');
   }
+};
+
+// ==================== ADVANCED CACHING STRATEGIES ====================
+
+/**
+ * Prefetch related data for better UX
+ * Call this when user navigates to screens that might need this data
+ */
+export const prefetchStrategies = {
+  // Prefetch job-related data when entering jobs screen
+  jobsScreen: async (userId: string) => {
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.jobs(),
+        staleTime: 1000 * 60 * 2, // 2 minutes
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.clients(),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.routes(),
+        staleTime: 1000 * 60 * 3, // 3 minutes
+      }),
+    ]);
+  },
+  
+  // Prefetch inventory-related data when entering inventory screen
+  inventoryScreen: async (userId: string) => {
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.inventory(),
+        staleTime: 1000 * 60 * 3, // 3 minutes
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.inventoryLowStock(),
+        staleTime: 1000 * 60 * 1, // 1 minute for critical data
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.partTemplates(),
+        staleTime: 1000 * 60 * 10, // 10 minutes
+      }),
+    ]);
+  },
+  
+  // Prefetch BOM data when entering job creation
+  jobCreationScreen: async (userId: string) => {
+    await Promise.all([
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.jobTypes(),
+        staleTime: 1000 * 60 * 10, // 10 minutes
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.clients(),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+      }),
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.partTemplates(),
+        staleTime: 1000 * 60 * 10, // 10 minutes
+      }),
+    ]);
+  },
+};
+
+/**
+ * Background sync strategies
+ * Keep important data fresh without user interaction
+ */
+export const backgroundSync = {
+  // Sync critical data every minute
+  startCriticalSync: () => {
+    const interval = setInterval(() => {
+      // Invalidate critical data to trigger refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.inventoryLowStock() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoute() });
+    }, 60000); // 1 minute
+    
+    return () => clearInterval(interval);
+  },
+  
+  // Sync regular data every 5 minutes
+  startRegularSync: () => {
+    const interval = setInterval(() => {
+      // Invalidate regular data to trigger refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.jobs() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.inventory() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.routes() });
+    }, 300000); // 5 minutes
+    
+    return () => clearInterval(interval);
+  },
+};
+
+/**
+ * Optimistic updates helpers
+ * Provide instant feedback for better UX
+ */
+export const optimisticUpdates = {
+  // Optimistically update job status
+  updateJobStatus: (jobId: string, newStatus: string) => {
+    queryClient.setQueryData(queryKeys.job(jobId), (old: any) => {
+      if (!old) return old;
+      return { ...old, status: newStatus, updated_at: new Date().toISOString() };
+    });
+    
+    // Update in jobs list too
+    queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(job => 
+        job.id === jobId 
+          ? { ...job, status: newStatus, updated_at: new Date().toISOString() }
+          : job
+      );
+    });
+  },
+  
+  // Optimistically update inventory quantity
+  updateInventoryQuantity: (itemId: string, newQuantity: number) => {
+    queryClient.setQueryData(queryKeys.inventoryItem(itemId), (old: any) => {
+      if (!old) return old;
+      return { ...old, quantity: newQuantity, updated_at: new Date().toISOString() };
+    });
+    
+    // Update in inventory list too
+    queryClient.setQueryData(queryKeys.inventory(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(item => 
+        item.id === itemId 
+          ? { ...item, quantity: newQuantity, updated_at: new Date().toISOString() }
+          : item
+      );
+    });
+  },
+};
+
+/**
+ * Cache warming strategies
+ * Preload data based on user behavior patterns
+ */
+export const cacheWarming = {
+  // Warm cache based on user's frequent patterns
+  warmFrequentData: async (userId: string) => {
+    const promises = [];
+    
+    // Always warm profile data
+    promises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.profile(userId),
+        staleTime: 1000 * 60 * 15, // 15 minutes
+      })
+    );
+    
+    // Warm today's jobs
+    promises.push(
+      queryClient.prefetchQuery({
+        queryKey: ['jobs', 'today'],
+        staleTime: 1000 * 60 * 5, // 5 minutes
+      })
+    );
+    
+    // Warm low stock items (important for planning)
+    promises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.inventoryLowStock(),
+        staleTime: 1000 * 60 * 2, // 2 minutes
+      })
+    );
+    
+    await Promise.all(promises);
+  },
 };
 
 export default queryClient; 

@@ -15,13 +15,13 @@ import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { Button, Card } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
-import { inventoryItemsAtom } from '@/store/atoms';
+import { useInventory } from '@/hooks/useInventory';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const [inventoryItems] = useAtom(inventoryItemsAtom);
+  const { data: inventoryItems = [] } = useInventory();
   const [isDayStarted, setIsDayStarted] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
 
