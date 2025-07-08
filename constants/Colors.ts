@@ -1,11 +1,11 @@
-// Green color scheme for Inventory Management App
-const primaryGreen = '#2E8B57'; // Sea Green
-const lightGreen = '#98FB98'; // Pale Green
-const darkGreen = '#006400'; // Dark Green
-const accentGreen = '#32CD32'; // Lime Green
+// Light wooden color scheme for TradeFlow Mobile App
+const primaryWood = '#F4A460'; // Sandy Brown - lighter, more readable brown
+const lightWood = '#F5DEB3'; // Wheat - light creamy wood
+const darkWood = '#8B4513'; // Saddle Brown - darker wood tone
+const accentWood = '#CD853F'; // Peru - medium wood accent
 
-const tintColorLight = primaryGreen;
-const tintColorDark = lightGreen;
+const tintColorLight = primaryWood;
+const tintColorDark = lightWood;
 
 export default {
   light: {
@@ -15,9 +15,9 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorLight,
     // Additional colors for inventory app
-    primary: primaryGreen,
-    secondary: lightGreen,
-    accent: accentGreen,
+    primary: primaryWood,
+    secondary: lightWood,
+    accent: accentWood,
     success: '#28a745',
     warning: '#ffc107',
     error: '#dc3545',
@@ -34,9 +34,9 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,
     // Additional colors for inventory app
-    primary: lightGreen,
-    secondary: darkGreen,
-    accent: accentGreen,
+    primary: lightWood,
+    secondary: darkWood,
+    accent: accentWood,
     success: '#28a745',
     warning: '#ffc107',
     error: '#dc3545',
@@ -50,8 +50,8 @@ export default {
 
 // Export individual colors for easy access
 export const Colors = {
-  primary: primaryGreen,
-  light: lightGreen,
-  dark: darkGreen,
-  accent: accentGreen,
+  primary: primaryWood,
+  light: lightWood,
+  dark: darkWood,
+  accent: accentWood,
 };
