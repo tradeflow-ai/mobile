@@ -83,6 +83,12 @@ function RootLayoutNav() {
           headerTintColor: colors.primary,
         }} 
       />
+      <Stack.Screen 
+        name="edit-item" 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
     </Stack>
   );
 }

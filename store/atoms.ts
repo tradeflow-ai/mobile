@@ -4,17 +4,10 @@ import { atom } from 'jotai';
 export interface InventoryItem {
   id: string;
   name: string;
-  description: string;
   quantity: number;
-  category: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  };
-  lastUpdated: Date;
+  category: 'plumbing' | 'hvac' | 'electrical';
   status: 'available' | 'low_stock' | 'out_of_stock';
-  imageUri?: string;
+  lastUpdated: Date;
 }
 
 export interface Route {
@@ -65,7 +58,99 @@ export interface JobRoute {
 }
 
 // Atoms for state management
-export const inventoryItemsAtom = atom<InventoryItem[]>([]);
+export const inventoryItemsAtom = atom<InventoryItem[]>([
+  // Plumbing items
+  {
+    id: '1',
+    name: 'PVC Pipe 1/2"',
+    quantity: 25,
+    category: 'plumbing',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+  {
+    id: '2',
+    name: 'Copper Fittings',
+    quantity: 3,
+    category: 'plumbing',
+    lastUpdated: new Date(),
+    status: 'low_stock',
+  },
+  {
+    id: '3',
+    name: 'Ball Valve 3/4"',
+    quantity: 0,
+    category: 'plumbing',
+    lastUpdated: new Date(),
+    status: 'out_of_stock',
+  },
+  {
+    id: '4',
+    name: 'Pipe Wrench',
+    quantity: 8,
+    category: 'plumbing',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+  // HVAC items
+  {
+    id: '5',
+    name: 'Air Filter 16x20',
+    quantity: 12,
+    category: 'hvac',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+  {
+    id: '6',
+    name: 'Thermostat Digital',
+    quantity: 2,
+    category: 'hvac',
+    lastUpdated: new Date(),
+    status: 'low_stock',
+  },
+  {
+    id: '7',
+    name: 'Duct Tape',
+    quantity: 15,
+    category: 'hvac',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+  // Electrical items
+  {
+    id: '8',
+    name: 'Wire 12 AWG',
+    quantity: 0,
+    category: 'electrical',
+    lastUpdated: new Date(),
+    status: 'out_of_stock',
+  },
+  {
+    id: '9',
+    name: 'Outlet GFCI',
+    quantity: 6,
+    category: 'electrical',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+  {
+    id: '10',
+    name: 'Circuit Breaker 20A',
+    quantity: 1,
+    category: 'electrical',
+    lastUpdated: new Date(),
+    status: 'low_stock',
+  },
+  {
+    id: '11',
+    name: 'Wire Nuts',
+    quantity: 45,
+    category: 'electrical',
+    lastUpdated: new Date(),
+    status: 'available',
+  },
+]);
 export const routesAtom = atom<Route[]>([]);
 export const currentLocationAtom = atom<UserLocation | null>(null);
 export const selectedItemAtom = atom<InventoryItem | null>(null);
@@ -160,7 +245,7 @@ export const filteredInventoryAtom = atom((get) => {
 
   return items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+                         item.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
@@ -176,4 +261,40 @@ export const categoriesAtom = atom((get) => {
   const items = get(inventoryItemsAtom);
   const categories = new Set(items.map(item => item.category));
   return Array.from(categories);
-}); 
+});
+
+// Actions for inventory management
+export const updateInventoryItemAtom = atom(
+  null,
+  (get, set, update: { id: string; updates: Partial<InventoryItem> }) => {
+    const items = get(inventoryItemsAtom);
+    const updatedItems = items.map(item =>
+      item.id === update.id
+        ? { ...item, ...update.updates, lastUpdated: new Date() }
+        : item
+    );
+    set(inventoryItemsAtom, updatedItems);
+  }
+);
+
+export const deleteInventoryItemAtom = atom(
+  null,
+  (get, set, itemId: string) => {
+    const items = get(inventoryItemsAtom);
+    const filteredItems = items.filter(item => item.id !== itemId);
+    set(inventoryItemsAtom, filteredItems);
+  }
+);
+
+export const addInventoryItemAtom = atom(
+  null,
+  (get, set, newItem: Omit<InventoryItem, 'id' | 'lastUpdated'>) => {
+    const items = get(inventoryItemsAtom);
+    const itemWithId: InventoryItem = {
+      ...newItem,
+      id: Date.now().toString(),
+      lastUpdated: new Date(),
+    };
+    set(inventoryItemsAtom, [...items, itemWithId]);
+  }
+); 
