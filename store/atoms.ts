@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 import type { User } from '@supabase/supabase-js';
+import type { UserProfile } from '@/services/profileService';
 
 // Theme types
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -10,6 +11,13 @@ export interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+}
+
+// Profile types
+export interface ProfileState {
+  profile: UserProfile | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 // Types for inventory management
@@ -161,6 +169,11 @@ export const userAtom = atom<User | null>(null);
 export const isAuthLoadingAtom = atom<boolean>(true);
 export const authErrorAtom = atom<string | null>(null);
 
+// Profile atoms
+export const userProfileAtom = atom<UserProfile | null>(null);
+export const isProfileLoadingAtom = atom<boolean>(false);
+export const profileErrorAtom = atom<string | null>(null);
+
 // Derived auth atoms
 export const isAuthenticatedAtom = atom((get) => {
   const user = get(userAtom);
@@ -175,6 +188,19 @@ export const authStateAtom = atom<AuthState>((get) => {
     user,
     isLoading,
     isAuthenticated: user !== null,
+  };
+});
+
+// Derived profile atoms
+export const profileStateAtom = atom<ProfileState>((get) => {
+  const profile = get(userProfileAtom);
+  const isLoading = get(isProfileLoadingAtom);
+  const error = get(profileErrorAtom);
+  
+  return {
+    profile,
+    isLoading,
+    error,
   };
 });
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,34 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { AuthManager } from '@/services/authManager';
+import { ProfileManager } from '@/services/profileManager';
+import { userProfileAtom, isProfileLoadingAtom } from '@/store/atoms';
 import { Header } from '@/components/Header';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const authManager = AuthManager.getInstance();
+  const profileManager = ProfileManager.getInstance();
+  
+  // Profile state from atoms
+  const [userProfile] = useAtom(userProfileAtom);
+  const [isProfileLoading] = useAtom(isProfileLoadingAtom);
+
+  // Get display information
+  const displayName = profileManager.getDisplayName();
+  const userEmail = profileManager.getUserEmail();
+  const userRole = profileManager.getUserRole();
+  const userInitials = profileManager.getInitials();
 
   const handleEditProfile = () => {
-    Alert.alert(
-      'Edit Profile',
-      'This feature allows you to edit your profile information.',
-      [{ text: 'OK' }]
-    );
+    router.push('/edit-profile');
   };
 
   const handleSettings = () => {
@@ -38,7 +51,30 @@ export default function ProfileScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            setIsLoggingOut(true);
+            try {
+              console.log('Logging out user...');
+              const { error } = await authManager.signOut();
+              
+              if (error) {
+                console.error('Logout error:', error);
+                Alert.alert('Logout Failed', 'An error occurred while logging out. Please try again.');
+              } else {
+                console.log('User logged out successfully');
+                // AuthGuard will handle navigation back to login
+              }
+            } catch (error) {
+              console.error('Unexpected logout error:', error);
+              Alert.alert('Logout Failed', 'An unexpected error occurred. Please try again.');
+            } finally {
+              setIsLoggingOut(false);
+            }
+          }
+        },
       ]
     );
   };
@@ -56,22 +92,30 @@ export default function ProfileScreen() {
 
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            <Image
-              source={{ uri: 'https://avatars.githubusercontent.com/u/124599?v=4' }}
-              style={styles.profileImage}
-            />
+            {userProfile?.avatar_url ? (
+              <Image
+                source={{ uri: userProfile.avatar_url }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={[styles.profileImage, styles.profileImagePlaceholder, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.profileImageText, { color: '#fff' }]}>
+                  {userInitials}
+                </Text>
+              </View>
+            )}
           </View>
           
           <Text style={[styles.name, { color: colors.text }]}>
-            John Doe
+            {displayName}
           </Text>
           
           <Text style={[styles.email, { color: colors.placeholder }]}>
-            john.doe@example.com
+            {userEmail}
           </Text>
           
           <Text style={[styles.role, { color: colors.primary }]}>
-            Inventory Manager
+            {userRole.toUpperCase()}
           </Text>
         </View>
 
@@ -136,11 +180,24 @@ export default function ProfileScreen() {
 
         <View style={styles.logoutSection}>
           <TouchableOpacity
-            style={[styles.logoutButton, { backgroundColor: colors.error }]}
+            style={[
+              styles.logoutButton, 
+              { 
+                backgroundColor: isLoggingOut ? colors.placeholder : colors.error,
+                opacity: isLoggingOut ? 0.6 : 1
+              }
+            ]}
             onPress={handleLogout}
+            disabled={isLoggingOut}
           >
-            <FontAwesome name="sign-out" size={20} color="#fff" />
-            <Text style={styles.logoutButtonText}>Logout</Text>
+            <FontAwesome 
+              name={isLoggingOut ? "spinner" : "sign-out"} 
+              size={20} 
+              color="#fff" 
+            />
+            <Text style={styles.logoutButtonText}>
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -167,6 +224,14 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
+  },
+  profileImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageText: {
+    fontSize: 36,
+    fontWeight: 'bold',
   },
   name: {
     fontSize: 24,

@@ -10,6 +10,8 @@ import { Provider as JotaiProvider } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { AuthGuard } from '@/components/AuthGuard';
+import { DeepLinkHandler } from '@/components/DeepLinkHandler';
+import { ProfileManager } from '@/services/profileManager';
 
 // ErrorBoundary will be handled by the default expo-router behavior
 
@@ -35,6 +37,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      // Initialize ProfileManager to start syncing profile data with auth state
+      ProfileManager.getInstance();
     }
   }, [loaded]);
 
@@ -45,6 +49,7 @@ export default function RootLayout() {
   return (
     <JotaiProvider>
       <AuthGuard>
+        <DeepLinkHandler />
         <RootLayoutNav />
       </AuthGuard>
     </JotaiProvider>
@@ -91,6 +96,24 @@ function RootLayoutNav() {
         })}
       />
       <Stack.Screen 
+        name="edit-profile"
+        options={({ navigation }) => ({
+          title: 'Edit Profile',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
         name="modal" 
         options={{ 
           presentation: 'modal',
@@ -118,6 +141,18 @@ function RootLayoutNav() {
             backgroundColor: colors.card,
           },
           headerTintColor: colors.primary,
+        }} 
+      />
+      <Stack.Screen 
+        name="login" 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
+      <Stack.Screen 
+        name="signup" 
+        options={{ 
+          headerShown: false,
         }} 
       />
     </Stack>
