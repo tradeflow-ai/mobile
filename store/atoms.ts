@@ -1,0 +1,179 @@
+import { atom } from 'jotai';
+
+// Types for inventory management
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  category: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  lastUpdated: Date;
+  status: 'available' | 'low_stock' | 'out_of_stock';
+  imageUri?: string;
+}
+
+export interface Route {
+  id: string;
+  name: string;
+  waypoints: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+    itemId?: string;
+  }[];
+  createdAt: Date;
+  isCompleted: boolean;
+}
+
+export interface UserLocation {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  timestamp: Date;
+}
+
+// Job location types
+export interface JobLocation {
+  id: string;
+  title: string;
+  description: string;
+  jobType: 'delivery' | 'pickup' | 'service' | 'inspection';
+  priority: 'high' | 'medium' | 'low';
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  address: string;
+  scheduledDate: Date;
+  status: 'pending' | 'in_progress' | 'completed';
+  estimatedDuration: number; // in minutes
+}
+
+export interface JobRoute {
+  id: string;
+  name: string;
+  jobLocations: JobLocation[];
+  totalDistance: number; // in kilometers
+  estimatedTime: number; // in minutes
+  createdAt: Date;
+  status: 'planned' | 'active' | 'completed';
+}
+
+// Atoms for state management
+export const inventoryItemsAtom = atom<InventoryItem[]>([]);
+export const routesAtom = atom<Route[]>([]);
+export const currentLocationAtom = atom<UserLocation | null>(null);
+export const selectedItemAtom = atom<InventoryItem | null>(null);
+export const isLoadingAtom = atom<boolean>(false);
+export const searchQueryAtom = atom<string>('');
+export const selectedCategoryAtom = atom<string>('all');
+
+// Job-related atoms
+export const jobLocationsAtom = atom<JobLocation[]>([
+  {
+    id: '1',
+    title: 'Downtown Office Building',
+    description: 'HVAC maintenance and inspection',
+    jobType: 'service',
+    priority: 'high',
+    coordinates: {
+      latitude: 37.7749,
+      longitude: -122.4194
+    },
+    address: '123 Market Street, San Francisco, CA',
+    scheduledDate: new Date('2024-01-15T09:00:00'),
+    status: 'pending',
+    estimatedDuration: 120
+  },
+  {
+    id: '2',
+    title: 'Residential Complex',
+    description: 'Equipment delivery and installation',
+    jobType: 'delivery',
+    priority: 'medium',
+    coordinates: {
+      latitude: 37.7849,
+      longitude: -122.4094
+    },
+    address: '456 Oak Avenue, San Francisco, CA',
+    scheduledDate: new Date('2024-01-15T11:30:00'),
+    status: 'pending',
+    estimatedDuration: 90
+  },
+  {
+    id: '3',
+    title: 'Industrial Warehouse',
+    description: 'Safety inspection and compliance check',
+    jobType: 'inspection',
+    priority: 'high',
+    coordinates: {
+      latitude: 37.7649,
+      longitude: -122.4294
+    },
+    address: '789 Industrial Drive, San Francisco, CA',
+    scheduledDate: new Date('2024-01-15T14:00:00'),
+    status: 'pending',
+    estimatedDuration: 180
+  },
+  {
+    id: '4',
+    title: 'Tech Startup Office',
+    description: 'Equipment pickup and recycling',
+    jobType: 'pickup',
+    priority: 'low',
+    coordinates: {
+      latitude: 37.7549,
+      longitude: -122.4394
+    },
+    address: '321 Mission Street, San Francisco, CA',
+    scheduledDate: new Date('2024-01-15T16:00:00'),
+    status: 'pending',
+    estimatedDuration: 60
+  }
+]);
+
+export const jobRoutesAtom = atom<JobRoute[]>([
+  {
+    id: 'route-1',
+    name: 'Daily Route - January 15',
+    jobLocations: [], // Will be populated from jobLocationsAtom
+    totalDistance: 12.5,
+    estimatedTime: 180,
+    createdAt: new Date('2024-01-15T08:00:00'),
+    status: 'planned'
+  }
+]);
+
+export const activeJobRouteAtom = atom<JobRoute | null>(null);
+export const selectedJobLocationAtom = atom<JobLocation | null>(null);
+
+// Derived atoms
+export const filteredInventoryAtom = atom((get) => {
+  const items = get(inventoryItemsAtom);
+  const searchQuery = get(searchQueryAtom);
+  const selectedCategory = get(selectedCategoryAtom);
+
+  return items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+});
+
+export const lowStockItemsAtom = atom((get) => {
+  const items = get(inventoryItemsAtom);
+  return items.filter(item => item.status === 'low_stock' || item.status === 'out_of_stock');
+});
+
+export const categoriesAtom = atom((get) => {
+  const items = get(inventoryItemsAtom);
+  const categories = new Set(items.map(item => item.category));
+  return Array.from(categories);
+}); 
