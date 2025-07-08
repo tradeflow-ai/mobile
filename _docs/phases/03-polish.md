@@ -62,6 +62,13 @@ To elevate the MVP into a polished, delightful, and production-ready application
 1.  **Upgrade to Calendar UI:** Replace the list-based schedule view with a full, interactive calendar interface using `react-native-big-calendar`.
 2.  **Enable Advanced Views:** Implement weekly and monthly planning views to provide users with a broader look at their schedule.
 
+### Feature 8: Agent Self-Improvement via In-Context Learning
+Implement an advanced feedback loop where the agent learns from user behavior. Instead of just verifying a plan, every user interaction becomes a training example.
+
+1.  **Log User Feedback:** Systematically capture every user approval (positive example) and modification (corrective example) of the AI-generated plans.
+2.  **Create Example Injection Service:** Build a service that retrieves the most relevant positive and corrective examples from the feedback log.
+3.  **Enhance Agent Prompts:** Update the core agent prompts to include a section for these dynamic, in-context examples, allowing the LLM to infer user preferences rather than being given hardcoded rules.
+
 ---
 
 ## Team Task Allocation
@@ -69,7 +76,7 @@ With a functional MVP in place, this phase is about refinement and adding layers
 
 | Feature & Core Task | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
-| **F1: UI/UX Refinement & Polish** | Frontend & UI/UX | **Jack** | This is a pure frontend task focused on making the application *feel* great. Jack will conduct an app-wide pass to implement all micro-interactions, skeleton loaders, and haptic feedback, touching many components but in a superficial way that avoids deep logic conflicts. |
-| **F2 & F7: Advanced UI Features** <br/> • Settings/Autonomy Sliders <br/> • Calendar Schedule View | Frontend & UI/UX | **Trevor** | This package combines two major, self-contained UI feature upgrades. Trevor will own the creation of the complex "Settings" screen and the replacement of the MVP's schedule list with the full, interactive calendar component. |
-| **F3 & F5: Advanced AI Services** <br/> • 3rd-Party API Integration <br/> • AI-Powered Job Creation | AI & Backend | **Jeremiah** | This package focuses on enhancing the app's intelligence. Jeremiah will own the extension of the `Inventory` agent with a real API tool and the creation of the new NLP service for parsing unstructured text when creating jobs. |
-| **F4 & F6: Platform & Architecture** <br/> • Performance & Optimization <br/> • Offline-First Sync | Platform & Backend | **Josh** | This package contains deep, architectural work critical for a production app. Josh will own the app-wide performance optimization efforts and the implementation of the complex offline-first data synchronization strategy. | 
+| **F1: UI/UX Refinement & Polish** | Frontend & UI/UX | **Josh** | This is a pure frontend task focused on making the application *feel* great. Josh will conduct an app-wide pass to implement all micro-interactions, skeleton loaders, and haptic feedback, touching many components but in a superficial way that avoids deep logic conflicts. |
+| **F2, F4, F6, F7: Frontend App & Architecture** <br/> • Settings/Autonomy Sliders <br/> • Performance & Optimization <br/> • Offline-First Sync (Client-side) <br/> • Calendar Schedule View | Frontend & UI/UX | **Jack** | This package covers all major client-side architecture and feature upgrades. Jack owns the app's performance, offline capabilities, and the most complex new UIs, solidifying his role as the Frontend Application Lead. |
+| **F3, F5, F8: Advanced AI Services** <br/> • 3rd-Party API Integration <br/> • AI-Powered Job Creation <br/> • Agent Self-Improvement (Logic) | AI & Backend | **Jeremiah** | This package focuses on enhancing the app's intelligence. Jeremiah will own the creation of new AI-powered services and the implementation of the adaptive learning logic for the core agents. |
+| **F6 & F8: Backend Architecture & Data Integrity** <br/> • Offline-First Sync (Backend & Conflicts) <br/> • Agent Self-Improvement (Feedback Logging) | Platform & Backend | **Trevor** | This package contains deep, architectural work critical for a production app. Trevor owns the backend data synchronization logic and the foundational data capture required for agent learning, supporting the other leads. | 
