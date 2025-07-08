@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { TouchableOpacity } from 'react-native';
 import 'react-native-reanimated';
 import { Provider as JotaiProvider } from 'jotai';
 
@@ -68,6 +69,24 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="edit-item"
+        options={({ navigation }) => ({
+          title: 'Edit Item',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
       <Stack.Screen 
         name="modal" 
         options={{ 
