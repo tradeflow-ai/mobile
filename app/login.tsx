@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
     right: 16,
-    top: 48,
+    top: 32,
     padding: 8,
     zIndex: 1,
   },
