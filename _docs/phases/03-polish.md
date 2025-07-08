@@ -73,3 +73,5 @@ With a functional MVP in place, this phase is about refinement and adding layers
 | **F2 & F7: Advanced UI Features** <br/> • Settings/Autonomy Sliders <br/> • Calendar Schedule View | Frontend & UI/UX | **Trevor** | This package combines two major, self-contained UI feature upgrades. Trevor will own the creation of the complex "Settings" screen and the replacement of the MVP's schedule list with the full, interactive calendar component. |
 | **F3 & F5: Advanced AI Services** <br/> • 3rd-Party API Integration <br/> • AI-Powered Job Creation | AI & Backend | **Jeremiah** | This package focuses on enhancing the app's intelligence. Jeremiah will own the extension of the `Inventory` agent with a real API tool and the creation of the new NLP service for parsing unstructured text when creating jobs. |
 | **F4 & F6: Platform & Architecture** <br/> • Performance & Optimization <br/> • Offline-First Sync | Platform & Backend | **Josh** | This package contains deep, architectural work critical for a production app. Josh will own the app-wide performance optimization efforts and the implementation of the complex offline-first data synchronization strategy. | 
+
+---

@@ -55,39 +55,7 @@ export const openDirectionsToJob = async (jobLocation: JobLocation): Promise<voi
   }
 };
 
-/**
- * Opens native Maps with a route through multiple job locations
- */
-export const openRouteInNativeMaps = async (jobLocations: JobLocation[]): Promise<void> => {
-  try {
-    if (jobLocations.length === 0) {
-      Alert.alert('Error', 'No job locations to route');
-      return;
-    }
 
-    if (Platform.OS === 'ios') {
-      // For iOS, we'll open with the first destination and show an alert about multiple stops
-      const firstJob = jobLocations[0];
-      const url = `http://maps.apple.com/?daddr=${firstJob.coordinates.latitude},${firstJob.coordinates.longitude}&dirflg=d`;
-      
-      if (jobLocations.length > 1) {
-        Alert.alert(
-          'Multiple Stops',
-          `Opening directions to ${firstJob.title}. You have ${jobLocations.length} total stops on this route.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Maps', onPress: () => Linking.openURL(url) }
-          ]
-        );
-      } else {
-        await Linking.openURL(url);
-      }
-    }
-  } catch (error) {
-    console.error('Error opening route:', error);
-    Alert.alert('Error', 'Unable to open route');
-  }
-};
 
 /**
  * Gets the color for a job marker based on job type and priority

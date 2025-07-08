@@ -1,128 +1,201 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  Alert,
   SafeAreaView,
-  TouchableOpacity,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Header } from '@/components/Header';
-import { SearchBar, Avatar } from '@/components/ui';
+import { QuickActionButton } from '@/components/QuickActionButton';
+import { Button, Card } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
-import { inventoryItemsAtom, InventoryItem } from '@/store/atoms';
+import { inventoryItemsAtom } from '@/store/atoms';
 
-export default function InventoryScreen() {
+export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
   const [inventoryItems] = useAtom(inventoryItemsAtom);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isDayStarted, setIsDayStarted] = useState(false);
+  const [isOnBreak, setIsOnBreak] = useState(false);
 
   const { navigate } = useAppNavigation();
 
   const handleProfilePress = () => {
-    // Navigate to profile using Expo Router
     navigate('/profile');
   };
 
-  // Filter items based on search query
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return inventoryItems;
-    }
-    
-    const query = searchQuery.toLowerCase();
-    return inventoryItems.filter(item => 
-      item.name.toLowerCase().includes(query)
-    );
-  }, [inventoryItems, searchQuery]);
-
-
-
-  const handleItemPress = (item: InventoryItem) => {
-    navigate(`/edit-item?item=${encodeURIComponent(JSON.stringify(item))}`);
+  const handleBeginDay = () => {
+    setIsDayStarted(true);
+    setIsOnBreak(false);
   };
 
-  const renderItem = ({ item }: { item: InventoryItem }) => (
-    <TouchableOpacity
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => handleItemPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.leftSection}>
-          <Avatar
-            name={item.name}
-            imageUri={item.imageUri}
-            size="m"
-            style={styles.avatarSpacing}
-          />
-          <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
-              {item.name}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.rightSection}>
-          <View style={styles.quantityContainer}>
-            <Text style={[styles.quantity, { color: colors.text }]}>
-              {item.quantity}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
+  const handleEndDay = () => {
+    setIsDayStarted(false);
+    setIsOnBreak(false);
+  };
+
+  const handleTakeBreak = () => {
+    setIsOnBreak(true);
+  };
+
+  const handleEndBreak = () => {
+    setIsOnBreak(false);
+  };
+
+  const quickActions = [
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      icon: 'list',
+      onPress: () => navigate('/inventory'),
+    },
+    {
+      id: 'map',
+      title: 'Map',
+      icon: 'map',
+      onPress: () => navigate('/map'),
+    },
+    {
+      id: 'add-item',
+      title: 'Add Item',
+      icon: 'plus',
+      onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      icon: 'cog',
+      onPress: () => navigate('/settings'),
+    },
+  ];
+
+  const renderQuickAction = (action: typeof quickActions[0]) => (
+    <QuickActionButton
+      key={action.id}
+      title={action.title}
+      icon={action.icon}
+      onPress={action.onPress}
+    />
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <FontAwesome name="search" size={48} color={colors.placeholder} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {searchQuery ? 'No items found' : 'No inventory items'}
+  const renderStats = () => (
+    <Card style={styles.statsCard}>
+      <Text style={[styles.statsTitle, { color: colors.text }]}>
+        Today's Overview
       </Text>
-      <Text style={[styles.emptyDescription, { color: colors.placeholder }]}>
-        {searchQuery ? 'Try adjusting your search terms' : 'Add your first inventory item to get started'}
-      </Text>
-    </View>
+      <View style={styles.statsGrid}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {inventoryItems.length}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
+            Inventory Items
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: !isDayStarted ? colors.error : isOnBreak ? colors.warning : colors.success }]}>
+            {!isDayStarted ? 'Inactive' : isOnBreak ? 'On Break' : 'Active'}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
+            Status
+          </Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            0
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
+            Routes Today
+          </Text>
+        </View>
+      </View>
+    </Card>
   );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <Header
-          title="Inventory"
+          title="Home"
           profile={{
             imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
             name: 'John Doe',
             onPress: handleProfilePress,
           }}
           rightAction={{
-            icon: 'plus',
-            onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
+            icon: 'bell',
+            onPress: () => Alert.alert('Notifications', 'No new notifications'),
           }}
         />
 
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search inventory..."
-        />
-
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={renderEmptyState}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-        />
+        >
+          {/* Day Start/End Button */}
+          <Card style={styles.dayCard}>
+            <Text style={[styles.dayTitle, { color: colors.text }]}>
+              Work Day
+            </Text>
+            <Text style={[styles.daySubtitle, { color: colors.placeholder }]}>
+              {!isDayStarted ? 'Ready to start your day?' : isOnBreak ? 'You are currently on break' : 'Your work day is active'}
+            </Text>
+            {!isDayStarted ? (
+              <Button
+                variant="primary"
+                onPress={handleBeginDay}
+                title="Begin Day"
+                style={styles.dayButton}
+              />
+            ) : (
+              <View style={styles.dayButtonsContainer}>
+                <Button
+                  variant="primary"
+                  onPress={handleEndDay}
+                  title="End Day"
+                  style={styles.dayButtonLeft}
+                />
+                <Button
+                  variant="primary"
+                  onPress={isOnBreak ? handleEndBreak : handleTakeBreak}
+                  title={isOnBreak ? 'End Break' : 'Take Break'}
+                  style={styles.dayButtonRight}
+                />
+              </View>
+            )}
+          </Card>
+
+          {/* Stats Overview */}
+          {renderStats()}
+
+          {/* Quick Actions */}
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Quick Actions
+          </Text>
+          <View style={styles.quickActionsGrid}>
+            {quickActions.map(renderQuickAction)}
+          </View>
+
+          {/* Recent Activity */}
+          <Card style={styles.recentCard}>
+            <Text style={[styles.recentTitle, { color: colors.text }]}>
+              Recent Activity
+            </Text>
+            <View style={styles.recentItem}>
+              <FontAwesome name="circle" size={8} color={colors.placeholder} />
+              <Text style={[styles.recentText, { color: colors.placeholder }]}>
+                No recent activity
+              </Text>
+            </View>
+          </Card>
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -136,70 +209,88 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  listContainer: {
-    flexGrow: 1,
+  scrollContent: {
+    paddingBottom: 20,
   },
-  card: {
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 8,
-    marginBottom: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  dayCard: {
+    padding: 20,
+    marginBottom: 20,
     alignItems: 'center',
   },
-  leftSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarSpacing: {
-    marginRight: 12,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  quantityContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  quantity: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
+  dayTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  emptyDescription: {
+  daySubtitle: {
     fontSize: 14,
+    marginBottom: 16,
     textAlign: 'center',
-    lineHeight: 20,
+  },
+  dayButton: {
+    minWidth: 120,
+  },
+  dayButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dayButtonLeft: {
+    flex: 1,
+  },
+  dayButtonRight: {
+    flex: 1,
+  },
+  statsCard: {
+    padding: 16,
+    marginBottom: 20,
+  },
+  statsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  recentCard: {
+    padding: 16,
+  },
+  recentTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  recentText: {
+    fontSize: 14,
+    marginLeft: 8,
   },
 });

@@ -88,10 +88,14 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 1.  **Build Job Types UI:** Create a UI for users to define and manage the types of jobs they perform (e.g., "Leaky Faucet Repair," "HVAC Tune-up").
 2.  **Implement BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.
 3.  **Update Seed Script:** Ensure the database seed script populates this data structure with sensible defaults that the user can later edit.
+2.  **Deploy to AWS Lightsail:** Write a script or CI/CD step to deploy the container to AWS Lightsail.
+3.  **Create Routing Service:** In `/services`, create `routing.ts` with a function that calls the deployed engine's API endpoint.
+4.  **Integrate Engine as a Tool:** Make the `routing.ts` function available as a "tool" that the `Route Optimizer` agent in the LangGraph graph can call.
 
 ---
 
 ## Team Task Allocation
+
 This is the most complex phase where the swimlanes become critical. The work is divided into four distinct, feature-based packages, allowing the team to build the app's core value proposition in parallel with minimal overlap.
 
 | Package & Features | Domain | Owner | Rationale |
@@ -100,3 +104,5 @@ This is the most complex phase where the swimlanes become critical. The work is 
 | **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Josh** | This package is focused on providing the application with its data. Josh will own the entire data access layer, from setting up TanStack Query to building all the hooks and backend logic needed for the frontend to manage jobs, clients, and bills of materials. |
 | **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Jack** | This package covers the primary, sequential user journey. Jack will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Josh and Jeremiah. |
 | **Data Management & Dynamic UI** <br/> • F6: CRUD UIs <br/> • F7: Dynamic Replanning | Frontend & UI/UX | **Trevor** | This package focuses on all the "management" and "reactive" parts of the UI. Trevor will own the screens for manually managing jobs and inventory, as well as the UI triggers and modals required for the dynamic re-planning flow, ensuring a robust data management experience. | 
+
+This is the most complex phase where the swimlanes become critical. The team will be building the app's core value proposition in parallel.

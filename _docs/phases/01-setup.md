@@ -46,6 +46,7 @@ To establish the project's technical foundation. This phase focuses on creating 
 ---
 
 ## Team Task Allocation
+
 This phase is about building the bedrock of the application. The goal is to work in parallel on the core pillars of the stack, with each developer taking sole ownership of a distinct domain to maximize velocity and prevent merge conflicts.
 
 | Task / Feature | Swimlane | Owner | Rationale & Collaboration |
@@ -54,3 +55,5 @@ This phase is about building the bedrock of the application. The goal is to work
 | **Feature 2: Backend & DB Setup** | Backend & Data | **Josh** | This is a self-contained unit of backend work. Josh will own the entire Supabase setup, including writing the detailed schema (with BoM), creating rich seed data, and implementing the initial authentication service. His work is isolated to the backend. |
 | **Feature 3: Design System Impl.** | Frontend & UI/UX | **Jack** | Jack will own the visual foundation of the app. He will translate the theme rules into the `Colors.ts` constant and build all the primitive UI components (Button, Card, etc.) in the `/components/ui` directory, working in isolation. |
 | **Feature 4: Core App Shell & Nav** | Frontend & UI/UX | **Trevor** | Trevor will own the application's skeleton and navigation. He will build the root layouts and tab navigators in the `/app` directory, using placeholder components until Jack's UI primitives are ready, ensuring no overlap. | 
+
+This phase is about building the bedrock of the application. The goal is to work in parallel on the core pillars of the stack.

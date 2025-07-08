@@ -1,3 +1,4 @@
+
 # TradeFlow: The AI-First OS for Tradespeople
 
 TradeFlow is an industry-specific AI agent that brings the "Cursor experience" to independent tradespeople. It acts as an "AI Admin," intelligently automating and optimizing the complex, dynamic context of a contractor's day to maximize their revenue-generating "wrench time" and minimize administrative overhead.

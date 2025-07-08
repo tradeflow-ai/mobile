@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Platform, Modal, Animated, Dimensions, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -14,9 +14,7 @@ import {
 import { LocationService } from '@/services/location';
 import { 
   openDirectionsToJob, 
-  openRouteInNativeMaps,
   getJobMarkerColor,
-  getJobTypeIcon
 } from '@/utils/mapUtils';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -140,14 +138,7 @@ export default function MapScreen() {
     }, 400); // Wait for modal animation to complete
   }, [setSelectedJobLocation, isJobModalVisible, modalAnimation, scrollViewRef, jobLocations]);
 
-  const handleRoutePress = useCallback(() => {
-    if (jobLocations.length === 0) {
-      Alert.alert('No Jobs', 'No job locations available for routing.');
-      return;
-    }
 
-    openRouteInNativeMaps(jobLocations);
-  }, [jobLocations]);
 
 
 
@@ -172,11 +163,7 @@ export default function MapScreen() {
     }
   }, [isJobModalVisible, modalAnimation]);
 
-  // Create route coordinates for polyline
-  const routeCoordinates = jobLocations.map(job => ({
-    latitude: job.coordinates.latitude,
-    longitude: job.coordinates.longitude,
-  }));
+
 
   const modalTranslateY = modalAnimation.interpolate({
     inputRange: [0, 1],
@@ -202,27 +189,20 @@ export default function MapScreen() {
         showsTraffic={false}
         onRegionChangeComplete={setMapRegion}
       >
-        {/* Job Location Markers */}
-        {jobLocations.map((job) => (
+        {/* Job Location Markers with Stop Numbers */}
+        {jobLocations.map((job, index) => (
           <Marker
             key={job.id}
             coordinate={job.coordinates}
             title={job.title}
             description={job.description}
-            pinColor={getJobMarkerColor(job.jobType, job.priority)}
             onPress={() => handleJobMarkerPress(job)}
-          />
+          >
+            <View style={[styles.customMarker, { backgroundColor: colors.primary }]}>
+              <Text style={styles.markerText}>{index + 1}</Text>
+            </View>
+          </Marker>
         ))}
-
-        {/* Route Polyline */}
-        {routeCoordinates.length > 1 && (
-          <Polyline
-            coordinates={routeCoordinates}
-            strokeColor={colors.primary}
-            strokeWidth={3}
-            onPress={handleRoutePress}
-          />
-        )}
       </MapView>
 
       {/* Floating Controls */}
@@ -237,18 +217,6 @@ export default function MapScreen() {
             name="location-arrow" 
             size={20} 
             color={isLoadingLocation ? colors.placeholder : colors.primary} 
-          />
-        </TouchableOpacity>
-
-        {/* Route Button */}
-        <TouchableOpacity
-          style={[styles.routeButton, { backgroundColor: colors.background }]}
-          onPress={handleRoutePress}
-        >
-          <FontAwesome 
-            name="road" 
-            size={20} 
-            color={colors.primary} 
           />
         </TouchableOpacity>
       </SafeAreaView>
@@ -328,7 +296,7 @@ export default function MapScreen() {
               showsVerticalScrollIndicator={false}
               ref={setScrollViewRef}
             >
-              {jobLocations.map((job) => (
+              {jobLocations.map((job, index) => (
                 <View
                   key={job.id}
                   style={[
@@ -353,7 +321,9 @@ export default function MapScreen() {
                     }}
                   >
                     <View style={styles.jobItemHeader}>
-                      <View style={[styles.jobTypeIndicator, { backgroundColor: getJobMarkerColor(job.jobType, job.priority) }]} />
+                      <View style={[styles.stopNumberIndicator, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.stopNumberText}>{index + 1}</Text>
+                      </View>
                       <Text style={[styles.jobTitle, { color: colors.text }]}>{job.title}</Text>
                       <Text style={[styles.jobType, { color: colors.placeholder }]}>{job.jobType}</Text>
                     </View>
@@ -382,23 +352,7 @@ export default function MapScreen() {
                 </View>
               ))}
 
-              {/* Job Legend */}
-              <View style={[styles.legendContainer, { backgroundColor: colors.card }]}>
-                <Text style={[styles.legendTitle, { color: colors.text }]}>Job Types</Text>
-                <View style={styles.legendGrid}>
-                  {[
-                    { type: 'delivery', label: 'Delivery', color: '#4CAF50' },
-                    { type: 'pickup', label: 'Pickup', color: '#FF9800' },
-                    { type: 'service', label: 'Service', color: '#2196F3' },
-                    { type: 'inspection', label: 'Inspection', color: '#9C27B0' },
-                  ].map(({ type, label, color }) => (
-                    <View key={type} style={styles.legendItem}>
-                      <View style={[styles.legendColor, { backgroundColor: color }]} />
-                      <Text style={[styles.legendText, { color: colors.text }]}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
+
             </ScrollView>
           </Animated.View>
         </View>
@@ -426,21 +380,6 @@ const styles = StyleSheet.create({
   myLocationButton: {
     position: 'absolute',
     top: 60,
-    right: 16,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  routeButton: {
-    position: 'absolute',
-    top: 120,
     right: 16,
     width: 48,
     height: 48,
@@ -541,12 +480,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  jobTypeIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
+
   jobTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -580,39 +514,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
   },
-  legendContainer: {
-    padding: 16,
-    borderRadius: 12,
-    marginVertical: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-  },
-  legendTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  legendGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '48%',
-    marginBottom: 8,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  legendText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
+
   directionsButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -627,5 +529,35 @@ const styles = StyleSheet.create({
   directionsButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  customMarker: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  markerText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  stopNumberIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  stopNumberText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
