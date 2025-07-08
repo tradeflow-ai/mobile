@@ -30,8 +30,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          title: 'Home',
+          tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="home" size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
           title: 'Inventory',
-          tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="cube" size={28} color={color} />,
+          tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="list" size={28} color={color} />,
         }}
       />
       <Tabs.Screen

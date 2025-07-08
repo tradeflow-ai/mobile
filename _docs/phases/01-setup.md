@@ -46,6 +46,7 @@ To establish the project's technical foundation. This phase focuses on creating 
 ---
 
 ## Team Task Allocation
+
 This phase is about building the bedrock of the application. The goal is to work in parallel on the core pillars of the stack, with each developer taking sole ownership of a distinct domain to maximize velocity and prevent merge conflicts.
 
 | Task / Feature | Swimlane | Owner | Rationale & Collaboration |
