@@ -1,8 +1,16 @@
 import { atom } from 'jotai';
+import type { User } from '@supabase/supabase-js';
 
 // Theme types
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ColorScheme = 'light' | 'dark';
+
+// Auth types
+export interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+}
 
 // Types for inventory management
 export interface InventoryItem {
@@ -146,6 +154,28 @@ export const effectiveColorSchemeAtom = atom((get) => {
   }
   
   return themeMode as ColorScheme;
+});
+
+// Auth atoms
+export const userAtom = atom<User | null>(null);
+export const isAuthLoadingAtom = atom<boolean>(true);
+export const authErrorAtom = atom<string | null>(null);
+
+// Derived auth atoms
+export const isAuthenticatedAtom = atom((get) => {
+  const user = get(userAtom);
+  return user !== null;
+});
+
+export const authStateAtom = atom<AuthState>((get) => {
+  const user = get(userAtom);
+  const isLoading = get(isAuthLoadingAtom);
+  
+  return {
+    user,
+    isLoading,
+    isAuthenticated: user !== null,
+  };
 });
 
 // Job-related atoms

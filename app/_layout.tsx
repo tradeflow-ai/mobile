@@ -9,6 +9,7 @@ import { Provider as JotaiProvider } from 'jotai';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { AuthGuard } from '@/components/AuthGuard';
 
 // ErrorBoundary will be handled by the default expo-router behavior
 
@@ -43,7 +44,9 @@ export default function RootLayout() {
 
   return (
     <JotaiProvider>
-      <RootLayoutNav />
+      <AuthGuard>
+        <RootLayoutNav />
+      </AuthGuard>
     </JotaiProvider>
   );
 }
