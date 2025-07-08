@@ -232,27 +232,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Sample Accounts */}
-          <View style={styles.sampleAccounts}>
-            <Text style={[styles.sampleTitle, { color: colors.text }]}>
-              Demo Accounts (Already Verified)
-            </Text>
-            <Text style={[styles.sampleText, { color: colors.placeholder }]}>
-              Try these sample accounts:
-            </Text>
-            <Text style={[styles.sampleEmail, { color: colors.primary }]}>
-              hvac@tradeflow.com
-            </Text>
-            <Text style={[styles.sampleEmail, { color: colors.primary }]}>
-              electrician@tradeflow.com
-            </Text>
-            <Text style={[styles.sampleEmail, { color: colors.primary }]}>
-              plumber@tradeflow.com
-            </Text>
-            <Text style={[styles.samplePassword, { color: colors.placeholder }]}>
-              Password: password123
-            </Text>
-          </View>
+
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -353,35 +333,5 @@ const styles = StyleSheet.create({
     padding: 8,
     zIndex: 1,
   },
-  sampleAccounts: {
-    backgroundColor: 'rgba(46, 125, 50, 0.1)',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(46, 125, 50, 0.2)',
-  },
-  sampleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  sampleText: {
-    fontSize: 14,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  sampleEmail: {
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  samplePassword: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
+
 }); 
