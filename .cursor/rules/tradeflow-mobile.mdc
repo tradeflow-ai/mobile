@@ -38,11 +38,13 @@ React Native Expo app with TypeScript for intelligent tradesmen tracking with ma
 
 ### 2. Colors & Theming
 - **ALWAYS** import colors from `@/constants/Colors`
-- **NEVER** use hardcoded colors - always reference the color system
-- **REQUIRED** color imports:
+- **ALWAYS** use the global theme system from `@/constants/Theme`
+- **NEVER** use hardcoded colors, spacing, or typography - always reference the theme system
+- **REQUIRED** theme imports:
 ```typescript
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 
 // In component:
 const colorScheme = useColorScheme();
@@ -124,6 +126,7 @@ export default function ScreenName() {
   - Examples: Button, TextInput, Card, SearchBar, StatusBadge
   - Should NOT import from `@/components/` (only from React Native, icons, colors, etc.)
   - Must be exported from `@/components/ui/index.ts`
+  - **MUST** use the new theme system from `@/constants/Theme.ts`
 - **@/components/** - Contains higher-level, composed components
   - These components are built using `@/components/ui/` components
   - Examples: Header (uses Button from ui), Avatar (uses Card styling)
@@ -215,6 +218,34 @@ try {
 - **ALWAYS** define interfaces for props and state
 - **PREFER** type inference over explicit typing where clear
 
+### 13. Theme System Usage
+- **ALWAYS** use `typography.*` objects for all text styling instead of hardcoded fontSize/fontWeight
+- **ALWAYS** use `spacing.*` values for all margins, padding, and layout spacing
+- **ALWAYS** use `shadows.*()` functions for elevation effects - pass colorScheme parameter
+- **ALWAYS** use `radius.*` values for border radius
+- **ALWAYS** use `touchTargets.*` values for minimum touch areas
+- **PATTERN** for theme-aware components:
+```typescript
+import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
+
+const styles = StyleSheet.create({
+  container: {
+    ...spacing.helpers.padding('m'),
+    borderRadius: radius.m,
+    ...shadows.subtle(colorScheme),
+  },
+  title: {
+    ...typography.h3,
+    color: colors.text,
+    marginBottom: spacing.s,
+  },
+  button: {
+    ...touchTargets.styles.minimum,
+    borderRadius: radius.m,
+  },
+});
+```
+
 ## Color System Reference
 Primary colors available in Colors.ts:
 - `colors.primary` - Main brand color (Sea Green)
@@ -238,11 +269,11 @@ Primary colors available in Colors.ts:
 Before creating new components, check these existing ones:
 
 ### UI Components (`@/components/ui/`) - Building Blocks
-- **Button** - Multi-variant buttons (primary, secondary, outline, ghost) with loading states
-- **Card** - Container with shadows, theming, and customizable padding
+- **Button** - Multi-variant buttons (primary, secondary, outline, ghost) with loading states, theme shadows, proper touch targets, and responsive scaling
+- **Card** - Container with theme shadows, responsive spacing, and customizable padding using theme system
 - **SearchBar** - Search input with clear functionality and proper theming
 - **StatusBadge** - Status indicators (available, low_stock, out_of_stock)
-- **TextInput** - Form inputs with labels, validation, error states, and focus handling
+- **TextInput** - Form inputs with labels, validation, error states, focus handling, and theme typography/spacing
 
 ### Composed Components (`@/components/`) - Built using UI components
 - **Avatar** - Profile images with letter fallbacks, multiple sizes (xs, s, m, l, xl)

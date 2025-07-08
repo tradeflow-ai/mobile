@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, shadows, touchTargets, radius } from '@/constants/Theme';
 
 interface ButtonProps {
   title: string;
@@ -45,12 +46,14 @@ export const Button: React.FC<ButtonProps> = ({
         variantStyle = {
           backgroundColor: colors.primary,
           borderColor: colors.primary,
+          ...shadows.medium(colorScheme),
         };
         break;
       case 'secondary':
         variantStyle = {
           backgroundColor: colors.secondary,
           borderColor: colors.secondary,
+          ...shadows.subtle(colorScheme),
         };
         break;
       case 'outline':
@@ -71,6 +74,9 @@ export const Button: React.FC<ButtonProps> = ({
     if (disabled) {
       variantStyle.backgroundColor = colors.disabled;
       variantStyle.borderColor = colors.disabled;
+      // Remove shadows for disabled state
+      variantStyle.shadowOpacity = 0;
+      variantStyle.elevation = 0;
     }
 
     return {
@@ -98,7 +104,7 @@ export const Button: React.FC<ButtonProps> = ({
     }
 
     return {
-      ...styles.text,
+      ...typography.button,
       ...styles[`${size}Text`],
       color: textColor,
       ...textStyle,
@@ -123,39 +129,36 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 8,
+    borderRadius: radius.m,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    ...touchTargets.styles.minimum,
   },
-  text: {
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  // Size variants
+  // Size variants using theme spacing
   small: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minHeight: 32,
+    ...spacing.helpers.paddingHorizontal('s'),
+    paddingVertical: spacing.xs + 2, // 6px
+    minHeight: touchTargets.minimum * 0.8, // 35px
   },
   medium: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    minHeight: 40,
+    ...spacing.helpers.paddingHorizontal('m'),
+    paddingVertical: spacing.s + 2, // 10px
+    minHeight: touchTargets.minimum, // 44px
   },
   large: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    minHeight: 48,
+    ...spacing.helpers.paddingHorizontal('l'),
+    paddingVertical: spacing.m - 2, // 14px
+    minHeight: touchTargets.comfortable, // 48px
   },
-  // Text size variants
+  // Text size variants using theme typography
   smallText: {
-    fontSize: 14,
+    fontSize: typography.sizes.caption,
   },
   mediumText: {
-    fontSize: 16,
+    fontSize: typography.sizes.button,
   },
   largeText: {
-    fontSize: 18,
+    fontSize: typography.sizes.h4,
   },
 }); 
