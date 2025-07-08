@@ -10,7 +10,7 @@ Independent contractors are often bogged down by non-revenue-generating activiti
 
 ### The Solution: An AI-First Workflow Agent
 
-TradeFlow will act as a "AI Admin for Tradespeople," applying the principles of Software 3.0 to automate and optimize the complex, dynamic context of a contractor's day. It will manage scheduling, routing, and inventory, keeping the human in the loop for verification and final decisions.
+TradeFlow will act as an "AI Admin for Tradespeople," applying the principles of Software 3.0 to automate and optimize the complex, dynamic context of a contractor's day. It will manage scheduling, routing, and inventory, keeping the human in the loop for verification and final decisions.
 
 - **Manages context intelligently:** The agent will maintain a holistic understanding of the user's multi-day schedule, job priorities (`Demand` vs. `Maintenance`), real-time traffic, and parts inventory.
 - **AI for generation, humans for verification:** The agent generates optimal daily plans; the tradesperson verifies, adjusts, and approves them.
@@ -44,7 +44,7 @@ Instead of a single monolithic AI, we will implement a collaborative crew of spe
 
     *   **Agent 2: The Route Optimizer**
         *   **Role:** `Logistics and Traffic Analyst with expertise in real-time, last-mile route optimization.`
-        *   **Goal:** `To calculate the most time- and fuel-efficient travel route to connect all job locations in the sequence provided, while accounting for current traffic data and user-defined travel buffers.`
+        *   **Goal:** `To calculate the most time and fuel efficient travel route to connect all job locations in the sequence provided, while accounting for current traffic data and user-defined travel buffers.`
         *   **Backstory:** `An analyst who previously worked for a major delivery service, you live and breathe maps, traffic patterns, and ETAs. You are obsessed with minimizing "windshield time".`
         *   **Task:** Takes the verified job list from the Dispatcher and uses the self-hosted VROOM routing engine to generate the most efficient travel route, considering advanced constraints like time windows and vehicle capacity.
 
@@ -62,9 +62,9 @@ Instead of a single monolithic AI, we will implement a collaborative crew of spe
     *   A checklist view for the inventory and shopping list.
 
 5.  **Partial Autonomy Controls (The "Autonomy Sliders"):** During onboarding, the user sets their core operational preferences, giving them granular control over the agent's behavior:
-    *   **Work Schedule:** Define workdays and hours (e.g., Mon-Fri, 8 AM - 5 PM).
+    *   **Work Schedule:** Define workdays, hours, and breaks (e.g., Mon-Fri, 8 AM - 5 PM, Lunch, 12 PM - 1 PM).
     *   **Buffer Time:** Set preferences for travel and job duration buffers (e.g., "Add 15% to estimated travel time").
-    *   **Priority Customization:** Define rules for what constitutes a `Demand` vs. `Maintenance` job.
+    *   **Priority Customization:** Define rules for what constitutes a `Demand` vs. `Maintenance` job. Can preference repsonse times (e.g., "Repsond to emergency leaks within 1 hour).
     *   **Inventory & Suppliers:** Upload an initial inventory list and select a preferred hardware store for API integration.
 
 ### Technical Architecture
@@ -72,7 +72,7 @@ Our technical architecture is designed to be robust, scalable, and powerful, ref
 
 - **Agentic Framework:** The core logic will be orchestrated using **LangGraph**, with agents powered by **OpenAI's GPT-4o** model. This framework is specifically chosen for its first-class support for stateful, cyclical workflows and its ability to natively handle Human-in-the-Loop (HITL) verification, which is essential for our three-step approval process.
 
-- **Backend & Routing Engine:** We will build a proprietary, self-hosted dynamic routing engine using **VROOM** for solving Vehicle Routing Problems (VRP) and **OSRM/GraphHopper** as the underlying routing data engine. The engine will be containerized using **Docker** and initially deployed on **AWS Lightsail** for its simplicity and predictable pricing, with a clear path to migrate to AWS EC2 for future scalability. This core component allows us to offer unique features standard APIs cannot, such as:
+- **Backend & Routing Engine:** We will build a proprietary, self-hosted dynamic routing engine using **VROOM** for solving Vehicle Routing Problems (VRP) and **OSRM** as the underlying routing data engine. The engine will be containerized using **Docker** and initially deployed on **AWS Lightsail** for its simplicity and predictable pricing, with a clear path to migrate to AWS EC2 for future scalability. This core component allows us to offer unique features standard APIs cannot, such as:
     - Honoring time windows and technician breaks.
     - Applying capacity constraints to prevent vehicle overloading.
     - Real-time rescheduling and re-optimization of unfinished routes.
