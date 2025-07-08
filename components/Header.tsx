@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
   title: string;
@@ -20,6 +21,7 @@ interface HeaderProps {
   };
   profile?: {
     imageUrl?: string;
+    name?: string;
     onPress?: () => void;
     disabled?: boolean;
   };
@@ -74,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   const renderProfileImage = () => {
     if (!profile) return null;
 
-    const { imageUrl, onPress, disabled } = profile;
+    const { imageUrl, name, onPress, disabled } = profile;
 
     return (
       <TouchableOpacity
@@ -85,12 +87,11 @@ export const Header: React.FC<HeaderProps> = ({
         onPress={onPress}
         disabled={disabled}
       >
-        <Image
-          source={{ uri: imageUrl }}
-          style={[
-            styles.profileImage,
-            disabled && { opacity: 0.5 },
-          ]}
+        <Avatar
+          name={name}
+          imageUri={imageUrl}
+          size="m"
+          style={disabled ? { opacity: 0.5 } : undefined}
         />
       </TouchableOpacity>
     );
@@ -146,10 +147,5 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  profileImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
   },
 }); 

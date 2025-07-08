@@ -69,7 +69,6 @@ This job and route management app is built using React Native with Expo, designe
 - **currentLocationAtom**: Real-time user GPS location
 - **selectedJobLocationAtom**: Currently selected job for details
 - **inventoryItemsAtom**: Inventory items management
-- **routesAtom**: Route planning and tracking data
 
 ### **React Hooks**
 - **useState**: Local component state

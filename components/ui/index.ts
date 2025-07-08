@@ -3,4 +3,5 @@ export { TextInput } from './TextInput';
 export { Card } from './Card';
 export { StatusBadge } from './StatusBadge';
 export { SearchBar } from './SearchBar';
-export { Header } from '../Header'; 
+export { Header } from '../Header';
+export { Avatar } from '../Avatar'; 

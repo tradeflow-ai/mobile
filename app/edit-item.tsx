@@ -7,10 +7,12 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
+import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { TextInput, Button } from '@/components/ui';
@@ -31,8 +33,7 @@ export default function EditItemScreen() {
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
-    category: 'plumbing' as 'plumbing' | 'hvac' | 'electrical',
-    status: 'available' as 'available' | 'low_stock' | 'out_of_stock',
+    imageUri: undefined as string | undefined,
   });
   const [loading, setLoading] = useState(false);
 
@@ -44,8 +45,7 @@ export default function EditItemScreen() {
         setFormData({
           name: parsedItem.name,
           quantity: parsedItem.quantity.toString(),
-          category: parsedItem.category,
-          status: parsedItem.status,
+          imageUri: parsedItem.imageUri,
         });
       } catch (error) {
         console.error('Error parsing item data:', error);
@@ -55,31 +55,83 @@ export default function EditItemScreen() {
     }
   }, [params.item, router]);
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'plumbing':
-        return 'tint';
-      case 'hvac':
-        return 'thermometer-half';
-      case 'electrical':
-        return 'bolt';
-      default:
-        return 'cube';
+  const handlePhotoPress = () => {
+    Alert.alert(
+      'Select Photo',
+      'Choose how you want to add a photo',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Camera', onPress: () => openCamera() },
+        { text: 'Gallery', onPress: () => openGallery() },
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setFormData({ ...formData, imageUri: result.assets[0].uri });
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Alert.alert('Error', 'Failed to open camera');
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'plumbing':
-        return '#3B82F6';
-      case 'hvac':
-        return '#F59E0B';
-      case 'electrical':
-        return '#EF4444';
-      default:
-        return colors.primary;
+  const openGallery = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Gallery permission is required to select photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setFormData({ ...formData, imageUri: result.assets[0].uri });
+      }
+    } catch (error) {
+      console.error('Error opening gallery:', error);
+      Alert.alert('Error', 'Failed to open gallery');
     }
   };
+
+  const removePhoto = () => {
+    setFormData({ ...formData, imageUri: undefined });
+  };
+
+  const handleQuantityIncrease = () => {
+    const currentQuantity = parseInt(formData.quantity) || 0;
+    setFormData({ ...formData, quantity: (currentQuantity + 1).toString() });
+  };
+
+  const handleQuantityDecrease = () => {
+    const currentQuantity = parseInt(formData.quantity) || 0;
+    if (currentQuantity > 0) {
+      setFormData({ ...formData, quantity: (currentQuantity - 1).toString() });
+    }
+  };
+
+
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -106,8 +158,7 @@ export default function EditItemScreen() {
         updates: {
           name: formData.name,
           quantity: Number(formData.quantity),
-          category: formData.category,
-          status: formData.status,
+          imageUri: formData.imageUri,
         },
       });
       
@@ -163,66 +214,9 @@ export default function EditItemScreen() {
     );
   };
 
-  const renderCategoryOption = (category: 'plumbing' | 'hvac' | 'electrical', label: string) => {
-    const isSelected = formData.category === category;
-    return (
-      <TouchableOpacity
-        key={category}
-        style={[
-          styles.categoryOption,
-          {
-            backgroundColor: isSelected ? colors.primary : colors.card,
-            borderColor: isSelected ? colors.primary : colors.border,
-          },
-        ]}
-        onPress={() => setFormData({ ...formData, category })}
-      >
-        <FontAwesome
-          name={getCategoryIcon(category)}
-          size={16}
-          color={isSelected ? colors.background : getCategoryColor(category)}
-        />
-        <Text
-          style={[
-            styles.categoryLabel,
-            {
-              color: isSelected ? colors.background : colors.text,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
 
-  const renderStatusOption = (status: 'available' | 'low_stock' | 'out_of_stock', label: string) => {
-    const isSelected = formData.status === status;
-    return (
-      <TouchableOpacity
-        key={status}
-        style={[
-          styles.statusOption,
-          {
-            backgroundColor: isSelected ? colors.primary : colors.card,
-            borderColor: isSelected ? colors.primary : colors.border,
-          },
-        ]}
-        onPress={() => setFormData({ ...formData, status })}
-      >
-        <Text
-          style={[
-            styles.statusLabel,
-            {
-              color: isSelected ? colors.background : colors.text,
-            },
-          ]}
-        >
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
+
+
 
   if (!item) {
     return (
@@ -248,6 +242,34 @@ export default function EditItemScreen() {
 
         {/* Form */}
         <View style={styles.form}>
+          {/* Photo Section */}
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Photo</Text>
+            <View style={styles.photoSection}>
+              {formData.imageUri ? (
+                <View style={styles.photoContainer}>
+                  <Image source={{ uri: formData.imageUri }} style={styles.photo} />
+                  <TouchableOpacity
+                    style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
+                    onPress={removePhoto}
+                  >
+                    <FontAwesome name="times" size={12} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.addPhotoButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={handlePhotoPress}
+                >
+                  <FontAwesome name="camera" size={24} color={colors.placeholder} />
+                  <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                    Add Photo
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           <TextInput
             label="Item Name"
             value={formData.name}
@@ -256,32 +278,35 @@ export default function EditItemScreen() {
             required
           />
 
-          <TextInput
-            label="Quantity"
-            value={formData.quantity}
-            onChangeText={(text) => setFormData({ ...formData, quantity: text })}
-            placeholder="Enter quantity"
-            keyboardType="numeric"
-            required
-          />
-
+          {/* Quantity with Plus/Minus Buttons */}
           <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Category</Text>
-            <View style={styles.categoryContainer}>
-              {renderCategoryOption('plumbing', 'Plumbing')}
-              {renderCategoryOption('hvac', 'HVAC')}
-              {renderCategoryOption('electrical', 'Electrical')}
+            <Text style={[styles.fieldLabel, { color: colors.text }]}>Quantity *</Text>
+            <View style={styles.quantityContainer}>
+              <TouchableOpacity
+                style={[styles.quantityButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={handleQuantityDecrease}
+              >
+                <FontAwesome name="minus" size={16} color={colors.text} />
+              </TouchableOpacity>
+              
+              <TextInput
+                value={formData.quantity}
+                onChangeText={(text) => setFormData({ ...formData, quantity: text })}
+                placeholder="0"
+                keyboardType="numeric"
+                style={styles.quantityInput}
+                containerStyle={styles.quantityInputContainer}
+              />
+              
+              <TouchableOpacity
+                style={[styles.quantityButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={handleQuantityIncrease}
+              >
+                <FontAwesome name="plus" size={16} color={colors.text} />
+              </TouchableOpacity>
             </View>
           </View>
 
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Status</Text>
-            <View style={styles.statusContainer}>
-              {renderStatusOption('available', 'Available')}
-              {renderStatusOption('low_stock', 'Low Stock')}
-              {renderStatusOption('out_of_stock', 'Out of Stock')}
-            </View>
-          </View>
         </View>
 
         {/* Actions */}
@@ -351,36 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
-  categoryContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  categoryOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-  },
-  categoryLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  statusContainer: {
-    gap: 8,
-  },
-  statusOption: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  statusLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
   actions: {
     gap: 12,
     marginBottom: 24,
@@ -390,5 +385,64 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginBottom: 8,
+  },
+  photoSection: {
+    alignItems: 'center',
+  },
+  photoContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+  photo: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addPhotoButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addPhotoText: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+  },
+  quantityButton: {
+    width: 40,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 6,
+  },
+  quantityInput: {
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  quantityInputContainer: {
+    flex: 1,
+    marginHorizontal: 2,
   },
 }); 
