@@ -38,4 +38,9 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+
+# Personal roadmap checklists (not for sharing)
+Roadmap Checklists/
 jeremiah-roadmap.md
+

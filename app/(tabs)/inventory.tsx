@@ -15,13 +15,13 @@ import Colors from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { SearchBar, Avatar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
-import { inventoryItemsAtom, InventoryItem } from '@/store/atoms';
+import { useInventory, InventoryItem } from '@/hooks/useInventory';
 
 export default function InventoryScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const [inventoryItems] = useAtom(inventoryItemsAtom);
+  const { data: inventoryItems = [] } = useInventory();
   const [searchQuery, setSearchQuery] = useState('');
 
   const { navigate } = useAppNavigation();
@@ -54,7 +54,6 @@ export default function InventoryScreen() {
         <View style={styles.leftSection}>
           <Avatar
             name={item.name}
-            imageUri={item.imageUri}
             size="m"
             style={styles.avatarSpacing}
           />

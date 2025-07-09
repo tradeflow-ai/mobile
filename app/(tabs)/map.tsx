@@ -6,11 +6,9 @@ import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { 
-  jobLocationsAtom, 
   currentLocationAtom, 
-  selectedJobLocationAtom,
-  JobLocation 
 } from '@/store/atoms';
+import { useJobs, JobLocation } from '@/hooks/useJobs';
 import { LocationService } from '@/services/location';
 import { 
   openDirectionsToJob, 
@@ -35,9 +33,9 @@ export default function MapScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   // State management
-  const [jobLocations] = useAtom(jobLocationsAtom);
+  const { data: jobLocations = [] } = useJobs();
   const [currentLocation, setCurrentLocation] = useAtom(currentLocationAtom);
-  const [selectedJobLocation, setSelectedJobLocation] = useAtom(selectedJobLocationAtom);
+  const [selectedJobLocation, setSelectedJobLocation] = useState<JobLocation | null>(null);
   
   // Local state
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);

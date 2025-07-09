@@ -17,15 +17,22 @@ import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { Button, Card } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
+
+import { useInventory } from '@/hooks/useInventory';
+
 import { inventoryItemsAtom, userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
+
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
+  const { data: inventoryItems = [] } = useInventory();
+
   const [inventoryItems] = useAtom(inventoryItemsAtom);
   const [userProfile] = useAtom(userProfileAtom);
+
   const [isDayStarted, setIsDayStarted] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
 

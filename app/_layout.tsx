@@ -6,13 +6,18 @@ import { useEffect } from 'react';
 import { TouchableOpacity } from 'react-native';
 import 'react-native-reanimated';
 import { Provider as JotaiProvider } from 'jotai';
+import { QueryClientProvider } from '@tanstack/react-query';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { AuthGuard } from '@/components/AuthGuard';
 import { DeepLinkHandler } from '@/components/DeepLinkHandler';
 import { ProfileManager } from '@/services/profileManager';
+
+import { queryClient } from '@/services/queryClient';
+
 import { typography, spacing, touchTargets } from '@/constants/Theme';
+
 
 // ErrorBoundary will be handled by the default expo-router behavior
 
@@ -49,10 +54,12 @@ export default function RootLayout() {
 
   return (
     <JotaiProvider>
-      <AuthGuard>
-        <DeepLinkHandler />
-        <RootLayoutNav />
-      </AuthGuard>
+      <QueryClientProvider client={queryClient}>
+        <AuthGuard>
+          <DeepLinkHandler />
+          <RootLayoutNav />
+        </AuthGuard>
+      </QueryClientProvider>
     </JotaiProvider>
   );
 }
