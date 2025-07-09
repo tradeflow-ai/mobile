@@ -12,15 +12,17 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { TextInput } from '@/components/ui/TextInput';
-import { Button } from '@/components/ui/Button';
+import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 import { supabase } from '@/services/supabase';
 import { authErrorAtom } from '@/store/atoms';
+import { signupSchema, type SignupFormData } from '@/components/forms/validationSchemas';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -29,81 +31,33 @@ export default function SignupScreen() {
   
   const [authError, setAuthError] = useAtom(authErrorAtom);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const authManager = AuthManager.getInstance();
   const profileManager = ProfileManager.getInstance();
   
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    occupation: '',
-    companyName: '',
-    phone: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+  const methods = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      occupation: '',
+      companyName: '',
+      phoneNumber: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+    mode: 'onChange',
   });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    // First name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-    
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-    
-    // Occupation validation
-    if (!formData.occupation.trim()) {
-      newErrors.occupation = 'Occupation is required';
-    }
-    
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    // Confirm password validation
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    // Phone validation (optional but must be valid if provided)
-    if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignup = async () => {
-    if (!validateForm()) return;
-    
+  const handleSignup = async (data: SignupFormData) => {
     setIsLoading(true);
     setAuthError(null);
     
     try {
-      const { user, error } = await authManager.signUp(formData.email, formData.password);
+      const { user, error } = await authManager.signUp(data.email, data.password);
       
       if (error) {
         const errorMessage = typeof error === 'string' ? error : (error as any)?.message || 'Signup failed';
@@ -115,12 +69,12 @@ export default function SignupScreen() {
       if (user) {
         // Create profile with the provided information
         const profileResult = await profileManager.createProfileDuringSignup(user.id, {
-          email: formData.email,
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          occupation: formData.occupation.trim(),
-          companyName: formData.companyName.trim() || undefined,
-          phone: formData.phone.trim() || undefined,
+          email: data.email,
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          occupation: data.occupation.trim(),
+          companyName: data.companyName?.trim() || undefined,
+          phone: data.phoneNumber?.trim() || undefined,
         });
         
         if (!profileResult.success) {
@@ -129,12 +83,12 @@ export default function SignupScreen() {
           try {
             await supabase.auth.updateUser({
               data: {
-                first_name: formData.firstName.trim(),
-                last_name: formData.lastName.trim(),
-                full_name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-                occupation: formData.occupation.trim(),
-                company_name: formData.companyName.trim() || undefined,
-                phone: formData.phone.trim() || undefined,
+                first_name: data.firstName.trim(),
+                last_name: data.lastName.trim(),
+                full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+                occupation: data.occupation.trim(),
+                company_name: data.companyName?.trim() || undefined,
+                phone: data.phoneNumber?.trim() || undefined,
               }
             });
           } catch (metadataError) {
@@ -145,7 +99,7 @@ export default function SignupScreen() {
         // Show success message
         Alert.alert(
           'Account Created!',
-          `Welcome ${formData.firstName}! Your account has been created successfully. Please check your email to verify your account.`,
+          `Welcome ${data.firstName}! Your account has been created successfully. Please check your email to verify your account.`,
           [
             {
               text: 'OK',
@@ -165,14 +119,6 @@ export default function SignupScreen() {
 
   const handleBackToLogin = () => {
     router.back();
-  };
-
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
   };
 
   return (
@@ -206,141 +152,131 @@ export default function SignupScreen() {
           </View>
 
           {/* Form */}
-          <View style={styles.form}>
-            <TextInput
-              label="First Name"
-              value={formData.firstName}
-              onChangeText={(value) => updateFormData('firstName', value)}
-              placeholder="Enter your first name"
-              autoCapitalize="words"
-              autoComplete="given-name"
-              error={errors.firstName}
-            />
-
-            <TextInput
-              label="Last Name"
-              value={formData.lastName}
-              onChangeText={(value) => updateFormData('lastName', value)}
-              placeholder="Enter your last name"
-              autoCapitalize="words"
-              autoComplete="family-name"
-              error={errors.lastName}
-            />
-
-            <TextInput
-              label="Occupation"
-              value={formData.occupation}
-              onChangeText={(value) => updateFormData('occupation', value)}
-              placeholder="e.g., Plumber, Electrician, HVAC Technician"
-              autoCapitalize="words"
-              error={errors.occupation}
-            />
-
-            <TextInput
-              label="Company Name (Optional)"
-              value={formData.companyName}
-              onChangeText={(value) => updateFormData('companyName', value)}
-              placeholder="Enter your company name"
-              autoCapitalize="words"
-              autoComplete="organization"
-              error={errors.companyName}
-            />
-
-            <TextInput
-              label="Phone Number (Optional)"
-              value={formData.phone}
-              onChangeText={(value) => updateFormData('phone', value)}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              error={errors.phone}
-            />
-
-            <TextInput
-              label="Email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData('email', value)}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              error={errors.email}
-            />
-
-            <View style={styles.passwordContainer}>
-              <TextInput
-                label="Password"
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                placeholder="Enter your password"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                error={errors.password}
+          <FormProvider methods={methods}>
+            <View style={styles.form}>
+              <FormTextInput
+                name="firstName"
+                label="First Name"
+                placeholder="Enter your first name"
+                autoCapitalize="words"
+                autoComplete="given-name"
               />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <FontAwesome 
-                  name={showPassword ? 'eye-slash' : 'eye'} 
-                  size={20} 
-                  color={colors.placeholder} 
-                />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.passwordContainer}>
-              <TextInput
-                label="Confirm Password"
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateFormData('confirmPassword', value)}
-                placeholder="Confirm your password"
-                secureTextEntry={!showConfirmPassword}
-                autoComplete="password"
-                error={errors.confirmPassword}
+              <FormTextInput
+                name="lastName"
+                label="Last Name"
+                placeholder="Enter your last name"
+                autoCapitalize="words"
+                autoComplete="family-name"
               />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <FontAwesome 
-                  name={showConfirmPassword ? 'eye-slash' : 'eye'} 
-                  size={20} 
-                  color={colors.placeholder} 
-                />
-              </TouchableOpacity>
-            </View>
 
-            {authError && (
-              <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
-                <FontAwesome name="exclamation-circle" size={16} color={colors.error} />
-                <Text style={[styles.errorText, { color: colors.error }]}>
-                  {authError}
+              <FormTextInput
+                name="occupation"
+                label="Occupation"
+                placeholder="e.g., Plumber, Electrician, HVAC Technician"
+                autoCapitalize="words"
+              />
+
+              <FormTextInput
+                name="companyName"
+                label="Company Name (Optional)"
+                placeholder="Enter your company name"
+                autoCapitalize="words"
+                autoComplete="organization"
+              />
+
+              <FormTextInput
+                name="phoneNumber"
+                label="Phone Number (Optional)"
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                autoComplete="tel"
+              />
+
+              <FormTextInput
+                name="email"
+                label="Email"
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+
+              <View style={styles.passwordContainer}>
+                <FormTextInput
+                  name="password"
+                  label="Password"
+                  placeholder="Enter your password"
+                  secureTextEntry={!showPassword}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  passwordRules="minlength: 8; required: lower; required: upper; required: digit;"
+                />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <FontAwesome 
+                    name={showPassword ? 'eye-slash' : 'eye'} 
+                    size={20} 
+                    color={colors.placeholder} 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.passwordContainer}>
+                <FormTextInput
+                  name="confirmPassword"
+                  label="Confirm Password"
+                  placeholder="Confirm your password"
+                  secureTextEntry={!showConfirmPassword}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <FontAwesome 
+                    name={showConfirmPassword ? 'eye-slash' : 'eye'} 
+                    size={20} 
+                    color={colors.placeholder} 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {authError && (
+                <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
+                  <FontAwesome name="exclamation-circle" size={16} color={colors.error} />
+                  <Text style={[styles.errorText, { color: colors.error }]}>
+                    {authError}
+                  </Text>
+                </View>
+              )}
+
+              <FormButton
+                title="Create Account"
+                type="submit"
+                onPress={methods.handleSubmit(handleSignup)}
+                disabled={isLoading}
+                loading={isLoading}
+                style={styles.signupButton}
+              />
+
+              <View style={styles.termsContainer}>
+                <Text style={[styles.termsText, { color: colors.placeholder }]}>
+                  By creating an account, you agree to our{' '}
+                  <Text style={[styles.termsLink, { color: colors.primary }]}>
+                    Terms of Service
+                  </Text>
+                  {' '}and{' '}
+                  <Text style={[styles.termsLink, { color: colors.primary }]}>
+                    Privacy Policy
+                  </Text>
                 </Text>
               </View>
-            )}
-
-            <Button
-              title="Create Account"
-              onPress={handleSignup}
-              disabled={isLoading}
-              loading={isLoading}
-              style={styles.signupButton}
-            />
-
-            <View style={styles.termsContainer}>
-              <Text style={[styles.termsText, { color: colors.placeholder }]}>
-                By creating an account, you agree to our{' '}
-                <Text style={[styles.termsLink, { color: colors.primary }]}>
-                  Terms of Service
-                </Text>
-                {' '}and{' '}
-                <Text style={[styles.termsLink, { color: colors.primary }]}>
-                  Privacy Policy
-                </Text>
-              </Text>
             </View>
-          </View>
+          </FormProvider>
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -447,7 +383,7 @@ const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
     right: 16,
-    top: 48,
+    top: 32, // Match the login screen positioning that was working perfectly
     padding: 8,
     zIndex: 1,
   },

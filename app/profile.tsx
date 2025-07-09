@@ -18,6 +18,7 @@ import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 import { userProfileAtom, themeModeAtom, type ThemeMode } from '@/store/atoms';
 import { Avatar } from '@/components/Avatar';
+import { useAppNavigation } from '@/hooks/useNavigation';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -25,6 +26,7 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const authManager = AuthManager.getInstance();
   const profileManager = ProfileManager.getInstance();
+  const { navigate } = useAppNavigation();
   
   // Profile state from atoms
   const [userProfile] = useAtom(userProfileAtom);
@@ -50,6 +52,10 @@ export default function ProfileScreen() {
         [{ text: 'OK' }]
       );
     }
+  };
+
+  const handleOnboardingSettings = () => {
+    navigate('/onboarding/work-schedule');
   };
 
   const handleLogout = () => {
@@ -170,6 +176,15 @@ export default function ProfileScreen() {
           >
             <FontAwesome name="shield" size={20} color={colors.placeholder} />
             <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy</Text>
+            <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={handleOnboardingSettings}
+          >
+            <FontAwesome name="cog" size={20} color={colors.placeholder} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Onboarding Settings</Text>
             <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
           </TouchableOpacity>
 
