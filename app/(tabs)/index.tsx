@@ -69,10 +69,66 @@ export default function HomeScreen() {
     setIsOnBreak(false);
   };
 
-  const handleViewFullSchedule = () => {
-    Alert.alert('Full Schedule', 'This will show the complete schedule view');
+  // ========================================
+  // JEREMIAH'S TEMPORARY CODE - START
+  // This function calls the backend LangGraph service to avoid React Native compatibility issues
+  // TODO: Josh to redesign this as part of the proper "Plan Your Day" UI flow
+  // ========================================
+  const handlePlanYourDay = async () => {
+    try {
+      // Import Jeremiah's agent service for backend communication
+      const { AgentService } = await import('../../services/agentService');
+      
+      Alert.alert('Planning Your Day', 'AI Agent workflow starting...', [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Start', 
+          onPress: async () => {
+            try {
+              // Check if backend is healthy first
+              const isHealthy = await AgentService.checkHealth();
+              if (!isHealthy) {
+                Alert.alert('Error', 'Backend service is not available. Please start Docker containers:\n\ndocker-compose up langgraph-backend');
+                return;
+              }
+              
+              // Call backend API instead of running LangGraph directly in React Native
+              const result = await AgentService.planDay(
+                'test-user-123',
+                ['job-1', 'job-2', 'job-3'],
+                new Date().toISOString().split('T')[0]
+              );
+              
+              if (result.success) {
+                Alert.alert('Success!', `Daily plan created: ${result.planId}\nStatus: ${result.currentStep || result.status}`);
+              } else {
+                Alert.alert('Error', `Agent workflow failed: ${result.error}`);
+              }
+            } catch (error) {
+              Alert.alert('Error', `Agent workflow failed: ${error.message}`);
+            }
+          }
+        }
+      ]);
+    } catch (error) {
+      Alert.alert('Error', `Failed to start planning: ${error.message}`);
+    }
   };
+  // ========================================
+  // JEREMIAH'S TEMPORARY CODE - END
+  // ========================================
+
+<!--   const handleViewFullSchedule = () => {
+    Alert.alert('Full Schedule', 'This will show the complete schedule view');
+  }; -->
   const quickActions = [
+    // JEREMIAH'S TEMPORARY CODE: Plan Your Day button for testing backend integration
+    {
+      id: 'plan-day',
+      title: 'Plan Your Day',
+      icon: 'calendar',
+      onPress: handlePlanYourDay,
+    },
     {
       id: 'inventory',
       title: 'Inventory',

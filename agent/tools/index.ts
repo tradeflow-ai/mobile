@@ -6,3 +6,4 @@
  */
 
 export { routingTool, convertCoordinates, calculateDistance } from './routing';
+export { mockSupplierAPI, type SupplierAPIResponse, type StoreLocation } from './mockSupplier';
