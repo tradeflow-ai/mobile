@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.l,
-    paddingHorizontal: spacing.xs,
   },
   title: {
     ...typography.h3,

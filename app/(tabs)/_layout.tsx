@@ -48,17 +48,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="jobs"
+        options={{
+          title: 'Jobs',
+          tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="briefcase" size={28} color={color} />,
+        }}
+      />
+        <Tabs.Screen
+          name="map"
+          options={{
+            title: 'Map',
+            tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="map" size={28} color={color} />,
+          }}
+        />
+      <Tabs.Screen
         name="inventory"
         options={{
           title: 'Inventory',
           tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="list" size={28} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="map"
-        options={{
-          title: 'Map',
-          tabBarIcon: ({ color }: { color: string }) => <FontAwesome name="map" size={28} color={color} />,
         }}
       />
       <Tabs.Screen

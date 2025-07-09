@@ -13,7 +13,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, touchTargets, radius } from '@/constants/Theme';
-import { Label, ErrorMessage } from '@/components/ui';
+import { Label, ErrorMessage, SearchBar } from '@/components/ui';
 import { BaseFormFieldProps, SelectOption } from './index';
 
 interface FormSelectProps extends BaseFormFieldProps {
@@ -37,6 +37,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const validationRules = {
     required: required ? (rules?.required || `${label || name} is required`) : undefined,
@@ -46,6 +47,15 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   const getSelectedLabel = (value: string) => {
     const option = options.find(opt => opt.value === value);
     return option?.label || placeholder;
+  };
+
+  const filteredOptions = options.filter(option =>
+    option.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleModalClose = () => {
+    setModalVisible(false);
+    setSearchQuery('');
   };
 
   return (
@@ -91,31 +101,47 @@ export const FormSelect: React.FC<FormSelectProps> = ({
               visible={modalVisible}
               transparent
               animationType="fade"
-              onRequestClose={() => setModalVisible(false)}
+              onRequestClose={handleModalClose}
             >
               <TouchableOpacity
                 style={styles.modalOverlay}
                 activeOpacity={1}
-                onPress={() => setModalVisible(false)}
+                onPress={handleModalClose}
               >
                 <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                  <FlatList
-                    data={options}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={[styles.option, { borderBottomColor: colors.border }]}
-                        onPress={() => {
-                          onChange(item.value);
-                          setModalVisible(false);
-                        }}
-                      >
-                        <Text style={[styles.optionText, { color: colors.text }]}>
-                          {item.label}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    keyExtractor={(item) => item.value}
+                  <SearchBar
+                    placeholder="Search options..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    style={styles.searchContainer}
                   />
+                  
+                  {filteredOptions.length === 0 ? (
+                    <View style={styles.noResultsContainer}>
+                      <Text style={[styles.noResultsText, { color: colors.placeholder }]}>
+                        No results found
+                      </Text>
+                    </View>
+                  ) : (
+                    <FlatList
+                      data={filteredOptions}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[styles.option, { borderBottomColor: colors.border }]}
+                          onPress={() => {
+                            onChange(item.value);
+                            handleModalClose();
+                          }}
+                        >
+                          <Text style={[styles.optionText, { color: colors.text }]}>
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      keyExtractor={(item) => item.value}
+                      showsVerticalScrollIndicator={false}
+                    />
+                  )}
                 </View>
               </TouchableOpacity>
             </Modal>
@@ -141,7 +167,8 @@ const styles = StyleSheet.create({
     minHeight: touchTargets.minimum,
   },
   selectorText: {
-    ...typography.body,
+    fontSize: typography.sizes.caption, // Match TextInput formatting
+    fontWeight: typography.weights.normal,
     flex: 1,
   },
   modalOverlay: {
@@ -161,12 +188,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  searchContainer: {
+    marginBottom: spacing.xs,
+  },
   option: {
     paddingVertical: spacing.s,
     paddingHorizontal: spacing.xs,
     borderBottomWidth: 1,
   },
   optionText: {
-    ...typography.body,
+    fontSize: typography.sizes.caption, // Match TextInput formatting
+    fontWeight: typography.weights.normal,
+  },
+  noResultsContainer: {
+    paddingVertical: spacing.l,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    ...typography.caption,
+    fontStyle: 'italic',
   },
 }); 

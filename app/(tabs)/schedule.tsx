@@ -13,6 +13,7 @@ import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { Card, Button } from '@/components/ui';
+import { formatDate } from '@/utils/dateUtils';
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
@@ -48,12 +49,7 @@ export default function ScheduleScreen() {
                 Today's Schedule
               </Text>
               <Text style={[styles.todayDate, { color: colors.placeholder }]}>
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {formatDate(new Date())}
               </Text>
             </View>
 

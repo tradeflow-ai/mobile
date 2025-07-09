@@ -4,16 +4,14 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  Alert,
   SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
-import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { SearchBar, Avatar } from '@/components/ui';
+import { SearchBar, Avatar, EmptyState } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 import { useInventory, InventoryItem } from '@/hooks/useInventory';
 
@@ -78,15 +76,13 @@ export default function InventoryScreen() {
   );
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <FontAwesome name="search" size={48} color={colors.placeholder} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {searchQuery ? 'No items found' : 'No inventory items'}
-      </Text>
-      <Text style={[styles.emptyDescription, { color: colors.placeholder }]}>
-        {searchQuery ? 'Try adjusting your search terms' : 'Add your first inventory item to get started'}
-      </Text>
-    </View>
+    <EmptyState
+      icon="search"
+      title={searchQuery ? 'No items found' : 'No inventory items'}
+      description={searchQuery ? 'Try adjusting your search terms' : 'Add your first inventory item to get started'}
+      createButtonText={searchQuery ? undefined : 'Add Item'}
+      handleOnCreatePress={handleAddItem}
+    />
   );
 
 
@@ -127,21 +123,17 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
+    ...spacing.helpers.padding('m'),
   },
   listContainer: {
     flexGrow: 1,
   },
   card: {
-    borderRadius: 8,
+    borderRadius: radius.m,
     borderWidth: 1,
-    padding: 8,
-    marginBottom: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...spacing.helpers.padding('s'),
+    marginBottom: spacing.xs,
+    ...shadows.subtle,
   },
   cardContent: {
     flexDirection: 'row',
@@ -154,7 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarSpacing: {
-    marginRight: 12,
+    marginRight: spacing.m,
   },
   itemInfo: {
     flex: 1,
@@ -169,30 +161,13 @@ const styles = StyleSheet.create({
   },
   quantityContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 8,
+    borderRadius: radius.s,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    marginRight: spacing.s,
   },
   quantity: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
   },
 });
