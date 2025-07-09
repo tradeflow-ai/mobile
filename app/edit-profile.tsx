@@ -16,7 +16,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { ProfileManager } from '@/services/profileManager';
 import { userProfileAtom, isProfileLoadingAtom } from '@/store/atoms';
-import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
+import { FormProvider, FormTextInput, FormActions } from '@/components/forms';
 
 interface ProfileFormData {
   firstName: string;
@@ -193,22 +193,12 @@ export default function EditProfileScreen() {
               />
             </View>
 
-            <View style={styles.buttonContainer}>
-              <FormButton
-                title="Save Changes"
-                type="submit"
-                onPress={handleSubmit(onSubmit)}
-                loading={isSubmitting}
-                style={styles.saveButton}
-              />
-              
-              <FormButton
-                title="Cancel"
-                onPress={handleCancel}
-                variant="outline"
-                style={styles.cancelButton}
-              />
-            </View>
+            <FormActions
+              onSubmit={handleSubmit(onSubmit)}
+              onCancel={handleCancel}
+              submitTitle="Save Changes"
+              isSubmitting={isSubmitting}
+            />
           </FormProvider>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -243,15 +233,5 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: 32,
-  },
-  buttonContainer: {
-    gap: 12,
-    marginBottom: 32,
-  },
-  saveButton: {
-    marginBottom: 8,
-  },
-  cancelButton: {
-    marginBottom: 8,
   },
 }); 

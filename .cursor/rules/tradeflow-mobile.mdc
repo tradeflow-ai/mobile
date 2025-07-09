@@ -115,14 +115,14 @@ export default function ScreenName() {
   - `TextInput` - Form inputs with validation and labels
   - `Header` - Reusable header with actions and profile support
   - `ExpoLink` - Navigation link component
-  - `QuantitySelector` - Quantity input with plus/minus buttons for numeric values, supports decimal/integer mode
+  - `QuantitySelector` - Quantity input with plus/minus buttons for numeric values, uses number values (not strings), supports decimal/integer mode
   - `QuickActionButton` - Reusable quick action button with icon and title for home screen actions
   - **Form Components** - React Hook Form integrated components in `@/components/forms/`:
     - `FormProvider` - Context wrapper for React Hook Form
     - `FormTextInput` - Text input with built-in validation
-    - `FormButton` - Button integrating with form state
     - `FormQuantitySelector` - Quantity selector with validation
     - `FormSelect` - Dropdown selector with modal interface
+    - `FormActions` - Standardized submit/cancel button pair for consistent form actions.
 - **IF** component doesn't exist, create it in `@/components/` folder
 - **IF** it's a UI component, create it in `@/components/ui/` folder and export from `@/components/ui/index.ts`
 - **IF** it's a form component, create it in `@/components/forms/` folder and export from `@/components/forms/index.ts`
@@ -207,30 +207,55 @@ const styles = StyleSheet.create({
   - `<StatusBadge>` - Use for status indicators
   - `<Avatar>` - Use for user profile images
   - `<Header>` - Use for screen headers with actions
-  - `<QuantitySelector>` - Use for numeric quantity input with plus/minus buttons, supports decimal/integer mode
+  - `<QuantitySelector>` - Use for numeric quantity input with plus/minus buttons, uses number values (not strings), supports decimal/integer mode
 
 ### 9.1. Form Components Usage
 - **ALWAYS** use React Hook Form integrated components from `@/components/forms` for form development
+- **ALWAYS** use `<FormActions>` component at the bottom of all forms for consistent submit/cancel button behavior
 - **AVAILABLE** form components:
   - `<FormProvider>` - Context wrapper for React Hook Form, wrap entire form with this
   - `<FormTextInput>` - Text input with built-in validation and error display
-  - `<FormButton>` - Button that integrates with form state (submit, loading, disabled)
-  - `<FormQuantitySelector>` - Quantity selector with validation support
+  - `<FormQuantitySelector>` - Quantity selector with validation support, uses number values (not strings)
   - `<FormSelect>` - Dropdown selector with modal interface and validation
+  - `<FormActions>` - Standardized submit/cancel button pair with consistent styling and behavior
 - **PATTERN** for form development:
 ```typescript
 import { useForm } from 'react-hook-form';
-import { FormProvider, FormTextInput, FormButton, BaseFormFieldProps, FormValidationRules } from '@/components/forms';
+import { FormProvider, FormTextInput, FormActions, BaseFormFieldProps, FormValidationRules } from '@/components/forms';
 
 const methods = useForm<FormData>({
   defaultValues: initialData,
   mode: 'onChange',
 });
 
+const onSubmit = async (data: FormData) => {
+  try {
+    await submitForm(data);
+    // Success handling
+  } catch (error) {
+    // Error handling
+  }
+};
+
+const handleCancel = () => {
+  navigation.goBack();
+};
+
 return (
   <FormProvider methods={methods}>
-    <FormTextInput name="field" label="Label" required />
-    <FormButton title="Submit" type="submit" onPress={handleSubmit(onSubmit)} />
+    <FormTextInput name="firstName" label="First Name" required />
+    <FormTextInput name="lastName" label="Last Name" required />
+    <FormTextInput name="email" label="Email Address" />
+    <FormQuantitySelector name="quantity" label="Quantity" required />
+    <FormSelect name="category" label="Category" options={options} required />
+    {/* Form content */}
+    <FormActions
+      onSubmit={handleSubmit(onSubmit)}
+      onCancel={handleCancel}
+      isSubmitting={isSubmitting}
+      submitTitle="Save"
+      cancelTitle="Cancel"
+    />
   </FormProvider>
 );
 ```
@@ -252,8 +277,134 @@ try {
 - **ALWAYS** use React Hook Form for form state management and validation
 - **ALWAYS** wrap forms with `<FormProvider>` component
 - **ALWAYS** use form components from `@/components/forms/` instead of native inputs
+- **ALWAYS** use `<FormActions>` component at the bottom of all forms for consistent submit/cancel behavior
 - **ALWAYS** use shared types `BaseFormFieldProps` and `FormValidationRules` for consistency across form fields
 - **ALWAYS** import shared types from `@/components/forms` when creating custom form components
+- **ALWAYS** use `label` prop on form components to display field titles above inputs
+- **ALWAYS** use `required` prop instead of manual validation rules for required fields
+- **ALWAYS** use the shared `Label` component from `@/components/ui` for consistent label styling across all components
+- **ALWAYS** use the shared `ErrorMessage` component from `@/components/ui` for consistent error message styling
+- **ALWAYS** use number types (not strings) for quantity fields in form interfaces and components
+
+### 11.0. Quantity Field Usage
+- **CRITICAL**: Both `QuantitySelector` and `FormQuantitySelector` components work with number values (not strings)
+- **ALWAYS** use `quantity: number` in form interfaces, not `quantity: string`
+- **PATTERN** for quantity fields in forms:
+```typescript
+interface FormData {
+  name: string;
+  quantity: number; // Always use number, not string
+}
+
+// Default values
+const defaultValues: FormData = {
+  name: '',
+  quantity: 0, // Use number, not '0'
+};
+
+// Form submission
+const onSubmit = (data: FormData) => {
+  // data.quantity is already a number, no conversion needed
+  const updateData = {
+    name: data.name.trim(),
+    quantity: data.quantity, // Direct usage as number
+  };
+};
+```
+
+### 11.1. Form Page Structure Pattern
+- **ALWAYS** create forms as separate pages/screens instead of inline modals when they contain multiple fields
+- **REQUIRED** form page structure:
+```typescript
+export default function FormScreen() {
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  // Form setup
+  const methods = useForm<FormData>({
+    defaultValues: defaultFormValues,
+    mode: 'onChange',
+  });
+
+  const { handleSubmit, formState: { isSubmitting } } = methods;
+
+  const onSubmit = async (data: FormData) => {
+    try {
+      await submitData(data);
+      Alert.alert('Success', 'Message', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (error) {
+      Alert.alert('Error', 'Message', [{ text: 'OK' }]);
+    }
+  };
+
+  const handleCancel = () => {
+    router.back();
+  };
+
+  return (
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>Form Title</Text>
+            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
+              Form description
+            </Text>
+          </View>
+
+          <FormProvider methods={methods}>
+            <View style={styles.form}>
+              {/* Form fields */}
+            </View>
+            <FormActions
+              onSubmit={handleSubmit(onSubmit)}
+              onCancel={handleCancel}
+              isSubmitting={isSubmitting}
+              submitTitle="Submit"
+              cancelTitle="Cancel"
+            />
+          </FormProvider>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+```
+- **ALWAYS** add navigation configuration to `app/_layout.tsx` for new form screens
+- **ALWAYS** add ` presentation: 'modal'` for the new form screens that are listed in the `app/_layout.tsx`
+- **REQUIRED** navigation pattern in `_layout.tsx`:
+```typescript
+<Stack.Screen 
+  name="form-screen-name"
+  options={({ navigation }) => ({
+    presentation: 'modal',
+    title: 'Form Screen Title',
+    headerBackTitle: '',
+    headerLeft: () => (
+      <TouchableOpacity 
+        onPress={() => navigation.goBack()}
+        style={{
+          ...touchTargets.styles.minimum,
+          ...spacing.helpers.paddingHorizontal('s'),
+          justifyContent: 'center',
+        }}
+      >
+        <FontAwesome 
+          name="arrow-left" 
+          size={20} 
+          color={colors.primary} 
+        />
+      </TouchableOpacity>
+    ),
+  })}
+/>
+```
+- **ALWAYS** use `router.back()` for form cancel/success navigation
+- **ALWAYS** use `navigate('/form-screen-name')` to open form screens from other screens
 - **PATTERN** for form validation using shared interfaces:
 ```typescript
 import { useForm } from 'react-hook-form';
@@ -266,7 +417,6 @@ const methods = useForm<FormData>({
 
 // Custom validation rules using shared FormValidationRules interface
 const emailRules: FormValidationRules = {
-  required: 'Email is required',
   pattern: {
     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
     message: 'Invalid email address'
@@ -275,12 +425,15 @@ const emailRules: FormValidationRules = {
 
 <FormTextInput
   name="email"
+  label="Email Address"
+  required
   rules={emailRules}
 />
 ```
 - **PATTERN** for creating custom form components:
 ```typescript
 import { BaseFormFieldProps, FormValidationRules } from '@/components/forms';
+import { Label, ErrorMessage } from '@/components/ui';
 
 interface CustomFormComponentProps extends BaseFormFieldProps {
   // Additional props specific to your component
@@ -290,19 +443,32 @@ interface CustomFormComponentProps extends BaseFormFieldProps {
 export const CustomFormComponent: React.FC<CustomFormComponentProps> = ({
   name,
   rules,
+  label,
+  required = false,
   customProp,
 }) => {
   const { control } = useFormContext();
+
+  const validationRules = {
+    required: required ? (rules?.required || `${label || name} is required`) : undefined,
+    ...rules,
+  };
   
   return (
-    <Controller
-      control={control}
-      name={name}
-      rules={rules}
-      render={({ field, fieldState }) => (
-        // Your custom form component implementation
-      )}
-    />
+    <View style={{ marginBottom: spacing.m }}>
+      {label && <Label text={label} required={required} />}
+      <Controller
+        control={control}
+        name={name}
+        rules={validationRules}
+        render={({ field, fieldState: { error } }) => (
+          <View>
+            {/* Your custom form component implementation */}
+            <ErrorMessage message={error?.message} />
+          </View>
+        )}
+      />
+    </View>
   );
 };
 ```
@@ -342,22 +508,28 @@ export const FormComponent: React.FC<FormComponentProps> = ({
   );
 };
 ```
-- **PATTERN** for form submission:
+- **PATTERN** for form submission with FormActions:
 ```typescript
 const onSubmit = async (data: FormData) => {
   try {
     await submitForm(data);
-    // Success handling
+    // Success handling (navigation, notifications, etc.)
   } catch (error) {
     // Error handling
   }
 };
 
-<FormButton
-  title="Submit"
-  type="submit"
-  onPress={handleSubmit(onSubmit)}
-  loading={isSubmitting}
+const handleCancel = () => {
+  navigation.goBack();
+};
+
+<FormActions
+  onSubmit={handleSubmit(onSubmit)}
+  onCancel={handleCancel}
+  isSubmitting={isSubmitting}
+  submitTitle="Save Changes"
+  cancelTitle="Cancel"
+  submitButtonVariant="primary"
 />
 ```
 
@@ -430,15 +602,22 @@ Before creating new components, check these existing ones:
 - **SearchBar** - Search input with clear functionality and proper theming
 - **StatusBadge** - Status indicators (available, low_stock, out_of_stock)
 - **TextInput** - Form inputs with labels, validation, error states, focus handling, and theme typography/spacing
+- **Label** - Reusable label component with consistent typography and required field asterisk styling
+- **ErrorMessage** - Reusable error message component with consistent typography and red error color styling
 
 ### Form Components (`@/components/forms/`) - React Hook Form Integrated
 - **FormProvider** - Context wrapper for React Hook Form, provides form context to child components
 - **FormTextInput** - Text input with built-in validation, error display, and React Hook Form integration (extends TextInputProps)
-- **FormButton** - Button that integrates with form state (submit, loading, disabled states) (extends ButtonProps with Omit<ButtonProps, 'onPress'>)
-- **FormQuantitySelector** - Quantity selector with validation support and React Hook Form integration (extends QuantitySelector props)
+- **FormQuantitySelector** - Quantity selector with validation support and React Hook Form integration, uses number values (not strings) (extends QuantitySelector props)
 - **FormSelect** - Dropdown selector with modal interface, validation, and React Hook Form integration (uses BaseFormFieldProps)
+- **FormActions** - Standardized submit/cancel button pair with consistent styling, loading states, and proper spacing for form bottoms
+- **NOTE**: `FormButton` is an internal component used only within `FormActions` - do not use directly
+- **SHARED PROPS**: All form components inherit `label` and `required` props from BaseFormFieldProps:
+  - `label` - Optional string displayed above the component as a title using the shared Label component
+  - `required` - Optional boolean that adds required validation and asterisk to label using the shared Label component
+- **SHARED STYLING**: All form components use the shared ErrorMessage component for consistent error display
 - **Shared Types** (defined in `@/components/forms/index.ts`):
-  - `BaseFormFieldProps` - Common props for all form fields (name, rules)
+  - `BaseFormFieldProps` - Common props for all form fields (name, rules, label, required)
   - `FormValidationRules` - Standardized validation rules interface
   - `SelectOption` - Interface for dropdown options
 
@@ -446,7 +625,7 @@ Before creating new components, check these existing ones:
 - **Avatar** - Profile images with letter fallbacks, multiple sizes (xs, s, m, l, xl)
 - **Header** - Reusable header with left/right actions, profile support, and proper theming (uses Button from ui)
 - **ExpoLink** - Navigation link component with expo-router integration
-- **QuantitySelector** - Quantity input with plus/minus buttons, proper alignment, disabled state support, and decimal/integer mode (uses TextInput from ui)
+- **QuantitySelector** - Quantity input with plus/minus buttons, proper alignment, disabled state support, uses number values (not strings), and decimal/integer mode (uses TextInput from ui)
 - **QuickActionButton** - Reusable quick action button with icon and title, uses consistent primary color for all icons (uses Card from ui)
 - **useColorScheme** - Hook for consistent color theming across app
 

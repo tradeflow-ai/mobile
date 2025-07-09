@@ -13,7 +13,6 @@ import Colors from '@/constants/Colors';
 import { typography, spacing, touchTargets, radius } from '@/constants/Theme';
 
 interface CustomTextInputProps extends TextInputProps {
-  label?: string;
   error?: string;
   helperText?: string;
   containerStyle?: ViewStyle;
@@ -21,7 +20,6 @@ interface CustomTextInputProps extends TextInputProps {
 }
 
 export const TextInput: React.FC<CustomTextInputProps> = ({
-  label,
   error,
   helperText,
   containerStyle,
@@ -46,12 +44,6 @@ export const TextInput: React.FC<CustomTextInputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && (
-        <Text style={[styles.label, { color: colors.text }]}>
-          {label}
-          {required && <Text style={[styles.required, { color: colors.error }]}> *</Text>}
-        </Text>
-      )}
       <RNTextInput
         {...props}
         style={getInputStyle()}
@@ -76,13 +68,6 @@ export const TextInput: React.FC<CustomTextInputProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.m,
-  },
-  label: {
-    ...typography.h4,
-    marginBottom: spacing.xs,
-  },
-  required: {
-    ...typography.h4,
   },
   input: {
     borderWidth: 1,
