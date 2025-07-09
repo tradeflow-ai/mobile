@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { radius, touchTargets, spacing } from '@/constants/Theme';
 import { TextInput } from '@/components/ui';
 
 interface QuantitySelectorProps {
@@ -120,12 +121,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   button: {
-    width: 44,
-    height: 44,
+    minHeight: touchTargets.minimum,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 6,
+    borderRadius: radius.m,
+    // Match TextInput height with platform-specific padding and make buttons square
+    ...Platform.select({
+      ios: {
+        paddingTop: spacing.s + 4,
+        paddingBottom: spacing.s + 4,
+        width: touchTargets.minimum + (spacing.s + 4) * 2, // 44 + 24 = 68px
+      },
+      android: {
+        paddingVertical: spacing.s + 2,
+        width: touchTargets.minimum + (spacing.s + 2) * 2, // 44 + 20 = 64px
+      },
+    }),
   },
   input: {
     textAlign: 'center',
