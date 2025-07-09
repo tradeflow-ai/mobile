@@ -13,6 +13,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { AuthGuard } from '@/components/AuthGuard';
 import { DeepLinkHandler } from '@/components/DeepLinkHandler';
+import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 
 import { queryClient } from '@/services/queryClient';
@@ -44,6 +45,8 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
+      // Initialize AuthManager first to ensure proper session handling
+      AuthManager.getInstance();
       // Initialize ProfileManager to start syncing profile data with auth state
       ProfileManager.getInstance();
     }

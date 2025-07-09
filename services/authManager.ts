@@ -35,6 +35,8 @@ export class AuthManager {
 
   private async initializeAuth() {
     try {
+      console.log('AuthManager: Initializing auth...');
+      
       // Check for existing session
       const { data: { session }, error } = await supabase.auth.getSession();
       
@@ -46,6 +48,7 @@ export class AuthManager {
 
       if (session?.user) {
         // Valid session found
+        console.log('AuthManager: Found valid session for user:', session.user.email);
         this.updateAuthState({
           user: session.user,
           session,
@@ -62,6 +65,7 @@ export class AuthManager {
           // Try to refresh the session
           await this.refreshSession();
         } else {
+          console.log('AuthManager: No stored session found, user needs to sign in');
           this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
         }
       }
@@ -139,12 +143,23 @@ export class AuthManager {
 
   private async refreshSession() {
     try {
-      const { data: { session }, error } = await supabase.auth.refreshSession();
+      const storedSession = await this.getStoredSession();
+      
+      if (!storedSession?.refresh_token) {
+        console.log('No refresh token found - user needs to sign in');
+        await this.clearSession();
+        this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
+        return;
+      }
+
+      const { data: { session }, error } = await supabase.auth.refreshSession({
+        refresh_token: storedSession.refresh_token,
+      });
       
       if (error) {
         // Handle session missing error gracefully (this is expected when no session exists)
-        if (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found')) {
-          console.log('No session to refresh - user needs to sign in');
+        if (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found') || error.message.includes('Invalid refresh token')) {
+          console.log('Invalid or expired refresh token - user needs to sign in');
         } else {
           console.error('Error refreshing session:', error);
         }
@@ -161,6 +176,7 @@ export class AuthManager {
           isLoading: false,
           isAuthenticated: true,
         });
+        console.log('Session refreshed successfully for user:', session.user.email);
       } else {
         // No session returned - clear stored session
         await this.clearSession();
@@ -168,8 +184,8 @@ export class AuthManager {
       }
     } catch (error) {
       // Handle session missing error gracefully
-      if (error instanceof Error && (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found'))) {
-        console.log('No session to refresh - user needs to sign in');
+      if (error instanceof Error && (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found') || error.message.includes('Invalid refresh token'))) {
+        console.log('Invalid or expired refresh token - user needs to sign in');
       } else {
         console.error('Error refreshing session:', error);
       }
