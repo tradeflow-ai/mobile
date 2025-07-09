@@ -7,6 +7,7 @@ import { TouchableOpacity } from 'react-native';
 import 'react-native-reanimated';
 import { Provider as JotaiProvider } from 'jotai';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -53,14 +54,16 @@ export default function RootLayout() {
   }
 
   return (
-    <JotaiProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthGuard>
-          <DeepLinkHandler />
-          <RootLayoutNav />
-        </AuthGuard>
-      </QueryClientProvider>
-    </JotaiProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <JotaiProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthGuard>
+            <DeepLinkHandler />
+            <RootLayoutNav />
+          </AuthGuard>
+        </QueryClientProvider>
+      </JotaiProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -214,6 +217,12 @@ function RootLayoutNav() {
       />
       <Stack.Screen 
         name="signup" 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
+      <Stack.Screen 
+        name="onboarding" 
         options={{ 
           headerShown: false,
         }} 

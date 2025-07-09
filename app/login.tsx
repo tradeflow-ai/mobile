@@ -7,19 +7,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ActivityIndicator,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { TextInput } from '@/components/ui/TextInput';
-import { Button } from '@/components/ui/Button';
+import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
 import { AuthManager } from '@/services/authManager';
 import { authErrorAtom } from '@/store/atoms';
+import { loginSchema, type LoginFormData } from '@/components/forms/validationSchemas';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,47 +29,26 @@ export default function LoginScreen() {
   
   const [authError, setAuthError] = useAtom(authErrorAtom);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const authManager = AuthManager.getInstance();
   
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+  const methods = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+    mode: 'onChange',
   });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async () => {
-    if (!validateForm()) return;
-    
+  const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     setAuthError(null);
     
     try {
-      console.log('Attempting login with email:', formData.email);
-      const { user, error } = await authManager.signIn(formData.email, formData.password);
+      console.log('Attempting login with email:', data.email);
+      const { user, error } = await authManager.signIn(data.email, data.password);
       
       if (error) {
         const errorMessage = typeof error === 'string' ? error : (error as any)?.message || 'Login failed';
@@ -78,7 +58,7 @@ export default function LoginScreen() {
         if (errorMessage.includes('Email not confirmed')) {
           Alert.alert(
             'Email Verification Required',
-            `Please check your email (${formData.email}) and click the verification link before signing in.\n\nIf you can't find the email, check your spam folder.`,
+            `Please check your email (${data.email}) and click the verification link before signing in.\n\nIf you can't find the email, check your spam folder.`,
             [
               { text: 'OK', style: 'default' },
               { 
@@ -108,7 +88,7 @@ export default function LoginScreen() {
       if (errorMessage.includes('Email not confirmed')) {
         Alert.alert(
           'Email Verification Required',
-          `Please check your email (${formData.email}) and click the verification link before signing in.\n\nIf you can't find the email, check your spam folder.`,
+          `Please check your email (${data.email}) and click the verification link before signing in.\n\nIf you can't find the email, check your spam folder.`,
           [
             { text: 'OK', style: 'default' },
             { 
@@ -139,14 +119,6 @@ export default function LoginScreen() {
     router.push('/signup');
   };
 
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
@@ -171,66 +143,66 @@ export default function LoginScreen() {
           </View>
 
           {/* Form */}
-          <View style={styles.form}>
-            <TextInput
-              label="Email"
-              value={formData.email}
-              onChangeText={(value) => updateFormData('email', value)}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              error={errors.email}
-            />
-
-            <View style={styles.passwordContainer}>
-              <TextInput
-                label="Password"
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                placeholder="Enter your password"
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                error={errors.password}
+          <FormProvider methods={methods}>
+            <View style={styles.form}>
+              <FormTextInput
+                name="email"
+                label="Email"
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
               />
-              <TouchableOpacity
-                style={styles.passwordToggle}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <FontAwesome 
-                  name={showPassword ? 'eye-slash' : 'eye'} 
-                  size={20} 
-                  color={colors.placeholder} 
+
+              <View style={styles.passwordContainer}>
+                <FormTextInput
+                  name="password"
+                  label="Password"
+                  placeholder="Enter your password"
+                  secureTextEntry={!showPassword}
+                  autoComplete="current-password"
+                  textContentType="password"
                 />
+                <TouchableOpacity
+                  style={styles.passwordToggle}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <FontAwesome 
+                    name={showPassword ? 'eye-slash' : 'eye'} 
+                    size={20} 
+                    color={colors.placeholder} 
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {authError && (
+                <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
+                  <FontAwesome name="exclamation-circle" size={16} color={colors.error} />
+                  <Text style={[styles.errorText, { color: colors.error }]}>
+                    {authError}
+                  </Text>
+                </View>
+              )}
+
+              <FormButton
+                title="Sign In"
+                type="submit"
+                onPress={methods.handleSubmit(handleLogin)}
+                disabled={isLoading}
+                loading={isLoading}
+                style={styles.loginButton}
+              />
+
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={handleForgotPassword}
+              >
+                <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+                  Forgot Password?
+                </Text>
               </TouchableOpacity>
             </View>
-
-            {authError && (
-              <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
-                <FontAwesome name="exclamation-circle" size={16} color={colors.error} />
-                <Text style={[styles.errorText, { color: colors.error }]}>
-                  {authError}
-                </Text>
-              </View>
-            )}
-
-            <Button
-              title="Sign In"
-              onPress={handleLogin}
-              disabled={isLoading}
-              loading={isLoading}
-              style={styles.loginButton}
-            />
-
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
-            >
-              <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
-                Forgot Password?
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </FormProvider>
 
 
 
@@ -329,7 +301,7 @@ const styles = StyleSheet.create({
   passwordToggle: {
     position: 'absolute',
     right: 16,
-    top: 32,
+    top: 32, // Original position - was already perfect
     padding: 8,
     zIndex: 1,
   },
