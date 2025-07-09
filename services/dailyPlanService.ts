@@ -41,6 +41,8 @@ export interface DispatchOutput {
     priority_reason: string;
     job_type: 'demand' | 'maintenance' | 'emergency';
     buffer_time_minutes: number;
+    priority_score: number;
+    scheduling_notes: string;
   }>;
   scheduling_constraints: {
     work_start_time: string;
@@ -48,10 +50,19 @@ export interface DispatchOutput {
     lunch_break_start: string;
     lunch_break_end: string;
     total_work_hours: number;
+    total_jobs_scheduled: number;
+    schedule_conflicts: string[];
   };
   recommendations: string[];
   agent_reasoning: string;
   execution_time_ms: number;
+  optimization_summary: {
+    emergency_jobs: number;
+    demand_jobs: number;
+    maintenance_jobs: number;
+    vip_clients: number;
+    schedule_efficiency: number;
+  };
 }
 
 export interface RouteOutput {
