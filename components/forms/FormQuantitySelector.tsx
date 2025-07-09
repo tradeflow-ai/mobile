@@ -1,7 +1,9 @@
 import React from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import { ViewStyle } from 'react-native';
+import { View, ViewStyle } from 'react-native';
+import { spacing } from '@/constants/Theme';
 import { QuantitySelector } from '@/components/QuantitySelector';
+import { Label, ErrorMessage } from '@/components/ui';
 import { BaseFormFieldProps, FormValidationRules } from './index';
 
 interface FormQuantitySelectorProps extends BaseFormFieldProps {
@@ -16,7 +18,9 @@ interface FormQuantitySelectorProps extends BaseFormFieldProps {
 
 export const FormQuantitySelector: React.FC<FormQuantitySelectorProps> = ({
   name,
+  label,
   rules,
+  required = false,
   placeholder = '0',
   style,
   disabled = false,
@@ -27,10 +31,11 @@ export const FormQuantitySelector: React.FC<FormQuantitySelectorProps> = ({
 }) => {
   const { control } = useFormContext();
 
-  const validationRules: FormValidationRules = {
+  const validationRules = {
+    required: required ? (rules?.required || `${label || name} is required`) : undefined,
     ...rules,
-    validate: (value: string) => {
-      const numValue = parseFloat(value) || 0;
+    validate: (value: number) => {
+      const numValue = value || 0;
       
       if (numValue < min) {
         return `Minimum value is ${min}`;
@@ -49,40 +54,45 @@ export const FormQuantitySelector: React.FC<FormQuantitySelectorProps> = ({
   };
 
   return (
-    <Controller
-      control={control}
-      name={name}
-      rules={validationRules}
-      render={({ field: { onChange, value } }) => {
+    <View style={[{ marginBottom: spacing.m }, style]}>
+      {label && <Label text={label} required={required} />}
+      <Controller
+        control={control}
+        name={name}
+        rules={validationRules}
+        render={({ field: { onChange, value }, fieldState: { error } }) => {
         const handleIncrease = () => {
-          const currentValue = parseFloat(value) || 0;
+          const currentValue = value || 0;
           const newValue = currentValue + step;
           const clampedValue = max !== undefined ? Math.min(newValue, max) : newValue;
-          const formattedValue = allowDecimals ? clampedValue.toString() : Math.round(clampedValue).toString();
-          onChange(formattedValue);
+          const finalValue = allowDecimals ? clampedValue : Math.round(clampedValue);
+          onChange(finalValue);
         };
 
         const handleDecrease = () => {
-          const currentValue = parseFloat(value) || 0;
+          const currentValue = value || 0;
           const newValue = Math.max(min, currentValue - step);
-          const formattedValue = allowDecimals ? newValue.toString() : Math.round(newValue).toString();
-          onChange(formattedValue);
+          const finalValue = allowDecimals ? newValue : Math.round(newValue);
+          onChange(finalValue);
         };
 
-        return (
-          <QuantitySelector
-            value={value || ''}
-            onChangeText={onChange}
-            onIncrease={handleIncrease}
-            onDecrease={handleDecrease}
-            placeholder={placeholder}
-            style={style}
-            disabled={disabled}
-            allowDecimals={allowDecimals}
-            step={step}
-          />
-        );
-      }}
-    />
+          return (
+            <View>
+              <QuantitySelector
+                value={value || 0}
+                onChangeText={onChange}
+                onIncrease={handleIncrease}
+                onDecrease={handleDecrease}
+                placeholder={placeholder}
+                disabled={disabled}
+                allowDecimals={allowDecimals}
+                step={step}
+              />
+              <ErrorMessage message={error?.message} />
+            </View>
+          );
+        }}
+      />
+    </View>
   );
 }; 

@@ -12,6 +12,8 @@ export interface FormValidationRules {
 export interface BaseFormFieldProps {
   name: string;
   rules?: FormValidationRules;
+  label?: string;
+  required?: boolean;
 }
 
 export interface SelectOption {
@@ -22,6 +24,6 @@ export interface SelectOption {
 // Form components
 export { FormProvider } from './FormProvider';
 export { FormTextInput } from './FormTextInput';
-export { FormButton } from './FormButton';
 export { FormQuantitySelector } from './FormQuantitySelector';
-export { FormSelect } from './FormSelect'; 
+export { FormSelect } from './FormSelect';
+export { FormActions } from './FormActions'; 

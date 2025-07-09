@@ -13,13 +13,12 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, touchTargets, radius } from '@/constants/Theme';
+import { Label, ErrorMessage } from '@/components/ui';
 import { BaseFormFieldProps, SelectOption } from './index';
 
 interface FormSelectProps extends BaseFormFieldProps {
-  label?: string;
   placeholder?: string;
   options: SelectOption[];
-  required?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
 }
@@ -27,9 +26,9 @@ interface FormSelectProps extends BaseFormFieldProps {
 export const FormSelect: React.FC<FormSelectProps> = ({
   name,
   label,
+  required = false,
   placeholder = 'Select an option',
   options,
-  required = false,
   disabled = false,
   style,
   rules,
@@ -50,101 +49,86 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   };
 
   return (
-    <Controller
-      control={control}
-      name={name}
-      rules={validationRules}
-      render={({ field: { onChange, value }, fieldState: { error } }) => (
-        <View style={[styles.container, style]}>
-          {label && (
-            <Text style={[styles.label, { color: colors.text }]}>
-              {label}
-              {required && <Text style={[styles.required, { color: colors.error }]}> *</Text>}
-            </Text>
-          )}
-          
-          <TouchableOpacity
-            style={[
-              styles.selector,
-              {
-                backgroundColor: colors.background,
-                borderColor: error ? colors.error : colors.border,
-              },
-            ]}
-            onPress={() => setModalVisible(true)}
-            disabled={disabled}
-          >
-            <Text
+    <View style={[styles.container, style]}>
+      {label && <Label text={label} required={required} />}
+      <Controller
+        control={control}
+        name={name}
+        rules={validationRules}
+        render={({ field: { onChange, value }, fieldState: { error } }) => (
+          <View>
+            <TouchableOpacity
               style={[
-                styles.selectorText,
+                styles.selector,
                 {
-                  color: value ? colors.text : colors.placeholder,
+                  backgroundColor: colors.background,
+                  borderColor: error ? colors.error : colors.border,
                 },
               ]}
+              onPress={() => setModalVisible(true)}
+              disabled={disabled}
             >
-              {getSelectedLabel(value)}
-            </Text>
-            <FontAwesome
-              name="chevron-down"
-              size={16}
-              color={colors.placeholder}
-            />
-          </TouchableOpacity>
-
-          {error && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {error.message}
-            </Text>
-          )}
-
-          <Modal
-            visible={modalVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setModalVisible(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setModalVisible(false)}
-            >
-              <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                <FlatList
-                  data={options}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[styles.option, { borderBottomColor: colors.border }]}
-                      onPress={() => {
-                        onChange(item.value);
-                        setModalVisible(false);
-                      }}
-                    >
-                      <Text style={[styles.optionText, { color: colors.text }]}>
-                        {item.label}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  keyExtractor={(item) => item.value}
-                />
-              </View>
+              <Text
+                style={[
+                  styles.selectorText,
+                  {
+                    color: value ? colors.text : colors.placeholder,
+                  },
+                ]}
+              >
+                {getSelectedLabel(value)}
+              </Text>
+              <FontAwesome
+                name="chevron-down"
+                size={16}
+                color={colors.placeholder}
+              />
             </TouchableOpacity>
-          </Modal>
-        </View>
-      )}
-    />
+
+            <ErrorMessage message={error?.message} />
+
+            <Modal
+              visible={modalVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setModalVisible(false)}
+            >
+              <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => setModalVisible(false)}
+              >
+                <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                  <FlatList
+                    data={options}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.option, { borderBottomColor: colors.border }]}
+                        onPress={() => {
+                          onChange(item.value);
+                          setModalVisible(false);
+                        }}
+                      >
+                        <Text style={[styles.optionText, { color: colors.text }]}>
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    keyExtractor={(item) => item.value}
+                  />
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          </View>
+        )}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.m,
-  },
-  label: {
-    ...typography.h4,
-    marginBottom: spacing.xs,
-  },
-  required: {
-    ...typography.h4,
   },
   selector: {
     borderWidth: 1,
@@ -159,10 +143,6 @@ const styles = StyleSheet.create({
   selectorText: {
     ...typography.body,
     flex: 1,
-  },
-  errorText: {
-    ...typography.caption,
-    marginTop: spacing.xs,
   },
   modalOverlay: {
     flex: 1,

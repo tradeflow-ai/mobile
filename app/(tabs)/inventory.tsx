@@ -38,7 +38,9 @@ export default function InventoryScreen() {
     );
   }, [inventoryItems, searchQuery]);
 
-
+  const handleAddItem = () => {
+    navigate('/add-item');
+  };
 
   const handleItemPress = (item: InventoryItem) => {
     navigate(`/edit-item?item=${encodeURIComponent(JSON.stringify(item))}`);
@@ -87,6 +89,8 @@ export default function InventoryScreen() {
     </View>
   );
 
+
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
@@ -94,7 +98,7 @@ export default function InventoryScreen() {
           title="Inventory"
           rightAction={{
             icon: 'plus',
-            onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
+            onPress: handleAddItem,
           }}
         />
 

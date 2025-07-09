@@ -6,8 +6,8 @@ import Colors from '@/constants/Colors';
 import { TextInput } from '@/components/ui';
 
 interface QuantitySelectorProps {
-  value: string;
-  onChangeText: (text: string) => void;
+  value: number;
+  onChangeText: (value: number) => void;
   onIncrease: () => void;
   onDecrease: () => void;
   placeholder?: string;
@@ -35,29 +35,31 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
     if (allowDecimals) {
       // Allow decimal input
       if (text === '' || /^\d*\.?\d*$/.test(text)) {
-        onChangeText(text);
+        const numValue = parseFloat(text) || 0;
+        onChangeText(numValue);
       }
     } else {
       // Only allow whole numbers
       if (text === '' || /^\d+$/.test(text)) {
-        onChangeText(text);
+        const numValue = parseInt(text) || 0;
+        onChangeText(numValue);
       }
     }
   };
 
   const handleIncrease = () => {
-    const currentValue = parseFloat(value) || 0;
+    const currentValue = value || 0;
     const newValue = currentValue + step;
-    const formattedValue = allowDecimals ? newValue.toString() : Math.round(newValue).toString();
-    onChangeText(formattedValue);
+    const finalValue = allowDecimals ? newValue : Math.round(newValue);
+    onChangeText(finalValue);
     onIncrease();
   };
 
   const handleDecrease = () => {
-    const currentValue = parseFloat(value) || 0;
+    const currentValue = value || 0;
     const newValue = Math.max(0, currentValue - step);
-    const formattedValue = allowDecimals ? newValue.toString() : Math.round(newValue).toString();
-    onChangeText(formattedValue);
+    const finalValue = allowDecimals ? newValue : Math.round(newValue);
+    onChangeText(finalValue);
     onDecrease();
   };
 
@@ -82,7 +84,7 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
       </TouchableOpacity>
       
       <TextInput
-        value={value}
+        value={value.toString()}
         onChangeText={handleTextChange}
         placeholder={placeholder}
         keyboardType={allowDecimals ? "decimal-pad" : "number-pad"}

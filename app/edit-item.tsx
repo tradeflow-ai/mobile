@@ -8,16 +8,24 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useAtom } from 'jotai';
+import { useForm } from 'react-hook-form';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { TextInput, Button } from '@/components/ui';
-import { QuantitySelector } from '@/components/QuantitySelector';
-import { updateInventoryItemAtom, deleteInventoryItemAtom, InventoryItem } from '@/store/atoms';
+import { typography, spacing } from '@/constants/Theme';
+import { FormProvider, FormTextInput, FormQuantitySelector, FormActions } from '@/components/forms';
+import { useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, UpdateInventoryData } from '@/hooks/useInventory';
+
+// Form data interface matching add-item.tsx
+interface EditInventoryFormData {
+  name: string;
+  quantity: number;
+}
 
 export default function EditItemScreen() {
   const colorScheme = useColorScheme();
@@ -25,37 +33,53 @@ export default function EditItemScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  // Global state actions
-  const [, updateItem] = useAtom(updateInventoryItemAtom);
-  const [, deleteItem] = useAtom(deleteInventoryItemAtom);
+  const updateInventoryMutation = useUpdateInventoryItem();
+  const deleteInventoryMutation = useDeleteInventoryItem();
 
-  // Parse the item data from params
+  // State for the current item and photo
   const [item, setItem] = useState<InventoryItem | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    quantity: '',
-    imageUri: undefined as string | undefined,
-  });
-  const [loading, setLoading] = useState(false);
+  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
 
+
+
+  // Initialize form with default values
+  const methods = useForm<EditInventoryFormData>({
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      quantity: 0,
+    },
+  });
+
+  const { handleSubmit, reset, formState: { isSubmitting } } = methods;
+
+  // Parse item data from params and populate form
   useEffect(() => {
     if (params.item) {
       try {
         const parsedItem = JSON.parse(params.item as string) as InventoryItem;
         setItem(parsedItem);
-        setFormData({
-          name: parsedItem.name,
-          quantity: parsedItem.quantity.toString(),
-          imageUri: parsedItem.imageUri,
-        });
+        
+        // Populate form with item data
+        const formData: EditInventoryFormData = {
+          name: parsedItem.name || '',
+          quantity: parsedItem.quantity || 0,
+        };
+        
+        reset(formData);
+        
+        // Set image if exists (this would need to be added to the InventoryItem interface)
+        // setImageUri(parsedItem.imageUri);
+        
       } catch (error) {
         console.error('Error parsing item data:', error);
         Alert.alert('Error', 'Invalid item data');
         router.back();
       }
     }
-  }, [params.item, router]);
+  }, [params.item, router, reset]);
 
+  // Photo handling functions
   const handlePhotoPress = () => {
     Alert.alert(
       'Select Photo',
@@ -84,7 +108,7 @@ export default function EditItemScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setFormData({ ...formData, imageUri: result.assets[0].uri });
+        setImageUri(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error opening camera:', error);
@@ -108,7 +132,7 @@ export default function EditItemScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setFormData({ ...formData, imageUri: result.assets[0].uri });
+        setImageUri(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error opening gallery:', error);
@@ -117,64 +141,49 @@ export default function EditItemScreen() {
   };
 
   const removePhoto = () => {
-    setFormData({ ...formData, imageUri: undefined });
+    setImageUri(undefined);
   };
 
-  const handleQuantityIncrease = () => {
-    const currentQuantity = parseInt(formData.quantity) || 0;
-    setFormData({ ...formData, quantity: (currentQuantity + 1).toString() });
-  };
-
-  const handleQuantityDecrease = () => {
-    const currentQuantity = parseInt(formData.quantity) || 0;
-    if (currentQuantity > 0) {
-      setFormData({ ...formData, quantity: (currentQuantity - 1).toString() });
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
-      return;
-    }
-
-    if (!formData.quantity.trim() || isNaN(Number(formData.quantity))) {
-      Alert.alert('Error', 'Please enter a valid quantity');
-      return;
-    }
-
+  // Form submission
+  const onSubmit = async (data: EditInventoryFormData) => {
     if (!item) {
       Alert.alert('Error', 'Item not found');
       return;
     }
 
-    setLoading(true);
-    
     try {
-      // Update the item in global state
-      updateItem({
-        id: item.id,
-        updates: {
-          name: formData.name,
-          quantity: Number(formData.quantity),
-          imageUri: formData.imageUri,
-        },
+      // Transform form data to match UpdateInventoryData interface
+      const updateData: UpdateInventoryData = {
+        name: data.name.trim(),
+        quantity: data.quantity,
+      };
+
+      await updateInventoryMutation.mutateAsync({
+        itemId: item.id,
+        updates: updateData,
       });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      Alert.alert('Success', 'Item updated successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+
+      Alert.alert(
+        'Success',
+        'Item updated successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
     } catch (error) {
-      console.error('Error saving item:', error);
-      Alert.alert('Error', 'Failed to save item');
-    } finally {
-      setLoading(false);
+      console.error('Error updating item:', error);
+      Alert.alert(
+        'Error',
+        'Failed to update item. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
+  // Delete item
   const handleDelete = () => {
     if (!item) {
       Alert.alert('Error', 'Item not found');
@@ -183,29 +192,33 @@ export default function EditItemScreen() {
 
     Alert.alert(
       'Delete Item',
-      `Are you sure you want to delete "${formData.name}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
             try {
-              // Delete the item from global state
-              deleteItem(item.id);
+              await deleteInventoryMutation.mutateAsync(item.id);
               
-              // Simulate API call
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
-              Alert.alert('Success', 'Item deleted successfully', [
-                { text: 'OK', onPress: () => router.back() }
-              ]);
+              Alert.alert(
+                'Success',
+                'Item deleted successfully!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.back(),
+                  },
+                ]
+              );
             } catch (error) {
               console.error('Error deleting item:', error);
-              Alert.alert('Error', 'Failed to delete item');
-            } finally {
-              setLoading(false);
+              Alert.alert(
+                'Error',
+                'Failed to delete item. Please try again.',
+                [{ text: 'OK' }]
+              );
             }
           },
         },
@@ -213,6 +226,11 @@ export default function EditItemScreen() {
     );
   };
 
+  const handleCancel = () => {
+    router.back();
+  };
+
+  // Loading state
   if (!item) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -225,82 +243,89 @@ export default function EditItemScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Photo Section */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>Photo</Text>
-            <View style={styles.photoSection}>
-              {formData.imageUri ? (
-                <View style={styles.photoContainer}>
-                  <Image source={{ uri: formData.imageUri }} style={styles.photo} />
-                  <TouchableOpacity
-                    style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
-                    onPress={removePhoto}
-                  >
-                    <FontAwesome name="times" size={12} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.addPhotoButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={handlePhotoPress}
-                >
-                  <FontAwesome name="camera" size={24} color={colors.placeholder} />
-                  <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
-                    Add Photo
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <TextInput
-            label="Item Name"
-            value={formData.name}
-            onChangeText={(text) => setFormData({ ...formData, name: text })}
-            placeholder="Enter item name"
-            required
-          />
-
-          {/* Quantity with Plus/Minus Buttons */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.fieldLabel, { color: colors.text }]}>
-              Quantity
-              <Text style={[styles.required, { color: colors.error }]}> *</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>Edit Item</Text>
+            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
+              Update inventory item details
             </Text>
-            <QuantitySelector
-              value={formData.quantity}
-              onChangeText={(text) => setFormData({ ...formData, quantity: text })}
-              onIncrease={handleQuantityIncrease}
-              onDecrease={handleQuantityDecrease}
-              placeholder="0"
-              disabled={loading}
-            />
           </View>
 
-        </View>
+          <FormProvider methods={methods}>
+            <View style={styles.form}>
+              {/* Photo Section */}
+              <View style={styles.photoSection}>
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Photo</Text>
+                <View style={styles.photoContainer}>
+                  {imageUri ? (
+                    <View style={styles.photoWrapper}>
+                      <Image source={{ uri: imageUri }} style={styles.photo} />
+                      <TouchableOpacity
+                        style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
+                        onPress={removePhoto}
+                      >
+                        <FontAwesome name="times" size={12} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.addPhotoButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={handlePhotoPress}
+                    >
+                      <FontAwesome name="camera" size={24} color={colors.placeholder} />
+                      <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                        Add Photo
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            title="Save Changes"
-            onPress={handleSave}
-            loading={loading}
-            style={styles.saveButton}
-          />
-          
-          <Button
-            title="Delete Item"
-            onPress={handleDelete}
-            variant="outline"
-            disabled={loading}
-            style={{ ...styles.deleteButton, borderColor: colors.error }}
-            textStyle={{ color: colors.error }}
-          />
-        </View>
-      </ScrollView>
+              <FormTextInput
+                name="name"
+                label="Item Name"
+                placeholder="Enter item name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                required
+              />
+
+              <FormQuantitySelector
+                name="quantity"
+                label="Quantity"
+                placeholder="0"
+                required
+              />
+            </View>
+
+            <FormActions
+              onSubmit={handleSubmit(onSubmit)}
+              onCancel={handleCancel}
+              isSubmitting={isSubmitting}
+              submitTitle="Save Changes"
+              cancelTitle="Cancel"
+            />
+          </FormProvider>
+
+          {/* Delete Button - Separate from FormActions for better UX */}
+          <View style={styles.deleteSection}>
+            <TouchableOpacity
+              style={[styles.deleteButton, { borderColor: colors.error }]}
+              onPress={handleDelete}
+              disabled={isSubmitting}
+            >
+              <FontAwesome name="trash" size={16} color={colors.error} />
+              <Text style={[styles.deleteButtonText, { color: colors.error }]}>
+                Delete Item
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -311,6 +336,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
     padding: 16,
   },
   loadingContainer: {
@@ -319,37 +347,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
+    ...typography.body,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+    paddingTop: 16,
+  },
+  title: {
+    ...typography.h1,
+    marginBottom: 8,
+  },
+  subtitle: {
+    ...typography.body,
+    textAlign: 'center',
   },
   form: {
     marginBottom: 32,
   },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  required: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  actions: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  saveButton: {
-    marginBottom: 8,
-  },
-  deleteButton: {
-    marginBottom: 8,
-  },
   photoSection: {
-    alignItems: 'center',
+    marginBottom: spacing.m,
+  },
+  sectionLabel: {
+    ...typography.h4,
+    marginBottom: spacing.s,
   },
   photoContainer: {
+    alignItems: 'center',
+  },
+  photoWrapper: {
     position: 'relative',
     alignItems: 'center',
   },
@@ -379,9 +405,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addPhotoText: {
-    fontSize: 12,
+    ...typography.caption,
     marginTop: 8,
     fontWeight: '500',
   },
-
+  deleteSection: {
+    marginTop: spacing.l,
+    marginBottom: spacing.xl,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.m,
+    paddingHorizontal: spacing.l,
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  deleteButtonText: {
+    ...typography.body,
+    fontWeight: '600',
+    marginLeft: spacing.s,
+  },
 }); 

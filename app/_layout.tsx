@@ -132,6 +132,30 @@ function RootLayoutNav() {
         })}
       />
       <Stack.Screen 
+        name="add-item"
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          title: 'Add New Item',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
         name="modal" 
         options={{ 
           presentation: 'modal',
