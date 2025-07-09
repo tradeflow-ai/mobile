@@ -24,7 +24,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   };
 
   return (
-    <View style={[{ marginBottom: spacing.m }]}>
+    <View>
       {label && <Label text={label} required={required} />}
       <Controller
         control={control}

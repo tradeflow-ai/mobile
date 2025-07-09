@@ -208,6 +208,77 @@ function RootLayoutNav() {
           ),
         })}
       />
+      <Stack.Screen 
+        name="job-details"
+        options={({ navigation }) => ({
+          title: 'Job Details',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="create-job"
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          title: 'Create Job',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="edit-job"
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          title: 'Edit Job',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
 
       <Stack.Screen 
         name="login" 

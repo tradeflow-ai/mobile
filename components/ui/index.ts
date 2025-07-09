@@ -10,5 +10,6 @@ export { StepIndicator } from './StepIndicator';
 export { TimeInput } from './TimeInput';
 export { Label } from './Label';
 export { ErrorMessage } from './ErrorMessage';
+export { EmptyState } from './EmptyState';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 

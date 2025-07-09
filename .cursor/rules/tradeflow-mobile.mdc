@@ -117,6 +117,7 @@ export default function ScreenName() {
   - `ExpoLink` - Navigation link component
   - `QuantitySelector` - Quantity input with plus/minus buttons for numeric values, uses number values (not strings), supports decimal/integer mode
   - `QuickActionButton` - Reusable quick action button with icon and title for home screen actions
+  - `EmptyState` - Reusable empty state component with customizable icon, title, description, and optional create button
   - **Form Components** - React Hook Form integrated components in `@/components/forms/`:
     - `FormProvider` - Context wrapper for React Hook Form
     - `FormTextInput` - Text input with built-in validation
@@ -208,6 +209,7 @@ const styles = StyleSheet.create({
   - `<Avatar>` - Use for user profile images
   - `<Header>` - Use for screen headers with actions
   - `<QuantitySelector>` - Use for numeric quantity input with plus/minus buttons, uses number values (not strings), supports decimal/integer mode
+  - `<EmptyState>` - Use for empty state displays with optional create button functionality
 
 ### 9.1. Form Components Usage
 - **ALWAYS** use React Hook Form integrated components from `@/components/forms` for form development
@@ -604,6 +606,7 @@ Before creating new components, check these existing ones:
 - **TextInput** - Form inputs with labels, validation, error states, focus handling, and theme typography/spacing
 - **Label** - Reusable label component with consistent typography and required field asterisk styling
 - **ErrorMessage** - Reusable error message component with consistent typography and red error color styling
+- **EmptyState** - Reusable empty state component with customizable FontAwesome icon, title, description, and optional callback-based create button (button shows when createButtonText is provided)
 
 ### Form Components (`@/components/forms/`) - React Hook Form Integrated
 - **FormProvider** - Context wrapper for React Hook Form, provides form context to child components
