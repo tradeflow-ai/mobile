@@ -111,13 +111,13 @@ export default function HomeScreen() {
                 Alert.alert('Error', `Agent workflow failed: ${result.error}`);
               }
             } catch (error) {
-              Alert.alert('Error', `Agent workflow failed: ${error.message}`);
+              Alert.alert('Error', `Agent workflow failed: ${error instanceof Error ? error.message : String(error)}`);
             }
           }
         }
       ]);
     } catch (error) {
-      Alert.alert('Error', `Failed to start planning: ${error.message}`);
+      Alert.alert('Error', `Failed to start planning: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
   // ========================================
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.l,
   },
   greetingTitle: {
-    ...typography.h1,
+    ...typography.h2,
     marginBottom: spacing.xs,
   },
   greetingSubtitle: {
