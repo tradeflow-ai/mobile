@@ -4,6 +4,8 @@
  * This Express server runs the LangGraph AI agent workflow that was
  * incompatible with React Native. It exposes HTTP endpoints for the
  * mobile app to trigger agent workflows.
+ * 
+ * NOTE: VROOM/OSRM routing engine will be implemented separately in Task 7 as a containerized service
  */
 
 import express from 'express';
@@ -80,4 +82,4 @@ app.listen(PORT, () => {
   console.log(`🎯 Plan Day API: http://localhost:${PORT}/api/plan-day`);
 });
 
-export default app; 
+export default app;

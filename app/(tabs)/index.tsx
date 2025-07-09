@@ -77,12 +77,12 @@ export default function HomeScreen() {
 
   // ========================================
   // JEREMIAH'S TEMPORARY CODE - START
-  // This function calls the backend LangGraph service to avoid React Native compatibility issues
+  // This function runs the dispatch agent CLIENT-SIDE per tech stack requirements
   // TODO: Josh to redesign this as part of the proper "Plan Your Day" UI flow
   // ========================================
   const handlePlanYourDay = async () => {
     try {
-      // Import Jeremiah's agent service for backend communication
+      // Import Jeremiah's agent service for client-side execution
       const { AgentService } = await import('../../services/agentService');
       
       Alert.alert('Planning Your Day', 'AI Agent workflow starting...', [
@@ -91,14 +91,14 @@ export default function HomeScreen() {
           text: 'Start', 
           onPress: async () => {
             try {
-              // Check if backend is healthy first
+              // Check if Supabase is available
               const isHealthy = await AgentService.checkHealth();
               if (!isHealthy) {
-                Alert.alert('Error', 'Backend service is not available. Please start Docker containers:\n\ndocker-compose up langgraph-backend');
+                Alert.alert('Error', 'Supabase service is not available. Please check your connection.');
                 return;
               }
               
-              // Call backend API instead of running LangGraph directly in React Native
+              // Run dispatch agent client-side and save to Supabase
               const result = await AgentService.planDay(
                 'test-user-123',
                 ['job-1', 'job-2', 'job-3'],
@@ -124,8 +124,8 @@ export default function HomeScreen() {
   // JEREMIAH'S TEMPORARY CODE - END
   // ========================================
 
-
   const quickActions = [
+    // JEREMIAH'S TEMPORARY CODE: Plan Your Day button for testing backend integration
     {
       id: 'plan-day',
       title: 'Plan Your Day',
