@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { FormProvider, FormCheckbox, FormTimeInput } from '@/components/forms';
 import { workScheduleSchema, WorkScheduleFormData } from '@/components/forms/validationSchemas';
 import { typography, spacing, touchTargets } from '@/constants/Theme';
+import { useOnboarding } from './_layout';
 
 type WorkDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -35,40 +36,85 @@ export default function WorkScheduleScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { saveStepData, navigateToNextStep, existingPreferences, isLoadingPreferences } = useOnboarding();
 
-  const methods = useForm({
-    resolver: zodResolver(workScheduleSchema),
-    defaultValues: {
-      workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+  // Transform preferences to form data
+  const getDefaultValues = () => {
+    if (existingPreferences) {
+      
+      // Convert 24-hour format to 12-hour format for the form
+      const formatTime = (time24: string) => {
+        if (!time24) return '8:00 AM';
+        const [hours, minutes] = time24.split(':');
+        const hour = parseInt(hours);
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        return `${displayHour}:${minutes} ${period}`;
+      };
+
+      // Convert work days to lowercase format expected by form
+      const workDays = existingPreferences.work_days?.map(day => day.toLowerCase()) as WorkDay[] || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+
+      const formData = {
+        workDays,
+        startTime: formatTime(existingPreferences.work_start_time),
+        endTime: formatTime(existingPreferences.work_end_time),
+        hasBreak: !!(existingPreferences.lunch_break_start && existingPreferences.lunch_break_start !== ''),
+        breakStartTime: existingPreferences.lunch_break_start ? formatTime(existingPreferences.lunch_break_start) : '12:00 PM',
+        breakEndTime: existingPreferences.lunch_break_end ? formatTime(existingPreferences.lunch_break_end) : '1:00 PM',
+      };
+
+      return formData;
+    }
+
+    // Default values if no preferences exist
+    return {
+      workDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as WorkDay[],
       startTime: '8:00 AM',
       endTime: '5:00 PM',
       hasBreak: true,
       breakStartTime: '12:00 PM',
       breakEndTime: '1:00 PM',
-    },
+    };
+  };
+
+  const methods = useForm({
+    resolver: zodResolver(workScheduleSchema),
+    defaultValues: getDefaultValues(),
     mode: 'onChange',
   });
 
-  const { handleSubmit, watch, setValue, getValues } = methods;
+  const { handleSubmit, watch, setValue, getValues, formState: { errors }, reset } = methods;
+
+  // Reset form when preferences are loaded
+  React.useEffect(() => {
+    if (!isLoadingPreferences && existingPreferences) {
+      reset(getDefaultValues());
+    }
+  }, [existingPreferences, isLoadingPreferences, reset]);
   const watchedHasBreak = watch('hasBreak');
   const watchedWorkDays = watch('workDays');
 
   const onSubmit = (data: any) => {
     try {
-      // TODO: Save step data to parent component state
-      console.log('Work schedule data:', data);
+      // Save step data to parent component state
+      saveStepData('work-schedule', data);
       
-      // Navigate to next step
-      router.push('/onboarding/time-buffers' as any);
+      // Navigate to next step using parent navigation
+      navigateToNextStep();
     } catch (error) {
       console.error('Error saving work schedule:', error);
       Alert.alert('Error', 'Failed to save work schedule. Please try again.');
     }
   };
 
+  const onError = (errors: any) => {
+    console.error('Work schedule form validation errors:', errors);
+  };
+
   const handleSkip = () => {
     // Navigate to next step without saving data
-    router.push('/onboarding/time-buffers' as any);
+    navigateToNextStep();
   };
 
   const handleWorkDayToggle = (dayValue: WorkDay) => {
@@ -240,7 +286,7 @@ export default function WorkScheduleScreen() {
             <Button
               title="Next: Time Buffers"
               variant="primary"
-              onPress={handleSubmit(onSubmit)}
+              onPress={handleSubmit(onSubmit, onError)}
               style={styles.nextButton}
             />
           </View>

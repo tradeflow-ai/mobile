@@ -14,44 +14,68 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FormProvider, FormTextInput, FormCheckbox } from '@/components/forms';
+import { FormProvider, FormTextInput, FormCheckbox, FormQuantitySelector } from '@/components/forms';
 import { timeBuffersSchema } from '@/components/forms/validationSchemas';
 import { typography, spacing } from '@/constants/Theme';
+import { useOnboarding } from './_layout';
 
 export default function TimeBuffersScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { saveStepData, navigateToNextStep, existingPreferences } = useOnboarding();
 
-  const methods = useForm({
-    resolver: zodResolver(timeBuffersSchema),
-    defaultValues: {
+  // Transform preferences to form data
+  const getDefaultValues = () => {
+    if (existingPreferences) {
+      return {
+        travelBufferMinutes: existingPreferences.travel_buffer_percentage,
+        jobBufferMinutes: existingPreferences.job_duration_buffer_minutes,
+        enableSmartBuffers: existingPreferences.emergency_travel_buffer_percentage > 0,
+      };
+    }
+
+    // Default values if no preferences exist
+    return {
       travelBufferMinutes: 15,
       jobBufferMinutes: 15,
       enableSmartBuffers: true,
-    },
+    };
+  };
+
+  const methods = useForm({
+    resolver: zodResolver(timeBuffersSchema),
+    defaultValues: getDefaultValues(),
     mode: 'onChange',
   });
 
-  const { handleSubmit, watch } = methods;
+  const { handleSubmit, watch, getValues, formState: { errors } } = methods;
   const watchedSmartBuffers = watch('enableSmartBuffers');
 
   const onSubmit = (data: any) => {
     try {
-      // TODO: Save step data to parent component state
-      console.log('Time buffers data:', data);
+      console.log('Time Buffers - onSubmit called with data:', data);
       
-      // Navigate to next step
-      router.push('/onboarding/suppliers' as any);
+      // Save step data to parent component state
+      saveStepData('time-buffers', data);
+      console.log('Time Buffers - saveStepData called');
+      
+      // Navigate to next step using parent navigation
+      navigateToNextStep();
     } catch (error) {
       console.error('Error saving time buffers:', error);
       Alert.alert('Error', 'Failed to save time buffers. Please try again.');
     }
   };
 
+  const onError = (errors: any) => {
+    console.log('Time Buffers - Form validation errors:', errors);
+    console.log('Time Buffers - Current form values:', getValues());
+  };
+
   const handleSkip = () => {
     // Navigate to next step without saving data
-    router.push('/onboarding/suppliers' as any);
+    navigateToNextStep();
   };
 
   return (
@@ -106,16 +130,9 @@ export default function TimeBuffersScreen() {
               Extra time added to travel between job sites to account for traffic and route changes
             </Text>
             
-            <FormTextInput
+            <FormQuantitySelector
               name="travelBufferMinutes"
               label="Travel buffer (minutes)"
-              keyboardType="numeric"
-              placeholder="15"
-              rules={{
-                required: 'Travel buffer is required',
-                min: { value: 0, message: 'Travel buffer must be 0 or greater' },
-                max: { value: 120, message: 'Travel buffer must be 120 minutes or less' },
-              }}
             />
 
             <View style={[styles.bufferExample, { backgroundColor: colors.card }]}>
@@ -134,16 +151,9 @@ export default function TimeBuffersScreen() {
               Extra time added to each job to handle unexpected complications or prep time
             </Text>
             
-            <FormTextInput
+            <FormQuantitySelector
               name="jobBufferMinutes"
               label="Job buffer (minutes)"
-              keyboardType="numeric"
-              placeholder="15"
-              rules={{
-                required: 'Job buffer is required',
-                min: { value: 0, message: 'Job buffer must be 0 or greater' },
-                max: { value: 120, message: 'Job buffer must be 120 minutes or less' },
-              }}
             />
 
             <View style={[styles.bufferExample, { backgroundColor: colors.card }]}>
@@ -191,7 +201,7 @@ export default function TimeBuffersScreen() {
             <Button
               title="Next: Suppliers"
               variant="primary"
-              onPress={handleSubmit(onSubmit)}
+              onPress={handleSubmit(onSubmit, onError)}
               style={styles.nextButton}
             />
           </View>

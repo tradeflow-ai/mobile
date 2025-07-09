@@ -6,7 +6,7 @@
  * Supports both 12-hour and 24-hour formats with intuitive picker interface.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,8 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { FontAwesome } from '@expo/vector-icons';
@@ -41,6 +43,139 @@ interface TimeComponents {
   minute: number;
   period?: 'AM' | 'PM';
 }
+
+interface IOSWheelPickerProps {
+  items: number[] | string[];
+  selectedValue: number | string;
+  onValueChange: (value: number | string) => void;
+  itemHeight?: number;
+  visibleItems?: number;
+  colors: any;
+}
+
+const IOSWheelPicker: React.FC<IOSWheelPickerProps> = ({
+  items,
+  selectedValue,
+  onValueChange,
+  itemHeight = 44,
+  visibleItems = 5,
+  colors,
+}) => {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [currentCenterIndex, setCurrentCenterIndex] = useState(0);
+  const containerHeight = itemHeight * visibleItems;
+  const paddingItems = Math.floor(visibleItems / 2);
+
+  // Create padded items array to center the selection
+  const paddedItems = [
+    ...Array(paddingItems).fill(''),
+    ...items.map(item => item),
+    ...Array(paddingItems).fill(''),
+  ];
+
+  // Find the index of the selected value in the padded array
+  const selectedIndex = paddedItems.findIndex(item => item === selectedValue);
+
+  useEffect(() => {
+    // Center the initially selected item, and don't fight user scrolling
+    if (scrollViewRef.current && selectedIndex >= 0 && !isScrolling) {
+      const y = (selectedIndex - paddingItems) * itemHeight;
+      scrollViewRef.current.scrollTo({ y, animated: false });
+      setCurrentCenterIndex(selectedIndex);
+    }
+  }, [selectedValue, items]);
+
+  const handleScroll = (event: any) => {
+    if (!isScrolling) return;
+    // Update visual highlight to match scroll position
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const topItemIndex = Math.round(scrollY / itemHeight);
+    const centerItemIndex = topItemIndex + paddingItems;
+    setCurrentCenterIndex(centerItemIndex);
+  };
+
+  const handleScrollBeginDrag = () => {
+    setIsScrolling(true);
+  };
+
+  const onScrollEnd = (event: any) => {
+    if (!isScrolling) return;
+
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const topItemIndex = Math.round(scrollY / itemHeight);
+    const centerItemIndex = topItemIndex + paddingItems;
+
+    // Check if item exists to prevent crash on out of bounds
+    if (centerItemIndex < 0 || centerItemIndex >= paddedItems.length) {
+      setIsScrolling(false);
+      return;
+    }
+    
+    const selectedItem = paddedItems[centerItemIndex];
+    
+    setCurrentCenterIndex(centerItemIndex);
+
+    if (selectedItem !== '' && selectedItem !== selectedValue) {
+      onValueChange(selectedItem);
+    }
+    setIsScrolling(false);
+  };
+
+  return (
+    <View style={[styles.iosWheelContainer, { height: containerHeight }]}>
+      {/* Selection indicator overlay */}
+      <View
+        style={[
+          styles.selectionIndicator,
+          {
+            top: paddingItems * itemHeight,
+            height: itemHeight,
+            backgroundColor: colors.primary + '15',
+            borderColor: colors.primary + '30',
+          },
+        ]}
+      />
+      
+              <ScrollView
+          ref={scrollViewRef}
+          style={styles.iosWheelScrollView}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={itemHeight}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          onScroll={handleScroll}
+          onScrollBeginDrag={handleScrollBeginDrag}
+          onScrollEndDrag={onScrollEnd}
+          onMomentumScrollEnd={onScrollEnd}
+          scrollEventThrottle={16}
+        >
+        {paddedItems.map((item, index) => (
+          <TouchableOpacity
+            key={`${item}-${index}`}
+            style={[styles.iosWheelItem, { height: itemHeight }]}
+            onPress={() => {
+              if (item !== '') {
+                onValueChange(item);
+                scrollViewRef.current?.scrollTo({ y: index * itemHeight, animated: true });
+              }
+            }}
+          >
+            <Text
+              style={[
+                styles.iosWheelItemText,
+                { color: index === currentCenterIndex ? colors.primary : colors.text },
+                { opacity: item === '' ? 0 : 1 },
+              ]}
+            >
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
 
 export const TimeInput: React.FC<TimeInputProps> = ({
   value,
@@ -165,93 +300,118 @@ export const TimeInput: React.FC<TimeInputProps> = ({
             {/* Hour Picker */}
             <View style={styles.pickerSection}>
               <Text style={[styles.pickerLabel, { color: colors.text }]}>Hour</Text>
-              <Picker
-                key={`hour-${timeComponents.hour}`}
-                selectedValue={timeComponents.hour}
-                style={styles.picker}
-                itemStyle={styles.pickerItem}
-                onValueChange={(itemValue) =>
-                  handleTimeChange({ ...timeComponents, hour: itemValue })
-                }
-              >
-                {generateHourOptions().map((hour) => (
-                  <Picker.Item
-                    key={hour}
-                    label={format24Hour ? hour.toString().padStart(2, '0') : hour.toString()}
-                    value={hour}
-                  />
-                ))}
-              </Picker>
+              {Platform.OS === 'ios' ? (
+                <IOSWheelPicker
+                  items={generateHourOptions()}
+                  selectedValue={timeComponents.hour}
+                  onValueChange={(value) => handleTimeChange({ ...timeComponents, hour: value as number })}
+                  colors={colors}
+                />
+              ) : (
+                <Picker
+                  key={`hour-${timeComponents.hour}`}
+                  selectedValue={timeComponents.hour}
+                  style={styles.picker}
+                  itemStyle={[styles.pickerItem, { color: colors.text }]}
+                  onValueChange={(itemValue) =>
+                    handleTimeChange({ ...timeComponents, hour: itemValue })
+                  }
+                >
+                  {generateHourOptions().map((hour) => (
+                    <Picker.Item
+                      key={hour}
+                      label={format24Hour ? hour.toString().padStart(2, '0') : hour.toString()}
+                      value={hour}
+                    />
+                  ))}
+                </Picker>
+              )}
             </View>
 
             {/* Minute Picker */}
             <View style={styles.pickerSection}>
               <Text style={[styles.pickerLabel, { color: colors.text }]}>Minute</Text>
-              <Picker
-                key={`minute-${timeComponents.minute}`}
-                selectedValue={timeComponents.minute}
-                style={styles.picker}
-                itemStyle={styles.pickerItem}
-                onValueChange={(itemValue) =>
-                  handleTimeChange({ ...timeComponents, minute: itemValue })
-                }
-              >
-                {generateMinuteOptions().map((minute) => (
-                  <Picker.Item
-                    key={minute}
-                    label={minute.toString().padStart(2, '0')}
-                    value={minute}
-                  />
-                ))}
-              </Picker>
+              {Platform.OS === 'ios' ? (
+                <IOSWheelPicker
+                  items={generateMinuteOptions()}
+                  selectedValue={timeComponents.minute}
+                  onValueChange={(value) => handleTimeChange({ ...timeComponents, minute: value as number })}
+                  colors={colors}
+                />
+              ) : (
+                <Picker
+                  key={`minute-${timeComponents.minute}`}
+                  selectedValue={timeComponents.minute}
+                  style={styles.picker}
+                  itemStyle={[styles.pickerItem, { color: colors.text }]}
+                  onValueChange={(itemValue) =>
+                    handleTimeChange({ ...timeComponents, minute: itemValue })
+                  }
+                >
+                  {generateMinuteOptions().map((minute) => (
+                    <Picker.Item
+                      key={minute}
+                      label={minute.toString().padStart(2, '0')}
+                      value={minute}
+                    />
+                  ))}
+                </Picker>
+              )}
             </View>
 
             {/* AM/PM Picker (only for 12-hour format) */}
             {!format24Hour && (
-                             <View style={styles.pickerSection}>
-                 <Text style={[styles.pickerLabel, { color: colors.text }]}>Period</Text>
-                 
-                 {Platform.OS === 'android' ? (
-                   <View style={styles.androidPickerContainer}>
-                     <TouchableOpacity
-                       style={[styles.androidPickerButton, { borderColor: colors.border }]}
-                       onPress={() => {
-                         // This will trigger the picker dialog
-                       }}
-                     >
-                       <Text style={[styles.androidPickerText, { color: colors.text }]}>
-                         {timeComponents.period || 'AM'}
-                       </Text>
-                     </TouchableOpacity>
-                     <Picker
-                       key={`period-${timeComponents.period}-${Date.now()}`}
-                       selectedValue={String(timeComponents.period || 'AM')}
-                       style={styles.hiddenPicker}
-                       mode="dialog"
-                       prompt="Select Period"
-                       onValueChange={(itemValue) => {
-                         handleTimeChange({ ...timeComponents, period: itemValue as 'AM' | 'PM' });
-                       }}
-                     >
-                       <Picker.Item label="AM" value="AM" />
-                       <Picker.Item label="PM" value="PM" />
-                     </Picker>
-                   </View>
-                 ) : (
-                   <Picker
-                     key={`period-${timeComponents.period}`}
-                     selectedValue={String(timeComponents.period || 'AM')}
-                     style={styles.picker}
-                     itemStyle={styles.pickerItem}
-                     onValueChange={(itemValue) => {
-                       handleTimeChange({ ...timeComponents, period: itemValue as 'AM' | 'PM' });
-                     }}
-                   >
-                     <Picker.Item label="AM" value="AM" />
-                     <Picker.Item label="PM" value="PM" />
-                   </Picker>
-                 )}
-               </View>
+              <View style={styles.pickerSection}>
+                <Text style={[styles.pickerLabel, { color: colors.text }]}>Period</Text>
+                
+                {Platform.OS === 'ios' ? (
+                  <IOSWheelPicker
+                    items={['AM', 'PM']}
+                    selectedValue={String(timeComponents.period || 'AM')}
+                    onValueChange={(value) => handleTimeChange({ ...timeComponents, period: value as 'AM' | 'PM' })}
+                    colors={colors}
+                  />
+                ) : Platform.OS === 'android' ? (
+                  <View style={styles.androidPickerContainer}>
+                    <TouchableOpacity
+                      style={[styles.androidPickerButton, { borderColor: colors.border }]}
+                      onPress={() => {
+                        // This will trigger the picker dialog
+                      }}
+                    >
+                      <Text style={[styles.androidPickerText, { color: colors.text }]}>
+                        {timeComponents.period || 'AM'}
+                      </Text>
+                    </TouchableOpacity>
+                    <Picker
+                      key={`period-${timeComponents.period}-${Date.now()}`}
+                      selectedValue={String(timeComponents.period || 'AM')}
+                      style={styles.hiddenPicker}
+                      mode="dialog"
+                      prompt="Select Period"
+                      onValueChange={(itemValue) => {
+                        handleTimeChange({ ...timeComponents, period: itemValue as 'AM' | 'PM' });
+                      }}
+                    >
+                      <Picker.Item label="AM" value="AM" />
+                      <Picker.Item label="PM" value="PM" />
+                    </Picker>
+                  </View>
+                ) : (
+                  <Picker
+                    key={`period-${timeComponents.period}`}
+                    selectedValue={String(timeComponents.period || 'AM')}
+                    style={styles.picker}
+                    itemStyle={[styles.pickerItem, { color: colors.text }]}
+                    onValueChange={(itemValue) => {
+                      handleTimeChange({ ...timeComponents, period: itemValue as 'AM' | 'PM' });
+                    }}
+                  >
+                    <Picker.Item label="AM" value="AM" />
+                    <Picker.Item label="PM" value="PM" />
+                  </Picker>
+                )}
+              </View>
             )}
           </View>
 
@@ -351,7 +511,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: radius.l,
     padding: spacing.l,
-    maxHeight: '70%',
+    maxHeight: Platform.OS === 'ios' ? '80%' : '75%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -369,11 +529,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: spacing.l,
-    paddingVertical: spacing.m,
+    paddingVertical: spacing.s,
   },
   pickerSection: {
     flex: 1,
     alignItems: 'center',
+    minHeight: Platform.OS === 'ios' ? 220 : 180,
   },
   pickerLabel: {
     ...typography.h4,
@@ -382,22 +543,21 @@ const styles = StyleSheet.create({
 
   picker: {
     width: '100%',
-    height: 160,
+    height: 180,
   },
   pickerItem: {
-    fontSize: 18,
+    fontSize: 20,
+    height: 44,
     textAlign: 'center',
-    height: 50,
   },
   pickerItemAndroid: {
-    fontSize: 18,
+    fontSize: 20,
     textAlign: 'center',
-    height: 50,
-    color: '#000000',
+    height: 44,
   },
   androidPickerContainer: {
     position: 'relative',
-    height: 160,
+    height: 180,
     justifyContent: 'center',
   },
   androidPickerButton: {
@@ -428,5 +588,33 @@ const styles = StyleSheet.create({
   doneButtonText: {
     ...typography.h4,
     fontWeight: '600',
+  },
+  // iOS Custom Wheel Picker Styles
+  iosWheelContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: radius.m,
+  },
+  selectionIndicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    zIndex: 1,
+    pointerEvents: 'none',
+  },
+  iosWheelScrollView: {
+    flex: 1,
+  },
+  iosWheelItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.s,
+  },
+  iosWheelItemText: {
+    fontSize: 20,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 }); 

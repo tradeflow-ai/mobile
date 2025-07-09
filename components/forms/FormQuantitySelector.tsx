@@ -61,28 +61,28 @@ export const FormQuantitySelector: React.FC<FormQuantitySelectorProps> = ({
         name={name}
         rules={validationRules}
         render={({ field: { onChange, value }, fieldState: { error } }) => {
-        const handleIncrease = () => {
-          const currentValue = value || 0;
-          const newValue = currentValue + step;
-          const clampedValue = max !== undefined ? Math.min(newValue, max) : newValue;
-          const finalValue = allowDecimals ? clampedValue : Math.round(clampedValue);
-          onChange(finalValue);
-        };
-
-        const handleDecrease = () => {
-          const currentValue = value || 0;
-          const newValue = Math.max(min, currentValue - step);
-          const finalValue = allowDecimals ? newValue : Math.round(newValue);
-          onChange(finalValue);
-        };
+          const handleValueChange = (newValue: number) => {
+            // Apply min/max constraints
+            let constrainedValue = newValue;
+            if (constrainedValue < min) {
+              constrainedValue = min;
+            }
+            if (max !== undefined && constrainedValue > max) {
+              constrainedValue = max;
+            }
+            
+            // Apply decimal/integer constraint
+            const finalValue = allowDecimals ? constrainedValue : Math.round(constrainedValue);
+            onChange(finalValue);
+          };
 
           return (
             <View>
               <QuantitySelector
                 value={value || 0}
-                onChangeText={onChange}
-                onIncrease={handleIncrease}
-                onDecrease={handleDecrease}
+                onChangeText={handleValueChange}
+                onIncrease={() => {}} // Empty handlers since QuantitySelector handles internally
+                onDecrease={() => {}} // Empty handlers since QuantitySelector handles internally
                 placeholder={placeholder}
                 disabled={disabled}
                 allowDecimals={allowDecimals}

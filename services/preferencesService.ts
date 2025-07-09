@@ -26,6 +26,7 @@ export interface UserPreferences {
   peak_hour_buffer_percentage: number;
   weather_buffer_percentage: number;
   job_duration_buffer_minutes: number;
+  enable_smart_buffers: boolean;
 
   // Emergency Response
   emergency_response_time_minutes: number;
@@ -52,6 +53,7 @@ export interface UserPreferences {
   specialty_suppliers: Record<string, string>;
   supplier_preferences: 'price' | 'quality' | 'availability' | 'location';
   supplier_account_numbers: Record<string, string>;
+  supplier_priority_order: any[];
 
   // Inventory Thresholds
   critical_items_min_stock: number;
@@ -97,6 +99,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   peak_hour_buffer_percentage: 10,
   weather_buffer_percentage: 20,
   job_duration_buffer_minutes: 15,
+  enable_smart_buffers: true,
 
   // Emergency Response
   emergency_response_time_minutes: 60,
@@ -127,6 +130,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   },
   supplier_preferences: 'availability',
   supplier_account_numbers: {},
+  supplier_priority_order: [],
 
   // Inventory Thresholds
   critical_items_min_stock: 5,
