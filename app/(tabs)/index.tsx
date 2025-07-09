@@ -72,6 +72,26 @@ export default function HomeScreen() {
   const handleViewFullSchedule = () => {
     Alert.alert('Full Schedule', 'This will show the complete schedule view');
   };
+  const quickActions = [
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      icon: 'list',
+      onPress: () => navigate('/inventory'),
+    },
+    {
+      id: 'map',
+      title: 'Map',
+      icon: 'map',
+      onPress: () => navigate('/map'),
+    },
+    {
+      id: 'add-item',
+      title: 'Add Item',
+      icon: 'plus',
+      onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
+    },
+  ];
 
   const handleAddNewJob = () => {
     Alert.alert('Add New Job', 'This will open the add job modal');
