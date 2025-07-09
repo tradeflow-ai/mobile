@@ -28,6 +28,7 @@ export interface InventoryItem {
   status: 'available' | 'low_stock' | 'out_of_stock';
   location?: string;
   notes?: string;
+  image_url?: string | null; // Base64 encoded image string or null
   created_at: string;
   updated_at: string;
 }
@@ -45,6 +46,7 @@ export interface CreateInventoryData {
   max_stock_level?: number;
   location?: string;
   notes?: string;
+  image_url?: string | null; // Base64 encoded image string or null
 }
 
 export interface UpdateInventoryData {
@@ -60,6 +62,7 @@ export interface UpdateInventoryData {
   max_stock_level?: number;
   location?: string;
   notes?: string;
+  image_url?: string | null; // Base64 encoded image string or null to remove
 }
 
 // ==================== QUERY HOOKS ====================

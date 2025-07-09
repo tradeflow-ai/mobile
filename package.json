@@ -45,7 +45,8 @@
     "react-native-screens": "~4.11.1",
     "react-native-uuid": "^2.0.3",
     "react-native-web": "~0.20.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "expo-image-manipulator": "~13.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -17,9 +17,10 @@ import { useForm } from 'react-hook-form';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { typography, spacing } from '@/constants/Theme';
+import { typography, spacing, radius } from '@/constants/Theme';
 import { FormProvider, FormTextInput, FormQuantitySelector, FormActions } from '@/components/forms';
 import { useUpdateInventoryItem, useDeleteInventoryItem, InventoryItem, UpdateInventoryData } from '@/hooks/useInventory';
+import { compressAndEncodeImage, createDataUri, formatFileSize, getBase64ImageSize } from '@/utils/imageUtils';
 
 // Form data interface matching add-item.tsx
 interface EditInventoryFormData {
@@ -38,7 +39,9 @@ export default function EditItemScreen() {
 
   // State for the current item and photo
   const [item, setItem] = useState<InventoryItem | null>(null);
-  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  const [imageBase64, setImageBase64] = useState<string | undefined>(undefined);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [imageWasRemoved, setImageWasRemoved] = useState(false);
 
 
 
@@ -68,8 +71,10 @@ export default function EditItemScreen() {
         
         reset(formData);
         
-        // Set image if exists (this would need to be added to the InventoryItem interface)
-        // setImageUri(parsedItem.imageUri);
+        // Set image if exists
+        if (parsedItem.image_url && parsedItem.image_url !== null) {
+          setImageBase64(parsedItem.image_url);
+        }
         
       } catch (error) {
         console.error('Error parsing item data:', error);
@@ -101,14 +106,14 @@ export default function EditItemScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        await processImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error opening camera:', error);
@@ -125,14 +130,14 @@ export default function EditItemScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        await processImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error opening gallery:', error);
@@ -140,8 +145,26 @@ export default function EditItemScreen() {
     }
   };
 
+  const processImage = async (imageUri: string) => {
+    setIsProcessingImage(true);
+    try {
+      const compressedImage = await compressAndEncodeImage(imageUri);
+      setImageBase64(compressedImage.base64);
+      setImageWasRemoved(false); // Reset removal flag when new image is added
+      
+      const sizeInBytes = getBase64ImageSize(compressedImage.base64);
+      console.log(`Image processed: ${compressedImage.width}x${compressedImage.height}, ${formatFileSize(sizeInBytes)}`);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert('Error', 'Failed to process image. Please try again.');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
   const removePhoto = () => {
-    setImageUri(undefined);
+    setImageBase64(undefined);
+    setImageWasRemoved(true); // Track that image was explicitly removed
   };
 
   // Form submission
@@ -157,6 +180,16 @@ export default function EditItemScreen() {
         name: data.name.trim(),
         quantity: data.quantity,
       };
+
+      // Handle image updates
+      if (imageWasRemoved) {
+        // Explicitly set to null to remove from database
+        updateData.image_url = null;
+      } else if (imageBase64) {
+        // Add the new base64 image
+        updateData.image_url = imageBase64;
+      }
+      // If neither removed nor new image, don't update the image field
 
       await updateInventoryMutation.mutateAsync({
         itemId: item.id,
@@ -248,22 +281,15 @@ export default function EditItemScreen() {
         style={styles.container}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Edit Item</Text>
-            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
-              Update inventory item details
-            </Text>
-          </View>
-
           <FormProvider methods={methods}>
             <View style={styles.form}>
               {/* Photo Section */}
               <View style={styles.photoSection}>
                 <Text style={[styles.sectionLabel, { color: colors.text }]}>Photo</Text>
                 <View style={styles.photoContainer}>
-                  {imageUri ? (
+                  {imageBase64 ? (
                     <View style={styles.photoWrapper}>
-                      <Image source={{ uri: imageUri }} style={styles.photo} />
+                      <Image source={{ uri: createDataUri(imageBase64) }} style={styles.photo} />
                       <TouchableOpacity
                         style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
                         onPress={removePhoto}
@@ -275,15 +301,32 @@ export default function EditItemScreen() {
                     <TouchableOpacity
                       style={[styles.addPhotoButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                       onPress={handlePhotoPress}
+                      disabled={isProcessingImage}
                     >
-                      <FontAwesome name="camera" size={24} color={colors.placeholder} />
-                      <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
-                        Add Photo
-                      </Text>
+                      {isProcessingImage ? (
+                        <>
+                          <FontAwesome name="spinner" size={24} color={colors.placeholder} />
+                          <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                            Processing...
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesome name="camera" size={24} color={colors.placeholder} />
+                          <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                            Add Photo
+                          </Text>
+                        </>
+                      )}
                     </TouchableOpacity>
+                                      )}
+                  </View>
+                  {imageBase64 && (
+                    <Text style={[styles.imageSizeText, { color: colors.placeholder }]}>
+                      Size: {formatFileSize(getBase64ImageSize(imageBase64))}
+                    </Text>
                   )}
                 </View>
-              </View>
 
               <FormTextInput
                 name="name"
@@ -305,7 +348,7 @@ export default function EditItemScreen() {
             <FormActions
               onSubmit={handleSubmit(onSubmit)}
               onCancel={handleCancel}
-              isSubmitting={isSubmitting}
+              isSubmitting={isSubmitting || isProcessingImage}
               submitTitle="Save Changes"
               cancelTitle="Cancel"
             />
@@ -348,19 +391,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-    paddingTop: 16,
-  },
-  title: {
-    ...typography.h1,
-    marginBottom: 8,
-  },
-  subtitle: {
-    ...typography.body,
-    textAlign: 'center',
   },
   form: {
     marginBottom: 32,
@@ -408,6 +438,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
     marginTop: 8,
     fontWeight: '500',
+  },
+  imageSizeText: {
+    ...typography.caption,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
   },
   deleteSection: {
     marginTop: spacing.l,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,19 @@ import {
   Platform,
   Alert,
   ScrollView,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useForm } from 'react-hook-form';
+import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { typography } from '@/constants/Theme';
-import { FormProvider, FormTextInput, FormQuantitySelector, FormSelect, FormActions } from '@/components/forms';
+import { typography, spacing, radius } from '@/constants/Theme';
+import { FormProvider, FormTextInput, FormQuantitySelector, FormActions } from '@/components/forms';
 import { useCreateInventoryItem, CreateInventoryData } from '@/hooks/useInventory';
+import { compressAndEncodeImage, createDataUri, formatFileSize, getBase64ImageSize } from '@/utils/imageUtils';
 
 // Form data interface matching CreateInventoryData
 interface CreateInventoryFormData {
@@ -29,6 +34,10 @@ export default function AddItemScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   
   const createInventoryMutation = useCreateInventoryItem();
+
+  // State for image handling
+  const [imageBase64, setImageBase64] = useState<string | undefined>(undefined);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // Default form values
   const defaultFormValues: CreateInventoryFormData = {
@@ -44,28 +53,86 @@ export default function AddItemScreen() {
 
   const { handleSubmit, formState: { isSubmitting } } = methods;
 
-  // Category options (you can expand this or make it dynamic)
-  const categoryOptions = [
-    { label: 'Tools', value: 'tools' },
-    { label: 'Materials', value: 'materials' },
-    { label: 'Equipment', value: 'equipment' },
-    { label: 'Parts', value: 'parts' },
-    { label: 'Consumables', value: 'consumables' },
-    { label: 'Safety', value: 'safety' },
-  ];
+  // Photo handling functions
+  const handlePhotoPress = () => {
+    Alert.alert(
+      'Select Photo',
+      'Choose how you want to add a photo',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Camera', onPress: () => openCamera() },
+        { text: 'Gallery', onPress: () => openGallery() },
+      ]
+    );
+  };
 
-  // Unit options
-  const unitOptions = [
-    { label: 'Units', value: 'units' },
-    { label: 'Pieces', value: 'pieces' },
-    { label: 'Boxes', value: 'boxes' },
-    { label: 'Meters', value: 'meters' },
-    { label: 'Feet', value: 'feet' },
-    { label: 'Liters', value: 'liters' },
-    { label: 'Gallons', value: 'gallons' },
-    { label: 'Kilograms', value: 'kilograms' },
-    { label: 'Pounds', value: 'pounds' },
-  ];
+  const openCamera = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Camera permission is required to take photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+      Alert.alert('Error', 'Failed to open camera');
+    }
+  };
+
+  const openGallery = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Gallery permission is required to select photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await processImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error opening gallery:', error);
+      Alert.alert('Error', 'Failed to open gallery');
+    }
+  };
+
+  const processImage = async (imageUri: string) => {
+    setIsProcessingImage(true);
+    try {
+      const compressedImage = await compressAndEncodeImage(imageUri);
+      setImageBase64(compressedImage.base64);
+      
+      const sizeInBytes = getBase64ImageSize(compressedImage.base64);
+      console.log(`Image processed: ${compressedImage.width}x${compressedImage.height}, ${formatFileSize(sizeInBytes)}`);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert('Error', 'Failed to process image. Please try again.');
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const removePhoto = () => {
+    setImageBase64(undefined);
+  };
 
   const onSubmit = async (data: CreateInventoryFormData) => {
     try {
@@ -73,6 +140,8 @@ export default function AddItemScreen() {
       const createData: Partial<CreateInventoryData> = {
         name: data.name.trim(),
         quantity: data.quantity,
+        // Add the base64 image if one was selected
+        ...(imageBase64 && { image_url: imageBase64 }),
       };
 
       await createInventoryMutation.mutateAsync(createData as CreateInventoryData);
@@ -114,8 +183,58 @@ export default function AddItemScreen() {
               Create a new inventory item
             </Text>
           </View>
+
           <FormProvider methods={methods}>
             <View style={styles.form}>
+              {/* Photo Section */}
+              <View style={styles.photoSection}>
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Photo</Text>
+                <View style={styles.photoContainer}>
+                  {imageBase64 ? (
+                    <View style={styles.photoWrapper}>
+                      <Image 
+                        source={{ uri: createDataUri(imageBase64) }} 
+                        style={styles.photo} 
+                      />
+                      <TouchableOpacity
+                        style={[styles.removePhotoButton, { backgroundColor: colors.error }]}
+                        onPress={removePhoto}
+                        disabled={isProcessingImage}
+                      >
+                        <FontAwesome name="times" size={12} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.addPhotoButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={handlePhotoPress}
+                      disabled={isProcessingImage}
+                    >
+                      {isProcessingImage ? (
+                        <>
+                          <FontAwesome name="spinner" size={24} color={colors.placeholder} />
+                          <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                            Processing...
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesome name="camera" size={24} color={colors.placeholder} />
+                          <Text style={[styles.addPhotoText, { color: colors.placeholder }]}>
+                            Add Photo
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {imageBase64 && (
+                  <Text style={[styles.imageSizeText, { color: colors.placeholder }]}>
+                    Size: {formatFileSize(getBase64ImageSize(imageBase64))}
+                  </Text>
+                )}
+              </View>
+
               <FormTextInput
                 name="name"
                 label="Item Name"
@@ -134,7 +253,7 @@ export default function AddItemScreen() {
             <FormActions
               onSubmit={handleSubmit(onSubmit)}
               onCancel={handleCancel}
-              isSubmitting={isSubmitting}
+              isSubmitting={isSubmitting || isProcessingImage}
               submitTitle="Create Item"
               cancelTitle="Cancel"
             />
@@ -154,22 +273,70 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    padding: 16,
+    ...spacing.helpers.padding('m'),
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
-    paddingTop: 16,
+    marginBottom: spacing.xl,
+    paddingTop: spacing.m,
   },
   title: {
     ...typography.h1,
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     ...typography.body,
     textAlign: 'center',
   },
   form: {
-    marginBottom: 32,
+    marginBottom: spacing.xl,
+  },
+  photoSection: {
+    marginBottom: spacing.l,
+  },
+  sectionLabel: {
+    ...typography.h4,
+    marginBottom: spacing.s,
+  },
+  photoContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.s,
+  },
+  photoWrapper: {
+    position: 'relative',
+  },
+  photo: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.m,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -spacing.xs,
+    right: -spacing.xs,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addPhotoButton: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.m,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  addPhotoText: {
+    ...typography.caption,
+    fontWeight: '500',
+  },
+  imageSizeText: {
+    ...typography.caption,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 }); 

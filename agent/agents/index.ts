@@ -795,7 +795,8 @@ This prioritization maximizes emergency response capability while maintaining se
     }
     
     return notes.length > 0 ? notes.join(', ') : 'Standard scheduling';
-=======
+  }
+
   private parseDispatchResponse(content: string, jobs: any[], startTime: number): DispatchOutput {
     // Try to extract JSON from the response
     let parsedResponse;
@@ -859,7 +860,6 @@ This prioritization maximizes emergency response capability while maintaining se
       recommendations: ['Jobs prioritized by urgency level'],
       agent_reasoning: 'Applied basic priority sorting by job urgency and type'
     };
->>>>>>> origin/main
   }
 }
 

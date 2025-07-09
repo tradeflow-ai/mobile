@@ -14,6 +14,7 @@ import { Header } from '@/components/Header';
 import { SearchBar, Avatar, EmptyState } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 import { useInventory, InventoryItem } from '@/hooks/useInventory';
+import { createDataUri } from '@/utils/imageUtils';
 
 export default function InventoryScreen() {
   const colorScheme = useColorScheme();
@@ -54,6 +55,7 @@ export default function InventoryScreen() {
         <View style={styles.leftSection}>
           <Avatar
             name={item.name}
+            imageUri={item.image_url && item.image_url !== null ? createDataUri(item.image_url) : undefined}
             size="m"
             style={styles.avatarSpacing}
           />
