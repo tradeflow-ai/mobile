@@ -134,13 +134,6 @@ export default function EditProfileScreen() {
         style={styles.container}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Edit Profile</Text>
-            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
-              Update your personal information
-            </Text>
-          </View>
-
           <FormProvider methods={methods}>
             <View style={styles.form}>
               <FormTextInput
@@ -217,21 +210,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-    paddingTop: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
   form: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
 }); 

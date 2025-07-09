@@ -177,13 +177,6 @@ export default function AddItemScreen() {
         style={styles.container}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Add New Item</Text>
-            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
-              Create a new inventory item
-            </Text>
-          </View>
-
           <FormProvider methods={methods}>
             <View style={styles.form}>
               {/* Photo Section */}
@@ -275,21 +268,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...spacing.helpers.padding('m'),
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingTop: spacing.m,
-  },
-  title: {
-    ...typography.h1,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    textAlign: 'center',
-  },
   form: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.l,
   },
   photoSection: {
     marginBottom: spacing.l,

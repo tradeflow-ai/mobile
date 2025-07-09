@@ -351,13 +351,6 @@ export default function FormScreen() {
         style={styles.container}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>Form Title</Text>
-            <Text style={[styles.subtitle, { color: colors.placeholder }]}>
-              Form description
-            </Text>
-          </View>
-
           <FormProvider methods={methods}>
             <View style={styles.form}>
               {/* Form fields */}
