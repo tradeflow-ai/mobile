@@ -20,7 +20,7 @@ import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
 
-import { inventoryItemsAtom, userProfileAtom } from '@/store/atoms';
+import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
 
 
@@ -30,7 +30,6 @@ export default function HomeScreen() {
   
   const { data: inventoryItems = [] } = useInventory();
 
-  const [inventoryItems] = useAtom(inventoryItemsAtom);
   const [userProfile] = useAtom(userProfileAtom);
 
   const [isDayStarted, setIsDayStarted] = useState(false);
@@ -125,11 +124,8 @@ export default function HomeScreen() {
   // JEREMIAH'S TEMPORARY CODE - END
   // ========================================
 
-<!--   const handleViewFullSchedule = () => {
-    Alert.alert('Full Schedule', 'This will show the complete schedule view');
-  }; -->
+
   const quickActions = [
-    // JEREMIAH'S TEMPORARY CODE: Plan Your Day button for testing backend integration
     {
       id: 'plan-day',
       title: 'Plan Your Day',
@@ -260,7 +256,7 @@ export default function HomeScreen() {
                  </Text>
                </View>
                <TouchableOpacity 
-                 onPress={handleViewFullSchedule} 
+                 onPress={() => Alert.alert('Full Schedule', 'This will show the complete schedule view')} 
                  style={[
                    styles.viewFullSchedule,
                    { borderTopColor: colors.border }
