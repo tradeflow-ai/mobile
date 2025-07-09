@@ -42,5 +42,10 @@ yarn-error.*
 # Personal roadmap checklists (not for sharing)
 Roadmap Checklists/
 jeremiah-roadmap.md
+
+# Internal testing and documentation files
+_internal-docs/
+
 _docs/josh-mvp-roadmap.md
+
 
