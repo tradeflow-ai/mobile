@@ -1,9 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Avatar } from './Avatar';
+import { userProfileAtom } from '@/store/atoms';
+import { ProfileManager } from '@/services/profileManager';
+import { useAppNavigation } from '@/hooks/useNavigation';
+import { typography, spacing, radius, touchTargets } from '@/constants/Theme';
 
 interface HeaderProps {
   title: string;
@@ -19,22 +24,25 @@ interface HeaderProps {
     onPress?: () => void;
     disabled?: boolean;
   };
-  profile?: {
-    imageUrl?: string;
-    name?: string;
-    onPress?: () => void;
-    disabled?: boolean;
-  };
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
   rightAction,
   leftAction,
-  profile,
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { navigate } = useAppNavigation();
+  
+  // Get profile data directly from ProfileManager
+  const [userProfile] = useAtom(userProfileAtom);
+  const profileManager = ProfileManager.getInstance();
+  const displayName = profileManager.getDisplayName();
+  
+  const handleProfilePress = () => {
+    navigate('/profile');
+  };
 
   const renderActionButton = (action: HeaderProps['rightAction'] | HeaderProps['leftAction']) => {
     if (!action) return <View style={styles.actionPlaceholder} />;
@@ -74,24 +82,15 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const renderProfileImage = () => {
-    if (!profile) return null;
-
-    const { imageUrl, name, onPress, disabled } = profile;
-
     return (
       <TouchableOpacity
-        style={[
-          styles.profileButton,
-          disabled && styles.disabledButton,
-        ]}
-        onPress={onPress}
-        disabled={disabled}
+        style={styles.profileButton}
+        onPress={handleProfilePress}
       >
         <Avatar
-          name={name}
-          imageUri={imageUrl}
+          name={displayName}
+          imageUri={userProfile?.avatar_url}
           size="m"
-          style={disabled ? { opacity: 0.5 } : undefined}
         />
       </TouchableOpacity>
     );
@@ -99,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={styles.header}>
-      {profile ? renderProfileImage() : renderActionButton(leftAction)}
+      {renderProfileImage()}
       
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
         {title}
@@ -115,36 +114,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 4,
+    marginBottom: spacing.l,
+    paddingHorizontal: spacing.xs,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...typography.h1,
     flex: 1,
     textAlign: 'center',
   },
   actionButton: {
-    padding: 8,
-    borderRadius: 8,
-    minWidth: 40,
+    padding: spacing.xs,
+    borderRadius: radius.s,
+    ...touchTargets.styles.minimum,
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionPlaceholder: {
-    width: 40,
-    height: 40,
+    width: touchTargets.minimum,
+    height: touchTargets.minimum,
   },
   disabledButton: {
     opacity: 0.5,
   },
   actionText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.h4,
   },
   profileButton: {
-    padding: 4,
-    borderRadius: 20,
+    padding: spacing.xs,
+    borderRadius: radius.l,
+    ...touchTargets.styles.minimum,
     alignItems: 'center',
     justifyContent: 'center',
   },
