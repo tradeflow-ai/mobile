@@ -11,16 +11,16 @@ To establish the project's technical foundation. This phase focuses on creating 
 
 ---
 
-### Feature 1: Project & Repository Initialization
+### Feature 1: Project & Repository Initialization (Jeremiah) ✅
 
-1.  **Initialize Expo App:** Create a new React Native project using `npx create-expo-app`.
-2.  **Set up Git Repository:** Initialize a Git repository and create the `main` branch.
-3.  **Establish Directory Structure:** Create the complete folder structure as defined in `_docs/project-rules.md` (`/components`, `/hooks`, `/services`, etc.).
-4.  **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, `supabase-js`, and `react-native-big-calendar`.
-5.  **Configure TypeScript:** Set up `tsconfig.json` with strict typing rules and path aliases (`@/*`).
-6.  **Create Open Source Documentation:** Create initial versions of `README.md`, `CONTRIBUTING.md`, and issue templates for bug reports and feature requests.
+1.  ✅ **Initialize Expo App:** Create a new React Native project using `npx create-expo-app`.
+2.  ✅ **Set up Git Repository:** Initialize a Git repository and create the `main` branch.
+3.  ✅ **Establish Directory Structure:** Create the complete folder structure as defined in `_docs/project-rules.md` (`/components`, `/hooks`, `/services`, etc.).
+4.  ✅ **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, `supabase-js`, and `react-native-big-calendar`.
+5.  ✅ **Configure TypeScript:** Set up `tsconfig.json` with strict typing rules and path aliases (`@/*`).
+6.  ✅ **Create Open Source Documentation:** Create initial versions of `README.md`, `CONTRIBUTING.md`, and issue templates for bug reports and feature requests.
 
-### Feature 2: Backend & Database Setup (Supabase)
+### Feature 2: Backend & Database Setup (Trevor)
 
 1.  **Create Supabase Project:** Set up a new project in the Supabase dashboard.
 2.  **Define Database Schema:** Write and execute SQL scripts to create the initial tables. This must include the relational schema (e.g., `job_type_parts` join tables) required to establish a **"Bill of Materials"** for different job types.
@@ -28,14 +28,14 @@ To establish the project's technical foundation. This phase focuses on creating 
 4.  **Implement Auth Service:** Create the initial `services/auth.ts` file to handle user sign-up, sign-in, and session management.
 5.  **Seed Initial Data:** Create a seed script to populate the database with a rich and varied set of sample data, including multiple job types (`Demand`, `Maintenance`), priorities, clients, and a comprehensive Bill of Materials, to support the development and testing of the agentic crew.
 
-### Feature 3: Design System Implementation
+### Feature 3: Design System Implementation (Josh)
 
 1.  **Implement Color Palette:** Create `constants/Colors.ts` and populate it with the full light/dark mode color palettes from `_docs/theme-rules.md`.
 2.  **Create UI Primitives:** Build the initial versions of the core UI components in `/components/ui`: `<Button>`, `<Card>`, `<TextInput>`. These should be styled using the tokens from the theme rules.
 3.  **Set up Global Styles:** Define the typography scale and spacing variables, making them available throughout the app.
 4.  **Build a Style Guide Screen:** Create a development-only screen that displays all core components (`<Button>`, `<Card>`, etc.) and colors to visually verify the design system.
 
-### Feature 4: Core Application Shell & Navigation
+### Feature 4: Core Application Shell & Navigation (Jack)
 
 1.  **Set up Root Layout:** Create the main `app/_layout.tsx` file, configuring the global `Stack` navigator and integrating the Jotai `Provider`.
 2.  **Implement Tab Navigator:** Create the `app/(tabs)/_layout.tsx` file to define the primary tab-based navigation for Dashboard, Schedule, Routes, Inventory, and Settings.

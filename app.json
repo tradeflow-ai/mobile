@@ -28,7 +28,24 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gauntlet-ai.tradeflow-app"
+      "bundleIdentifier": "com.gauntlet-ai.tradeflow-app",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSExceptionRequiresForwardSecrecy": false
+            },
+            "192.168.1.186": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0",
+              "NSExceptionRequiresForwardSecrecy": false
+            }
+          }
+        }
+      }
     },
     "web": {
       "bundler": "metro",

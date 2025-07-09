@@ -1,0 +1,12 @@
+# Allow false positives from git-secrets
+# These are safe patterns that shouldn't trigger secret detection
+
+# .env.example template URLs (safe placeholders)
+https://your-project-id.supabase.co
+
+# Package lock integrity hashes (not secrets)
+sha512-.*
+
+# Documentation references to API patterns
+sk-\[a-zA-Z0-9\]\{48\}
+eyJ\[a-zA-Z0-9_-\]\*\\.\[a-zA-Z0-9_-\]\*\\.\[a-zA-Z0-9_-\]\*

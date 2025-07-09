@@ -19,9 +19,19 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
 
   const getAvatarColor = (text: string) => {
-    // Generate a consistent color based on the text
+    // Generate a consistent color based on the full text using a hash
     const colors = ['#3B82F6', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#F97316'];
-    const index = text.charCodeAt(0) % colors.length;
+    
+    // Create a simple hash from the entire string
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    // Use absolute value to ensure positive index
+    const index = Math.abs(hash) % colors.length;
     return colors[index];
   };
 
@@ -137,6 +147,6 @@ const styles = StyleSheet.create({
     borderRadius: 32,
   },
   xlText: {
-    fontSize: 24,
+    fontSize: 32,
   },
 }); 

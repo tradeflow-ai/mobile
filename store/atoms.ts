@@ -144,29 +144,4 @@ export const profileStateAtom = atom<ProfileState>((get) => {
   };
 });
 
-// ✅ MIGRATED TO TANSTACK QUERY - Use hooks/useJobs.ts instead
-// Legacy job data - now replaced with TanStack Query hooks:
-// - useJobs() - fetch all job locations
-// - useJob(id) - fetch specific job
-// - useCreateJob() - create new jobs
-// - useUpdateJob() - update existing jobs
-// - useDeleteJob() - delete jobs
-// - useJobsByStatus() - filter by status
-// - useJobsByType() - filter by type
-// - useJobsByClient() - filter by client
-// - useTodaysJobs() - get today's scheduled jobs
-// Sample data now in sample-data.sql for proper database seeding
 
-// Selected job can be managed by component state or URL params with expo-router
-// Use useJob(id) hook with ID from navigation params instead of global atom
-
-
-
-// ✅ MIGRATED TO TANSTACK QUERY - Use hooks/useInventory.ts instead
-// Legacy inventory actions - now replaced with TanStack Query mutations:
-// - useUpdateInventoryItem() - update inventory items
-// - useDeleteInventoryItem() - delete inventory items
-// - useCreateInventoryItem() - create inventory items
-// - useAdjustInventoryQuantity() - adjust quantities
-// - useBatchUpdateInventory() - batch operations
-// These provide better error handling, loading states, and cache management 

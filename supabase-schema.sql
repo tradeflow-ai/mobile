@@ -180,6 +180,7 @@ CREATE TABLE IF NOT EXISTS public.inventory_movements (
 );
 
 -- =====================================================
+
 -- 8. JOB TYPES TABLE (Bill of Materials - Job Definitions)
 -- =====================================================
 
@@ -250,6 +251,50 @@ CREATE TABLE IF NOT EXISTS public.job_type_parts (
 
 -- =====================================================
 -- 11. TRIGGERS FOR UPDATED_AT
+
+-- 7. DAILY PLANS TABLE (for AI agent workflow state)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.daily_plans (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  
+  -- Workflow state tracking
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'dispatch_complete', 'route_complete', 'inventory_complete', 'approved', 'cancelled', 'error')),
+  current_step TEXT DEFAULT 'dispatch' CHECK (current_step IN ('dispatch', 'route', 'inventory', 'complete')),
+  
+  -- Agent outputs (JSONB for flexibility)
+  dispatch_output JSONB DEFAULT '{}', -- Prioritized job list from Dispatch Strategist
+  route_output JSONB DEFAULT '{}', -- Optimized route data from Route Optimizer
+  inventory_output JSONB DEFAULT '{}', -- Parts manifest and shopping list from Inventory Specialist
+  
+  -- Human-in-the-loop modifications
+  user_modifications JSONB DEFAULT '{}', -- Any user changes to AI suggestions
+  
+  -- Context and preferences snapshot
+  preferences_snapshot JSONB DEFAULT '{}', -- User preferences at time of planning
+  job_ids UUID[] DEFAULT '{}', -- Array of original job_location IDs for this plan
+  created_job_ids UUID[] DEFAULT '{}', -- Array of job_location IDs created during workflow (e.g., hardware store runs)
+  
+  -- Error handling
+  error_state JSONB DEFAULT '{}', -- Any agent execution errors
+  retry_count INTEGER DEFAULT 0, -- Number of retry attempts
+  
+  -- Planning metadata
+  planned_date DATE NOT NULL,
+  total_estimated_duration INTEGER, -- Total estimated time in minutes
+  total_distance DECIMAL(10, 2), -- Total distance in kilometers
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  started_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- =====================================================
+-- 8. TRIGGERS FOR UPDATED_AT
+
 -- =====================================================
 
 -- Function to update the updated_at column
@@ -282,6 +327,7 @@ CREATE TRIGGER update_routes_updated_at
   BEFORE UPDATE ON public.routes 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+
 CREATE TRIGGER update_job_types_updated_at 
   BEFORE UPDATE ON public.job_types 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -292,6 +338,14 @@ CREATE TRIGGER update_part_templates_updated_at
 
 -- =====================================================
 -- 12. ROW LEVEL SECURITY (RLS) POLICIES
+
+CREATE TRIGGER update_daily_plans_updated_at 
+  BEFORE UPDATE ON public.daily_plans 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 9. ROW LEVEL SECURITY (RLS) POLICIES
+
 -- =====================================================
 
 -- Enable RLS on all tables
@@ -301,9 +355,13 @@ ALTER TABLE public.inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.routes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.inventory_movements ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.job_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.part_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.job_type_parts ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE public.daily_plans ENABLE ROW LEVEL SECURITY;
+
 
 -- Profiles policies
 CREATE POLICY "Users can view own profile" ON public.profiles
@@ -374,6 +432,7 @@ CREATE POLICY "Users can view own movements" ON public.inventory_movements
 CREATE POLICY "Users can insert own movements" ON public.inventory_movements
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+
 -- Job types policies
 CREATE POLICY "Users can view own job types" ON public.job_types
   FOR SELECT USING (auth.uid() = user_id);
@@ -415,6 +474,23 @@ CREATE POLICY "Users can delete own job type parts" ON public.job_type_parts
 
 -- =====================================================
 -- 13. INDEXES FOR PERFORMANCE
+
+-- Daily plans policies
+CREATE POLICY "Users can view own daily plans" ON public.daily_plans
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own daily plans" ON public.daily_plans
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own daily plans" ON public.daily_plans
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own daily plans" ON public.daily_plans
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- =====================================================
+-- 10. INDEXES FOR PERFORMANCE
+
 -- =====================================================
 
 -- User-based indexes for fast filtering
@@ -424,11 +500,15 @@ CREATE INDEX IF NOT EXISTS idx_job_locations_user_id ON public.job_locations(use
 CREATE INDEX IF NOT EXISTS idx_job_locations_client_id ON public.job_locations(client_id);
 CREATE INDEX IF NOT EXISTS idx_routes_user_id ON public.routes(user_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_user_id ON public.inventory_movements(user_id);
+
 CREATE INDEX IF NOT EXISTS idx_job_types_user_id ON public.job_types(user_id);
 CREATE INDEX IF NOT EXISTS idx_part_templates_user_id ON public.part_templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_type_parts_user_id ON public.job_type_parts(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_type_parts_job_type_id ON public.job_type_parts(job_type_id);
 CREATE INDEX IF NOT EXISTS idx_job_type_parts_part_template_id ON public.job_type_parts(part_template_id);
+
+CREATE INDEX IF NOT EXISTS idx_daily_plans_user_id ON public.daily_plans(user_id);
+
 
 -- Status and type indexes for filtering
 CREATE INDEX IF NOT EXISTS idx_clients_is_active ON public.clients(is_active);
@@ -446,12 +526,21 @@ CREATE INDEX IF NOT EXISTS idx_part_templates_is_common ON public.part_templates
 -- Date indexes for scheduling
 CREATE INDEX IF NOT EXISTS idx_job_locations_scheduled_date ON public.job_locations(scheduled_date);
 CREATE INDEX IF NOT EXISTS idx_routes_planned_date ON public.routes(planned_date);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_planned_date ON public.daily_plans(planned_date);
+
+-- Daily plans specific indexes
+CREATE INDEX IF NOT EXISTS idx_daily_plans_status ON public.daily_plans(status);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_current_step ON public.daily_plans(current_step);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_status_user_id ON public.daily_plans(status, user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_plans_planned_date_user_id ON public.daily_plans(planned_date, user_id);
 
 -- Location indexes for spatial queries
 CREATE INDEX IF NOT EXISTS idx_job_locations_lat_lng ON public.job_locations(latitude, longitude);
 
 -- =====================================================
+
 -- 14. FUNCTIONS FOR AUTOMATIC PROFILE CREATION
+
 -- =====================================================
 
 -- Function to create user profile when a new user signs up

@@ -43,8 +43,8 @@ export default function MapScreen() {
   const [modalAnimation] = useState(new Animated.Value(0));
   const [scrollViewRef, setScrollViewRef] = useState<ScrollView | null>(null);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 37.7749, // Default to San Francisco
-    longitude: -122.4194,
+    latitude: 30.2672, // Default to Austin, Texas
+    longitude: -97.7431,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });

@@ -6,9 +6,11 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, touchTargets, radius } from '@/constants/Theme';
 
 interface CustomTextInputProps extends TextInputProps {
   label?: string;
@@ -73,31 +75,43 @@ export const TextInput: React.FC<CustomTextInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: spacing.m,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
+    ...typography.h4,
+    marginBottom: spacing.xs,
   },
   required: {
-    fontSize: 16,
-    fontWeight: '500',
+    ...typography.h4,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    minHeight: 44,
+    borderRadius: radius.m,
+    ...spacing.helpers.paddingHorizontal('s'),
+    fontSize: typography.sizes.caption, // Use smaller font size for inputs
+    fontWeight: typography.weights.normal,
+    minHeight: touchTargets.minimum,
+    // Platform-specific text alignment and padding
+    ...Platform.select({
+      ios: {
+        paddingTop: spacing.s + 4, // More top padding for iOS
+        paddingBottom: spacing.s + 4, // Equal bottom padding for iOS
+        textAlignVertical: 'center',
+        lineHeight: typography.sizes.caption * 1.2, // Tighter line height for better centering
+      },
+      android: {
+        paddingVertical: spacing.s + 2,
+        textAlignVertical: 'center',
+        lineHeight: typography.sizes.caption * 1.3, // Slightly more line height for Android
+      },
+    }),
   },
   errorText: {
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
   helperText: {
-    fontSize: 12,
-    marginTop: 4,
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
 }); 

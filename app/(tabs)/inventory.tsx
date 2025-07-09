@@ -26,11 +26,6 @@ export default function InventoryScreen() {
 
   const { navigate } = useAppNavigation();
 
-  const handleProfilePress = () => {
-    // Navigate to profile using Expo Router
-    navigate('/profile');
-  };
-
   // Filter items based on search query
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -97,11 +92,6 @@ export default function InventoryScreen() {
       <View style={styles.container}>
         <Header
           title="Inventory"
-          profile={{
-            imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
-            name: 'John Doe',
-            onPress: handleProfilePress,
-          }}
           rightAction={{
             icon: 'plus',
             onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
