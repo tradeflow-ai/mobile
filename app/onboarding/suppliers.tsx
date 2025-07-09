@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { FormProvider } from '@/components/forms';
 import { supplierPreferencesSchema } from '@/components/forms/validationSchemas';
 import { typography, spacing, touchTargets } from '@/constants/Theme';
+import { useOnboarding } from './_layout';
 
 const SUPPLIER_OPTIONS = [
   { id: 'home-depot', label: 'Home Depot', value: 'home-depot' },
@@ -37,37 +38,67 @@ export default function SuppliersScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
+  const { saveStepData, navigateToNextStep, existingPreferences } = useOnboarding();
 
-  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>(['home-depot']);
-  const [priorityOrder, setPriorityOrder] = useState(DEFAULT_PRIORITY_ORDER);
+  // Transform preferences to form data
+  const getInitialSuppliers = () => {
+    if (existingPreferences) {
+      const suppliers = [];
+      if (existingPreferences.primary_supplier) {
+        suppliers.push(existingPreferences.primary_supplier.toLowerCase().replace(/\s+/g, '-'));
+      }
+      if (existingPreferences.secondary_suppliers) {
+        suppliers.push(...existingPreferences.secondary_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-')));
+      }
+      return suppliers.length > 0 ? suppliers : ['home-depot'];
+    }
+    return ['home-depot'];
+  };
+
+  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>(getInitialSuppliers());
+  const [priorityOrder, setPriorityOrder] = useState(
+    (existingPreferences && existingPreferences.supplier_priority_order && existingPreferences.supplier_priority_order.length > 0)
+      ? existingPreferences.supplier_priority_order 
+      : DEFAULT_PRIORITY_ORDER
+  );
 
   const methods = useForm({
     resolver: zodResolver(supplierPreferencesSchema),
     defaultValues: {
-      preferredSuppliers: ['home-depot'],
+      preferredSuppliers: getInitialSuppliers(),
       priorityOrder: DEFAULT_PRIORITY_ORDER,
     },
     mode: 'onChange',
   });
 
-  const { handleSubmit, setValue } = methods;
+  const { handleSubmit, setValue, getValues, formState: { errors } } = methods;
 
-  const onSubmit = (data: any) => {
+  const onSubmit = async (data: any) => {
     try {
-      // TODO: Save step data to parent component state
-      console.log('Supplier preferences data:', data);
+      // Create final data structure for this step
+      const finalData = {
+        ...data,
+        preferredSuppliers: selectedSuppliers,
+        priorityOrder: priorityOrder,
+      };
       
-      // Navigate to completion or main app
-      router.push('/(tabs)' as any);
+      // Save step data and navigate, letting the layout handle completion
+      saveStepData('suppliers', finalData);
+      navigateToNextStep();
+      
     } catch (error) {
       console.error('Error saving supplier preferences:', error);
       Alert.alert('Error', 'Failed to save supplier preferences. Please try again.');
     }
   };
 
+  const onError = (errors: any) => {
+    console.error('Supplier form validation errors:', errors);
+  };
+
   const handleSkip = () => {
-    // Navigate to completion or main app without saving data
-    router.push('/(tabs)' as any);
+    // Navigate to completion without saving data
+    navigateToNextStep();
   };
 
   const handleSupplierToggle = (supplierId: string) => {
@@ -222,7 +253,7 @@ export default function SuppliersScreen() {
             <Button
               title="Complete Setup"
               variant="primary"
-              onPress={handleSubmit(onSubmit)}
+              onPress={handleSubmit(onSubmit, onError)}
               style={styles.nextButton}
               disabled={selectedSuppliers.length === 0}
             />
