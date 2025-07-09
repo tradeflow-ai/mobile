@@ -72,6 +72,13 @@ export const queryKeys = {
   partTemplates: () => ['part-templates'] as const,
   partTemplate: (partTemplateId: string) => ['part-templates', partTemplateId] as const,
   jobTypeParts: (jobTypeId: string) => ['job-types', jobTypeId, 'parts'] as const,
+  
+  // Onboarding queries
+  onboarding: () => ['onboarding'] as const,
+  onboardingConfig: () => ['onboarding', 'configuration'] as const,
+  onboardingPreferences: (userId: string) => ['onboarding', 'preferences', userId] as const,
+  onboardingStatus: (userId: string) => ['onboarding', 'status', userId] as const,
+  onboardingAnalytics: (userId: string) => ['onboarding', 'analytics', userId] as const,
 } as const;
 
 // Helper function to invalidate related queries after mutations
@@ -143,6 +150,23 @@ export const invalidateQueries = {
   partTemplate: (partTemplateId: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.partTemplate(partTemplateId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.partTemplates() });
+  },
+  
+  // Invalidate all onboarding data
+  allOnboarding: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboarding() });
+  },
+  
+  // Invalidate specific user's onboarding data
+  userOnboarding: (userId: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingPreferences(userId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingStatus(userId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingAnalytics(userId) });
+  },
+  
+  // Invalidate onboarding configuration
+  onboardingConfig: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingConfig() });
   },
 } as const;
 

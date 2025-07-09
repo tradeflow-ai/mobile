@@ -8,6 +8,7 @@ import { useAtom } from 'jotai';
 import { userAtom } from '@/store/atoms';
 import { ProfileService, UserProfile, CreateProfileData } from '@/services/profileService';
 import { queryKeys, invalidateQueries, handleQueryError } from '@/services/queryClient';
+import { useOnboardingRequired } from '@/hooks/useOnboarding';
 
 const profileService = new ProfileService();
 
@@ -204,6 +205,40 @@ export const useProfileCompleteness = () => {
     missingFields,
     profile,
     isLoading,
+  };
+};
+
+/**
+ * Combined profile and onboarding status
+ * Josh needs this for determining overall user completion status
+ */
+export const useUserCompletionStatus = () => {
+  const profileCompleteness = useProfileCompleteness();
+  const onboardingRequired = useOnboardingRequired();
+
+  const isFullyComplete = profileCompleteness.isComplete && !onboardingRequired.isRequired;
+  const needsProfile = !profileCompleteness.isComplete;
+  const needsOnboarding = onboardingRequired.isRequired;
+  
+  return {
+    // Profile status
+    ...profileCompleteness,
+    
+    // Onboarding status
+    onboardingRequired: onboardingRequired.isRequired,
+    onboardingNextStep: onboardingRequired.nextStep,
+    onboardingProgress: onboardingRequired.completionScore,
+    
+    // Combined status
+    isFullyComplete,
+    needsProfile,
+    needsOnboarding,
+    
+    // Loading states
+    isLoading: profileCompleteness.isLoading || onboardingRequired.isLoading,
+    
+    // Next step determination
+    nextStep: needsProfile ? 'profile' : needsOnboarding ? 'onboarding' : 'complete',
   };
 };
 
