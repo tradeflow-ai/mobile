@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,20 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
-import { FontAwesome } from '@expo/vector-icons';
+import { useForm } from 'react-hook-form';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { TextInput } from '@/components/ui/TextInput';
-import { Button } from '@/components/ui/Button';
 import { ProfileManager } from '@/services/profileManager';
 import { userProfileAtom, isProfileLoadingAtom } from '@/store/atoms';
+import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
+
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  occupation: string;
+  companyName: string;
+  phone: string;
+}
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -27,71 +34,73 @@ export default function EditProfileScreen() {
   
   const [userProfile] = useAtom(userProfileAtom);
   const [isProfileLoading] = useAtom(isProfileLoadingAtom);
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    occupation: '',
-    companyName: '',
-    phone: '',
+
+  // Memoize the current profile data to avoid unnecessary recalculations
+  const currentProfileData = useMemo(() => {
+    const currentProfile = profileManager.getCurrentProfile();
+    const firstName = userProfile?.first_name || currentProfile?.first_name || '';
+    const lastName = userProfile?.last_name || currentProfile?.last_name || '';
+    const fullName = profileManager.getDisplayName() || '';
+    const role = userProfile?.role || currentProfile?.role || profileManager.getUserRole() || '';
+    const companyName = userProfile?.company_name || currentProfile?.company_name || '';
+    const phone = userProfile?.phone || currentProfile?.phone || '';
+
+    // If we don't have first/last name from profile but have full name from ProfileManager
+    let derivedFirstName = firstName;
+    let derivedLastName = lastName;
+    
+    if (!firstName && !lastName && fullName) {
+      const nameParts = fullName.split(' ');
+      derivedFirstName = nameParts[0] || '';
+      derivedLastName = nameParts.slice(1).join(' ') || '';
+    }
+
+    return {
+      firstName: derivedFirstName,
+      lastName: derivedLastName,
+      occupation: role,
+      companyName: companyName,
+      phone: phone,
+    };
+  }, [userProfile, profileManager]);
+
+  // Initialize form with react-hook-form using the current profile data
+  const methods = useForm<ProfileFormData>({
+    defaultValues: currentProfileData,
+    mode: 'onChange',
   });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load current profile data
+  const { reset, handleSubmit, formState: { isSubmitting } } = methods;
+
+  // Initialize profile data on mount if needed
   useEffect(() => {
-    if (userProfile) {
-      setFormData({
-        firstName: userProfile.first_name || '',
-        lastName: userProfile.last_name || '',
-        occupation: userProfile.role || '',
-        companyName: userProfile.company_name || '',
-        phone: userProfile.phone || '',
-      });
-    }
-  }, [userProfile]);
+    const initializeProfile = async () => {
+      if (!userProfile && !isProfileLoading) {
+        try {
+          await profileManager.refreshProfile();
+        } catch (error) {
+          console.error('Error refreshing profile:', error);
+        }
+      }
+    };
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    // First name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-    
-    // Last name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-    
-    // Occupation validation
-    if (!formData.occupation.trim()) {
-      newErrors.occupation = 'Occupation is required';
-    }
-    
-    // Phone validation (optional but must be valid if provided)
-    if (formData.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    initializeProfile();
+  }, [userProfile, isProfileLoading, profileManager]);
 
-  const handleSave = async () => {
-    if (!validateForm()) return;
-    
-    setIsLoading(true);
-    
+  // Reset form when profile data changes (simplified)
+  useEffect(() => {
+    reset(currentProfileData);
+  }, [currentProfileData, reset]);
+
+  const onSubmit = async (data: ProfileFormData) => {
     try {
       const result = await profileManager.updateProfile({
-        first_name: formData.firstName.trim(),
-        last_name: formData.lastName.trim(),
-        full_name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-        role: formData.occupation.trim(),
-        company_name: formData.companyName.trim() || undefined,
-        phone: formData.phone.trim() || undefined,
+        first_name: data.firstName.trim(),
+        last_name: data.lastName.trim(),
+        full_name: `${data.firstName.trim()} ${data.lastName.trim()}`,
+        role: data.occupation.trim(),
+        company_name: data.companyName.trim() || undefined,
+        phone: data.phone.trim() || undefined,
       });
       
       if (result.success) {
@@ -111,8 +120,6 @@ export default function EditProfileScreen() {
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Update Failed', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -134,73 +141,75 @@ export default function EditProfileScreen() {
             </Text>
           </View>
 
-          <View style={styles.form}>
-            <TextInput
-              label="First Name"
-              value={formData.firstName}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, firstName: text }))}
-              error={errors.firstName}
-              placeholder="Enter your first name"
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
+          <FormProvider methods={methods}>
+            <View style={styles.form}>
+              <FormTextInput
+                name="firstName"
+                label="First Name"
+                placeholder="Enter your first name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                required
+              />
 
-            <TextInput
-              label="Last Name"
-              value={formData.lastName}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, lastName: text }))}
-              error={errors.lastName}
-              placeholder="Enter your last name"
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
+              <FormTextInput
+                name="lastName"
+                label="Last Name"
+                placeholder="Enter your last name"
+                autoCapitalize="words"
+                autoCorrect={false}
+                required
+              />
 
-            <TextInput
-              label="Occupation"
-              value={formData.occupation}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, occupation: text }))}
-              error={errors.occupation}
-              placeholder="e.g., Plumber, Electrician, HVAC Technician"
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
+              <FormTextInput
+                name="occupation"
+                label="Occupation"
+                placeholder="e.g., Plumber, Electrician, HVAC Technician"
+                autoCapitalize="words"
+                autoCorrect={false}
+                required
+              />
 
-            <TextInput
-              label="Company Name (Optional)"
-              value={formData.companyName}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, companyName: text }))}
-              error={errors.companyName}
-              placeholder="Enter your company name"
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
+              <FormTextInput
+                name="companyName"
+                label="Company Name (Optional)"
+                placeholder="Enter your company name"
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
 
-            <TextInput
-              label="Phone Number (Optional)"
-              value={formData.phone}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, phone: text }))}
-              error={errors.phone}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              autoCorrect={false}
-            />
-          </View>
+              <FormTextInput
+                name="phone"
+                label="Phone Number (Optional)"
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+                autoCorrect={false}
+                rules={{
+                  pattern: {
+                    value: /^\+?[\d\s\-\(\)]+$/,
+                    message: 'Please enter a valid phone number'
+                  }
+                }}
+              />
+            </View>
 
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Save Changes"
-              onPress={handleSave}
-              loading={isLoading}
-              style={styles.saveButton}
-            />
-            
-            <Button
-              title="Cancel"
-              onPress={handleCancel}
-              variant="outline"
-              style={styles.cancelButton}
-            />
-          </View>
+            <View style={styles.buttonContainer}>
+              <FormButton
+                title="Save Changes"
+                type="submit"
+                onPress={handleSubmit(onSubmit)}
+                loading={isSubmitting}
+                style={styles.saveButton}
+              />
+              
+              <FormButton
+                title="Cancel"
+                onPress={handleCancel}
+                variant="outline"
+                style={styles.cancelButton}
+              />
+            </View>
+          </FormProvider>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

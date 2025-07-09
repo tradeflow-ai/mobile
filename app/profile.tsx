@@ -4,23 +4,22 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   Alert,
   SafeAreaView,
+  Switch,
+  Linking,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
-import { userProfileAtom, isProfileLoadingAtom } from '@/store/atoms';
-import { Header } from '@/components/Header';
+import { userProfileAtom, themeModeAtom, type ThemeMode } from '@/store/atoms';
+import { Avatar } from '@/components/Avatar';
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -29,20 +28,28 @@ export default function ProfileScreen() {
   
   // Profile state from atoms
   const [userProfile] = useAtom(userProfileAtom);
-  const [isProfileLoading] = useAtom(isProfileLoadingAtom);
+  const [themeMode, setThemeMode] = useAtom(themeModeAtom);
 
   // Get display information
   const displayName = profileManager.getDisplayName();
   const userEmail = profileManager.getUserEmail();
   const userRole = profileManager.getUserRole();
-  const userInitials = profileManager.getInitials();
 
-  const handleEditProfile = () => {
-    router.push('/edit-profile');
+  const handleThemeToggle = (value: boolean) => {
+    const newThemeMode: ThemeMode = value ? 'dark' : 'light';
+    setThemeMode(newThemeMode);
   };
 
-  const handleSettings = () => {
-    router.push('/settings');
+  const handleLocationSettings = async () => {
+    try {
+      await Linking.openSettings();
+    } catch (error) {
+      Alert.alert(
+        'Unable to Open Settings',
+        'Please manually open Settings > Privacy & Security > Location Services to manage location permissions for TradeFlow.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleLogout = () => {
@@ -81,29 +88,15 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container}>
-        <Header
-          title="Profile"
-          rightAction={{
-            icon: 'edit',
-            onPress: handleEditProfile,
-          }}
-        />
-
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            {userProfile?.avatar_url ? (
-              <Image
-                source={{ uri: userProfile.avatar_url }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={[styles.profileImage, styles.profileImagePlaceholder, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.profileImageText, { color: '#fff' }]}>
-                  {userInitials}
-                </Text>
-              </View>
-            )}
+            <Avatar
+              name={displayName}
+              imageUri={userProfile?.avatar_url}
+              size="xl"
+              style={styles.profileImage}
+            />
           </View>
           
           <Text style={[styles.name, { color: colors.text }]}>
@@ -122,31 +115,43 @@ export default function ProfileScreen() {
         <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.stat}>
             <Text style={[styles.statNumber, { color: colors.text }]}>156</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]}>Items Managed</Text>
+            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Items Managed</Text>
           </View>
           
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           
           <View style={styles.stat}>
             <Text style={[styles.statNumber, { color: colors.text }]}>24</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]}>Routes Completed</Text>
+            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Routes Completed</Text>
           </View>
           
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           
           <View style={styles.stat}>
             <Text style={[styles.statNumber, { color: colors.text }]}>8</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]}>Locations</Text>
+            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Locations</Text>
           </View>
         </View>
 
         <View style={styles.menuSection}>
+          {/* Dark Mode Toggle */}
+          <View style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome name="moon-o" size={20} color={colors.placeholder} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
+            <Switch
+              value={themeMode === 'dark'}
+              onValueChange={handleThemeToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={themeMode === 'dark' ? colors.background : colors.placeholder}
+            />
+          </View>
+
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={handleSettings}
+            onPress={handleLocationSettings}
           >
-            <FontAwesome name="cog" size={20} color={colors.placeholder} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Settings</Text>
+            <FontAwesome name="map-marker" size={20} color={colors.placeholder} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Location Services</Text>
             <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
           </TouchableOpacity>
 
@@ -216,6 +221,7 @@ const styles = StyleSheet.create({
   profileSection: {
     alignItems: 'center',
     marginBottom: 32,
+    paddingTop: 16,
   },
   profileImageContainer: {
     marginBottom: 16,
@@ -224,14 +230,6 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-  },
-  profileImagePlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImageText: {
-    fontSize: 36,
-    fontWeight: 'bold',
   },
   name: {
     fontSize: 24,
@@ -252,7 +250,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 12,
     borderWidth: 1,
-    padding: 20,
+    padding: 16,
     marginBottom: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -263,6 +261,8 @@ const styles = StyleSheet.create({
   stat: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   statNumber: {
     fontSize: 24,
@@ -270,13 +270,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
+    lineHeight: 14,
   },
   statDivider: {
     width: 1,
-    height: 40,
-    marginHorizontal: 16,
+    height: 50,
+    marginHorizontal: 12,
+    alignSelf: 'center',
   },
   menuSection: {
     marginBottom: 32,

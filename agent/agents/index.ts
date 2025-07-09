@@ -795,6 +795,71 @@ This prioritization maximizes emergency response capability while maintaining se
     }
     
     return notes.length > 0 ? notes.join(', ') : 'Standard scheduling';
+=======
+  private parseDispatchResponse(content: string, jobs: any[], startTime: number): DispatchOutput {
+    // Try to extract JSON from the response
+    let parsedResponse;
+    try {
+      // Look for JSON in the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResponse = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No valid JSON found in response');
+      }
+    } catch (error) {
+      // Fallback: create a basic prioritized list
+      parsedResponse = this.createFallbackDispatchOutput(jobs);
+    }
+
+    return {
+      prioritized_jobs: parsedResponse.prioritized_jobs || this.createBasicPrioritization(jobs),
+      scheduling_constraints: parsedResponse.scheduling_constraints || {
+        work_start_time: '08:00',
+        work_end_time: '17:00',
+        lunch_break_start: '12:00',
+        lunch_break_end: '13:00',
+        total_work_hours: 8
+      },
+      recommendations: parsedResponse.recommendations || [],
+      agent_reasoning: parsedResponse.agent_reasoning || 'Jobs prioritized by urgency and type',
+      execution_time_ms: Date.now() - startTime
+    };
+  }
+
+  private createBasicPrioritization(jobs: any[]) {
+    return jobs
+      .sort((a, b) => {
+        // Sort by priority: urgent > high > medium > low
+        const priorityOrder = { 'urgent': 0, 'high': 1, 'medium': 2, 'low': 3 };
+        return (priorityOrder[a.priority as keyof typeof priorityOrder] || 3) - 
+               (priorityOrder[b.priority as keyof typeof priorityOrder] || 3);
+      })
+      .map((job, index) => ({
+        job_id: job.id,
+        priority_rank: index + 1,
+        estimated_start_time: new Date(Date.now() + index * 2 * 60 * 60 * 1000).toISOString(),
+        estimated_end_time: new Date(Date.now() + (index + 1) * 2 * 60 * 60 * 1000).toISOString(),
+        priority_reason: `${job.priority} priority ${job.job_type} job`,
+        job_type: job.job_type === 'emergency' ? 'demand' : 'maintenance',
+        buffer_time_minutes: job.priority === 'urgent' ? 30 : 15
+      }));
+  }
+
+  private createFallbackDispatchOutput(jobs: any[]): any {
+    return {
+      prioritized_jobs: this.createBasicPrioritization(jobs),
+      scheduling_constraints: {
+        work_start_time: '08:00',
+        work_end_time: '17:00',
+        lunch_break_start: '12:00',
+        lunch_break_end: '13:00',
+        total_work_hours: 8
+      },
+      recommendations: ['Jobs prioritized by urgency level'],
+      agent_reasoning: 'Applied basic priority sorting by job urgency and type'
+    };
+>>>>>>> origin/main
   }
 }
 

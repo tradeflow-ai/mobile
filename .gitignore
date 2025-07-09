@@ -17,6 +17,8 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+ios/
+android/
 
 # Metro
 .metro-health-check*
@@ -36,4 +38,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Personal roadmap checklists (not for sharing)
+Roadmap Checklists/
 jeremiah-roadmap.md

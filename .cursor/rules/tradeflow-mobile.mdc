@@ -38,11 +38,13 @@ React Native Expo app with TypeScript for intelligent tradesmen tracking with ma
 
 ### 2. Colors & Theming
 - **ALWAYS** import colors from `@/constants/Colors`
-- **NEVER** use hardcoded colors - always reference the color system
-- **REQUIRED** color imports:
+- **ALWAYS** use the global theme system from `@/constants/Theme`
+- **NEVER** use hardcoded colors, spacing, or typography - always reference the theme system
+- **REQUIRED** theme imports:
 ```typescript
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 
 // In component:
 const colorScheme = useColorScheme();
@@ -115,8 +117,15 @@ export default function ScreenName() {
   - `ExpoLink` - Navigation link component
   - `QuantitySelector` - Quantity input with plus/minus buttons for numeric values, supports decimal/integer mode
   - `QuickActionButton` - Reusable quick action button with icon and title for home screen actions
+  - **Form Components** - React Hook Form integrated components in `@/components/forms/`:
+    - `FormProvider` - Context wrapper for React Hook Form
+    - `FormTextInput` - Text input with built-in validation
+    - `FormButton` - Button integrating with form state
+    - `FormQuantitySelector` - Quantity selector with validation
+    - `FormSelect` - Dropdown selector with modal interface
 - **IF** component doesn't exist, create it in `@/components/` folder
 - **IF** it's a UI component, create it in `@/components/ui/` folder and export from `@/components/ui/index.ts`
+- **IF** it's a form component, create it in `@/components/forms/` folder and export from `@/components/forms/index.ts`
 
 ### 5.1. Component Architecture & Folder Structure
 - **@/components/ui/** - Contains primitive, low-level UI components (building blocks)
@@ -124,6 +133,16 @@ export default function ScreenName() {
   - Examples: Button, TextInput, Card, SearchBar, StatusBadge
   - Should NOT import from `@/components/` (only from React Native, icons, colors, etc.)
   - Must be exported from `@/components/ui/index.ts`
+  - **MUST** use the new theme system from `@/constants/Theme.ts`
+- **@/components/forms/** - Contains React Hook Form integrated components
+  - These components integrate with React Hook Form for validation and state management
+  - Examples: FormProvider, FormTextInput, FormButton, FormQuantitySelector, FormSelect
+  - Can import from `@/components/ui/` and React Hook Form
+  - Must be exported from `@/components/forms/index.ts`
+  - **MUST** use React Hook Form patterns and validation
+  - **MUST** use shared `BaseFormFieldProps` and `FormValidationRules` interfaces for consistency
+  - **MUST** inherit from base component props (e.g., FormTextInput extends TextInputProps, FormButton extends ButtonProps)
+  - **MUST** use `Omit<BaseProps, 'conflictingProp'>` when base component props conflict with form-specific behavior
 - **@/components/** - Contains higher-level, composed components
   - These components are built using `@/components/ui/` components
   - Examples: Header (uses Button from ui), Avatar (uses Card styling)
@@ -190,6 +209,32 @@ const styles = StyleSheet.create({
   - `<Header>` - Use for screen headers with actions
   - `<QuantitySelector>` - Use for numeric quantity input with plus/minus buttons, supports decimal/integer mode
 
+### 9.1. Form Components Usage
+- **ALWAYS** use React Hook Form integrated components from `@/components/forms` for form development
+- **AVAILABLE** form components:
+  - `<FormProvider>` - Context wrapper for React Hook Form, wrap entire form with this
+  - `<FormTextInput>` - Text input with built-in validation and error display
+  - `<FormButton>` - Button that integrates with form state (submit, loading, disabled)
+  - `<FormQuantitySelector>` - Quantity selector with validation support
+  - `<FormSelect>` - Dropdown selector with modal interface and validation
+- **PATTERN** for form development:
+```typescript
+import { useForm } from 'react-hook-form';
+import { FormProvider, FormTextInput, FormButton, BaseFormFieldProps, FormValidationRules } from '@/components/forms';
+
+const methods = useForm<FormData>({
+  defaultValues: initialData,
+  mode: 'onChange',
+});
+
+return (
+  <FormProvider methods={methods}>
+    <FormTextInput name="field" label="Label" required />
+    <FormButton title="Submit" type="submit" onPress={handleSubmit(onSubmit)} />
+  </FormProvider>
+);
+```
+
 ### 10. Error Handling
 - **ALWAYS** wrap async operations in try-catch blocks
 - **ALWAYS** show user-friendly error messages using Alert
@@ -203,17 +248,159 @@ try {
 }
 ```
 
-### 11. File Organization
+### 11. Form Development Patterns
+- **ALWAYS** use React Hook Form for form state management and validation
+- **ALWAYS** wrap forms with `<FormProvider>` component
+- **ALWAYS** use form components from `@/components/forms/` instead of native inputs
+- **ALWAYS** use shared types `BaseFormFieldProps` and `FormValidationRules` for consistency across form fields
+- **ALWAYS** import shared types from `@/components/forms` when creating custom form components
+- **PATTERN** for form validation using shared interfaces:
+```typescript
+import { useForm } from 'react-hook-form';
+import { FormValidationRules } from '@/components/forms';
+
+const methods = useForm<FormData>({
+  defaultValues: initialData,
+  mode: 'onChange', // Real-time validation
+});
+
+// Custom validation rules using shared FormValidationRules interface
+const emailRules: FormValidationRules = {
+  required: 'Email is required',
+  pattern: {
+    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    message: 'Invalid email address'
+  }
+};
+
+<FormTextInput
+  name="email"
+  rules={emailRules}
+/>
+```
+- **PATTERN** for creating custom form components:
+```typescript
+import { BaseFormFieldProps, FormValidationRules } from '@/components/forms';
+
+interface CustomFormComponentProps extends BaseFormFieldProps {
+  // Additional props specific to your component
+  customProp?: string;
+}
+
+export const CustomFormComponent: React.FC<CustomFormComponentProps> = ({
+  name,
+  rules,
+  customProp,
+}) => {
+  const { control } = useFormContext();
+  
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={rules}
+      render={({ field, fieldState }) => (
+        // Your custom form component implementation
+      )}
+    />
+  );
+};
+```
+- **PATTERN** for inheriting from base component props:
+```typescript
+import { BaseComponent, BaseComponentProps } from '@/components/ui/BaseComponent';
+import { BaseFormFieldProps } from '@/components/forms';
+
+// When base component props conflict with form behavior, use Omit
+interface FormComponentProps extends BaseFormFieldProps, Omit<BaseComponentProps, 'onPress'> {
+  onPress?: () => void; // Custom form-specific behavior
+  type?: 'submit' | 'button'; // Additional form props
+}
+
+export const FormComponent: React.FC<FormComponentProps> = ({
+  name,
+  rules,
+  onPress,
+  type = 'button',
+  ...baseProps // All other base component props
+}) => {
+  const { control } = useFormContext();
+  
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={rules}
+      render={({ field }) => (
+        <BaseComponent
+          {...baseProps}
+          onPress={handleFormPress}
+          // Override specific props for form behavior
+        />
+      )}
+    />
+  );
+};
+```
+- **PATTERN** for form submission:
+```typescript
+const onSubmit = async (data: FormData) => {
+  try {
+    await submitForm(data);
+    // Success handling
+  } catch (error) {
+    // Error handling
+  }
+};
+
+<FormButton
+  title="Submit"
+  type="submit"
+  onPress={handleSubmit(onSubmit)}
+  loading={isSubmitting}
+/>
+```
+
+### 12. File Organization
 - Place screens in `app/` directory
 - Place reusable components in `components/`
 - Place UI components in `components/ui/`
+- Place form components in `components/forms/`
 - Place utilities in `utils/`
 - Place services in `services/`
 
-### 12. TypeScript
+### 13. TypeScript
 - **ALWAYS** use proper TypeScript types
 - **ALWAYS** define interfaces for props and state
 - **PREFER** type inference over explicit typing where clear
+
+### 14. Theme System Usage
+- **ALWAYS** use `typography.*` objects for all text styling instead of hardcoded fontSize/fontWeight
+- **ALWAYS** use `spacing.*` values for all margins, padding, and layout spacing
+- **ALWAYS** use `shadows.*()` functions for elevation effects - pass colorScheme parameter
+- **ALWAYS** use `radius.*` values for border radius
+- **ALWAYS** use `touchTargets.*` values for minimum touch areas
+- **PATTERN** for theme-aware components:
+```typescript
+import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
+
+const styles = StyleSheet.create({
+  container: {
+    ...spacing.helpers.padding('m'),
+    borderRadius: radius.m,
+    ...shadows.subtle(colorScheme),
+  },
+  title: {
+    ...typography.h3,
+    color: colors.text,
+    marginBottom: spacing.s,
+  },
+  button: {
+    ...touchTargets.styles.minimum,
+    borderRadius: radius.m,
+  },
+});
+```
 
 ## Color System Reference
 Primary colors available in Colors.ts:
@@ -238,11 +425,22 @@ Primary colors available in Colors.ts:
 Before creating new components, check these existing ones:
 
 ### UI Components (`@/components/ui/`) - Building Blocks
-- **Button** - Multi-variant buttons (primary, secondary, outline, ghost) with loading states
-- **Card** - Container with shadows, theming, and customizable padding
+- **Button** - Multi-variant buttons (primary, secondary, outline, ghost) with loading states, theme shadows, proper touch targets, and responsive scaling
+- **Card** - Container with theme shadows, responsive spacing, and customizable padding using theme system
 - **SearchBar** - Search input with clear functionality and proper theming
 - **StatusBadge** - Status indicators (available, low_stock, out_of_stock)
-- **TextInput** - Form inputs with labels, validation, error states, and focus handling
+- **TextInput** - Form inputs with labels, validation, error states, focus handling, and theme typography/spacing
+
+### Form Components (`@/components/forms/`) - React Hook Form Integrated
+- **FormProvider** - Context wrapper for React Hook Form, provides form context to child components
+- **FormTextInput** - Text input with built-in validation, error display, and React Hook Form integration (extends TextInputProps)
+- **FormButton** - Button that integrates with form state (submit, loading, disabled states) (extends ButtonProps with Omit<ButtonProps, 'onPress'>)
+- **FormQuantitySelector** - Quantity selector with validation support and React Hook Form integration (extends QuantitySelector props)
+- **FormSelect** - Dropdown selector with modal interface, validation, and React Hook Form integration (uses BaseFormFieldProps)
+- **Shared Types** (defined in `@/components/forms/index.ts`):
+  - `BaseFormFieldProps` - Common props for all form fields (name, rules)
+  - `FormValidationRules` - Standardized validation rules interface
+  - `SelectOption` - Interface for dropdown options
 
 ### Composed Components (`@/components/`) - Built using UI components
 - **Avatar** - Profile images with letter fallbacks, multiple sizes (xs, s, m, l, xl)

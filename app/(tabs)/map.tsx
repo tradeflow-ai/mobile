@@ -6,11 +6,9 @@ import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { 
-  jobLocationsAtom, 
   currentLocationAtom, 
-  selectedJobLocationAtom,
-  JobLocation 
 } from '@/store/atoms';
+import { useJobs, JobLocation } from '@/hooks/useJobs';
 import { LocationService } from '@/services/location';
 import { 
   openDirectionsToJob, 
@@ -35,9 +33,9 @@ export default function MapScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   // State management
-  const [jobLocations] = useAtom(jobLocationsAtom);
+  const { data: jobLocations = [] } = useJobs();
   const [currentLocation, setCurrentLocation] = useAtom(currentLocationAtom);
-  const [selectedJobLocation, setSelectedJobLocation] = useAtom(selectedJobLocationAtom);
+  const [selectedJobLocation, setSelectedJobLocation] = useState<JobLocation | null>(null);
   
   // Local state
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -45,8 +43,8 @@ export default function MapScreen() {
   const [modalAnimation] = useState(new Animated.Value(0));
   const [scrollViewRef, setScrollViewRef] = useState<ScrollView | null>(null);
   const [mapRegion, setMapRegion] = useState({
-    latitude: 37.7749, // Default to San Francisco
-    longitude: -122.4194,
+    latitude: 30.2672, // Default to Austin, Texas
+    longitude: -97.7431,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });

@@ -6,32 +6,58 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
+import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { Button, Card } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
-import { inventoryItemsAtom } from '@/store/atoms';
+
+import { useInventory } from '@/hooks/useInventory';
+
+import { userProfileAtom } from '@/store/atoms';
+import { ProfileManager } from '@/services/profileManager';
+
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const [inventoryItems] = useAtom(inventoryItemsAtom);
+  const { data: inventoryItems = [] } = useInventory();
+
+  const [userProfile] = useAtom(userProfileAtom);
+
   const [isDayStarted, setIsDayStarted] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
 
   const { navigate } = useAppNavigation();
 
-  const handleProfilePress = () => {
-    navigate('/profile');
+  // Get user's first name from ProfileManager
+  const profileManager = ProfileManager.getInstance();
+  const displayName = profileManager.getDisplayName();
+  const firstName = displayName.split(' ')[0]; // Get first name only
+
+  // Get dynamic greeting based on time of day
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening';
+    } else {
+      return 'Good evening';
+    }
   };
 
-  const handleBeginDay = () => {
+  const handleStartDay = () => {
     setIsDayStarted(true);
     setIsOnBreak(false);
   };
@@ -85,13 +111,13 @@ export default function HomeScreen() {
                 Alert.alert('Error', `Agent workflow failed: ${result.error}`);
               }
             } catch (error) {
-              Alert.alert('Error', `Agent workflow failed: ${error.message}`);
+              Alert.alert('Error', `Agent workflow failed: ${error instanceof Error ? error.message : String(error)}`);
             }
           }
         }
       ]);
     } catch (error) {
-      Alert.alert('Error', `Failed to start planning: ${error.message}`);
+      Alert.alert('Error', `Failed to start planning: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
   // ========================================
@@ -124,67 +150,21 @@ export default function HomeScreen() {
       icon: 'plus',
       onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
     },
-    {
-      id: 'settings',
-      title: 'Settings',
-      icon: 'cog',
-      onPress: () => navigate('/settings'),
-    },
   ];
 
-  const renderQuickAction = (action: typeof quickActions[0]) => (
-    <QuickActionButton
-      key={action.id}
-      title={action.title}
-      icon={action.icon}
-      onPress={action.onPress}
-    />
-  );
+  const handleAddNewJob = () => {
+    Alert.alert('Add New Job', 'This will open the add job modal');
+  };
 
-  const renderStats = () => (
-    <Card style={styles.statsCard}>
-      <Text style={[styles.statsTitle, { color: colors.text }]}>
-        Today's Overview
-      </Text>
-      <View style={styles.statsGrid}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {inventoryItems.length}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
-            Inventory Items
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: !isDayStarted ? colors.error : isOnBreak ? colors.warning : colors.success }]}>
-            {!isDayStarted ? 'Inactive' : isOnBreak ? 'On Break' : 'Active'}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
-            Status
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            0
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.placeholder }]}>
-            Routes Today
-          </Text>
-        </View>
-      </View>
-    </Card>
-  );
+  const handleInventoryPress = () => {
+    navigate('/inventory');
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <Header
-          title="Home"
-          profile={{
-            imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
-            name: 'John Doe',
-            onPress: handleProfilePress,
-          }}
+          title="TradeFlow"
           rightAction={{
             icon: 'bell',
             onPress: () => Alert.alert('Notifications', 'No new notifications'),
@@ -195,48 +175,153 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Day Start/End Button */}
-          <Card style={styles.dayCard}>
-            <Text style={[styles.dayTitle, { color: colors.text }]}>
-              Work Day
+          {/* Greeting Section */}
+          <View style={styles.greetingSection}>
+            <Text style={[styles.greetingTitle, { color: colors.text }]}>
+              {getTimeBasedGreeting()}, {firstName}
             </Text>
-            <Text style={[styles.daySubtitle, { color: colors.placeholder }]}>
-              {!isDayStarted ? 'Ready to start your day?' : isOnBreak ? 'You are currently on break' : 'Your work day is active'}
+            <Text style={[styles.greetingSubtitle, { color: colors.placeholder }]}>
+              Ready to start your day?
             </Text>
-            {!isDayStarted ? (
-              <Button
-                variant="primary"
-                onPress={handleBeginDay}
-                title="Begin Day"
-                style={styles.dayButton}
-              />
-            ) : (
-              <View style={styles.dayButtonsContainer}>
-                <Button
-                  variant="primary"
-                  onPress={handleEndDay}
-                  title="End Day"
-                  style={styles.dayButtonLeft}
-                />
-                <Button
-                  variant="primary"
-                  onPress={isOnBreak ? handleEndBreak : handleTakeBreak}
-                  title={isOnBreak ? 'End Break' : 'Take Break'}
-                  style={styles.dayButtonRight}
-                />
-              </View>
-            )}
-          </Card>
+          </View>
 
-          {/* Stats Overview */}
-          {renderStats()}
+                     {/* Job Stats */}
+           <View style={styles.statsContainer}>
+             <Card style={styles.statCard}>
+               <View style={styles.statIconContainer}>
+                 <FontAwesome name="briefcase" size={20} color={colors.primary} />
+               </View>
+               <Text style={[styles.statNumber, { color: colors.text }]}>
+                 0
+               </Text>
+               <Text style={[styles.statLabel, { color: colors.placeholder }]}>
+                 Today's Jobs
+               </Text>
+             </Card>
+             
+             <Card style={styles.statCard}>
+               <View style={styles.statIconContainer}>
+                 <FontAwesome name="clock-o" size={20} color={colors.success} />
+               </View>
+               <Text style={[styles.statNumber, { color: colors.text }]}>
+                 0h
+               </Text>
+               <Text style={[styles.statLabel, { color: colors.placeholder }]}>
+                 Estimated Time
+               </Text>
+             </Card>
+           </View>
+
+           {/* Start My Day Button */}
+           {!isDayStarted ? (
+             <Button
+               variant="primary"
+               onPress={handleStartDay}
+               title="▶ Start My Day"
+               style={styles.startDayButton}
+             />
+           ) : (
+             <View style={styles.dayButtonsContainer}>
+               <Button
+                 variant="primary"
+                 onPress={handleEndDay}
+                 title="End Day"
+                 style={styles.dayButtonLeft}
+               />
+               <Button
+                 variant="primary"
+                 onPress={isOnBreak ? handleEndBreak : handleTakeBreak}
+                 title={isOnBreak ? 'End Break' : 'Take Break'}
+                 style={styles.dayButtonRight}
+               />
+             </View>
+           )}
+
+           {/* Today's Schedule */}
+           <View style={styles.scheduleSection}>
+             <View style={styles.scheduleHeader}>
+               <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+                 Today's Schedule
+               </Text>
+               <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
+                 0 jobs
+               </Text>
+             </View>
+             
+             <Card style={styles.scheduleCard}>
+               <View style={styles.emptySchedule}>
+                 <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
+                 <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
+                   No jobs scheduled for today
+                 </Text>
+               </View>
+               <TouchableOpacity 
+                 onPress={() => Alert.alert('Full Schedule', 'This will show the complete schedule view')} 
+                 style={[
+                   styles.viewFullSchedule,
+                   { borderTopColor: colors.border }
+                 ]}
+               >
+                 <Text style={[styles.viewFullScheduleText, { color: colors.primary }]}>
+                   View Full Schedule
+                 </Text>
+               </TouchableOpacity>
+             </Card>
+           </View>
 
           {/* Quick Actions */}
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Quick Actions
-          </Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map(renderQuickAction)}
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.quickAction, 
+                { 
+                  backgroundColor: colors.card,
+                  ...shadows.subtle(colorScheme)
+                }
+              ]} 
+              onPress={handleAddNewJob}
+            >
+              <View style={[
+                styles.quickActionIcon,
+                { backgroundColor: colors.background }
+              ]}>
+                <FontAwesome name="plus" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text style={[styles.quickActionTitle, { color: colors.text }]}>
+                  Add New Job
+                </Text>
+                <Text style={[styles.quickActionSubtitle, { color: colors.placeholder }]}>
+                  Create a new work order
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.quickAction, 
+                { 
+                  backgroundColor: colors.card,
+                  ...shadows.subtle(colorScheme)
+                }
+              ]} 
+              onPress={handleInventoryPress}
+            >
+              <View style={[
+                styles.quickActionIcon,
+                { backgroundColor: colors.background }
+              ]}>
+                <FontAwesome name="archive" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.quickActionContent}>
+                <Text style={[styles.quickActionTitle, { color: colors.text }]}>
+                  Inventory
+                </Text>
+                <Text style={[styles.quickActionSubtitle, { color: colors.placeholder }]}>
+                  Manage your supplies
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           {/* Recent Activity */}
@@ -263,32 +348,54 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
+    ...spacing.helpers.padding('m'),
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: spacing.xl,
   },
-  dayCard: {
-    padding: 20,
-    marginBottom: 20,
+  greetingSection: {
+    marginBottom: spacing.l,
+  },
+  greetingTitle: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
+  },
+  greetingSubtitle: {
+    ...typography.body,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: spacing.m,
+    marginBottom: spacing.l,
+  },
+  statCard: {
+    flex: 1,
     alignItems: 'center',
+    ...spacing.helpers.padding('m'),
   },
-  dayTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 4,
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: '#F0F9FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.s,
   },
-  daySubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: 'center',
+  statNumber: {
+    ...typography.h2,
+    marginBottom: spacing.xs,
   },
-  dayButton: {
-    minWidth: 120,
+  statLabel: {
+    ...typography.caption,
+  },
+  startDayButton: {
+    marginBottom: spacing.l,
   },
   dayButtonsContainer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.m,
+    marginBottom: spacing.l,
   },
   dayButtonLeft: {
     flex: 1,
@@ -296,57 +403,93 @@ const styles = StyleSheet.create({
   dayButtonRight: {
     flex: 1,
   },
-  statsCard: {
-    padding: 16,
-    marginBottom: 20,
+  scheduleSection: {
+    marginBottom: spacing.l,
   },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  statsGrid: {
+  scheduleHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.m,
   },
-  statItem: {
+  scheduleTitle: {
+    ...typography.h3,
+  },
+  scheduleCount: {
+    ...typography.caption,
+  },
+  scheduleCard: {
+    ...spacing.helpers.padding('m'),
+  },
+  emptySchedule: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyScheduleText: {
+    ...typography.body,
+    marginTop: spacing.s,
+    textAlign: 'center',
+  },
+  viewFullSchedule: {
+    alignItems: 'center',
+    paddingTop: spacing.m,
+    borderTopWidth: 1,
+  },
+  viewFullScheduleText: {
+    ...typography.h4,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: spacing.m,
+    marginBottom: spacing.l,
+  },
+  quickAction: {
+    flex: 1,
+    borderRadius: radius.m,
+    ...spacing.helpers.padding('m'),
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 4,
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.m,
   },
-  statLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+  quickActionContent: {
+    flex: 1,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
+  quickActionTitle: {
+    ...typography.h4,
+    marginBottom: spacing.xs,
   },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+  quickActionSubtitle: {
+    ...typography.caption,
   },
   recentCard: {
-    padding: 16,
+    ...spacing.helpers.padding('m'),
   },
   recentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
+    ...typography.h3,
+    marginBottom: spacing.m,
   },
   recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.s,
+  },
+  recentContent: {
+    flex: 1,
+    marginLeft: spacing.s,
   },
   recentText: {
-    fontSize: 14,
-    marginLeft: 8,
+    ...typography.body,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.s,
+  },
+  recentTime: {
+    ...typography.caption,
   },
 });

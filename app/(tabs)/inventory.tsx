@@ -15,21 +15,16 @@ import Colors from '@/constants/Colors';
 import { Header } from '@/components/Header';
 import { SearchBar, Avatar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
-import { inventoryItemsAtom, InventoryItem } from '@/store/atoms';
+import { useInventory, InventoryItem } from '@/hooks/useInventory';
 
 export default function InventoryScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const [inventoryItems] = useAtom(inventoryItemsAtom);
+  const { data: inventoryItems = [] } = useInventory();
   const [searchQuery, setSearchQuery] = useState('');
 
   const { navigate } = useAppNavigation();
-
-  const handleProfilePress = () => {
-    // Navigate to profile using Expo Router
-    navigate('/profile');
-  };
 
   // Filter items based on search query
   const filteredItems = useMemo(() => {
@@ -59,7 +54,6 @@ export default function InventoryScreen() {
         <View style={styles.leftSection}>
           <Avatar
             name={item.name}
-            imageUri={item.imageUri}
             size="m"
             style={styles.avatarSpacing}
           />
@@ -98,11 +92,6 @@ export default function InventoryScreen() {
       <View style={styles.container}>
         <Header
           title="Inventory"
-          profile={{
-            imageUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
-            name: 'John Doe',
-            onPress: handleProfilePress,
-          }}
           rightAction={{
             icon: 'plus',
             onPress: () => Alert.alert('Add Item', 'This will open the add item modal'),
