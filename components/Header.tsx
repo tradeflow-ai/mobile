@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   title: {
-    ...typography.h1,
+    ...typography.h3,
     flex: 1,
     textAlign: 'center',
   },
