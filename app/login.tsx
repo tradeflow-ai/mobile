@@ -17,7 +17,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
+import { FormProvider, FormTextInput } from '@/components/forms';
+import { Button } from '@/components/ui';
 import { AuthManager } from '@/services/authManager';
 import { authErrorAtom } from '@/store/atoms';
 import { loginSchema, type LoginFormData } from '@/components/forms/validationSchemas';
@@ -184,9 +185,8 @@ export default function LoginScreen() {
                 </View>
               )}
 
-              <FormButton
+              <Button
                 title="Sign In"
-                type="submit"
                 onPress={methods.handleSubmit(handleLogin)}
                 disabled={isLoading}
                 loading={isLoading}

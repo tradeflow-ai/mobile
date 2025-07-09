@@ -17,7 +17,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { FormProvider, FormTextInput, FormButton } from '@/components/forms';
+import { FormProvider, FormTextInput } from '@/components/forms';
+import { Button } from '@/components/ui';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 import { supabase } from '@/services/supabase';
@@ -254,9 +255,8 @@ export default function SignupScreen() {
                 </View>
               )}
 
-              <FormButton
+              <Button
                 title="Create Account"
-                type="submit"
                 onPress={methods.handleSubmit(handleSignup)}
                 disabled={isLoading}
                 loading={isLoading}
