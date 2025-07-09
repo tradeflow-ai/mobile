@@ -79,6 +79,15 @@ export const queryKeys = {
   onboardingPreferences: (userId: string) => ['onboarding', 'preferences', userId] as const,
   onboardingStatus: (userId: string) => ['onboarding', 'status', userId] as const,
   onboardingAnalytics: (userId: string) => ['onboarding', 'analytics', userId] as const,
+  
+  // Onboarding analytics queries
+  onboardingAnalyticsAll: () => ['onboarding-analytics'] as const,
+  onboardingFunnel: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'funnel', startDate, endDate] as const,
+  onboardingCompletionTrends: (period: string, startDate?: string, endDate?: string) => ['onboarding-analytics', 'completion-trends', period, startDate, endDate] as const,
+  onboardingDropOff: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'drop-off', startDate, endDate] as const,
+  onboardingPerformance: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'performance', startDate, endDate] as const,
+  onboardingUserJourney: (userId: string) => ['onboarding-analytics', 'user-journey', userId] as const,
+  onboardingExport: (format: string, startDate?: string, endDate?: string) => ['onboarding-analytics', 'export', format, startDate, endDate] as const,
 } as const;
 
 // Helper function to invalidate related queries after mutations
@@ -167,6 +176,32 @@ export const invalidateQueries = {
   // Invalidate onboarding configuration
   onboardingConfig: () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.onboardingConfig() });
+  },
+  
+  // Invalidate all onboarding analytics data
+  allOnboardingAnalytics: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingAnalyticsAll() });
+  },
+  
+  // Invalidate specific onboarding analytics queries
+  onboardingFunnel: (startDate?: string, endDate?: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingFunnel(startDate, endDate) });
+  },
+  
+  onboardingCompletionTrends: (period: string, startDate?: string, endDate?: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingCompletionTrends(period, startDate, endDate) });
+  },
+  
+  onboardingDropOff: (startDate?: string, endDate?: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingDropOff(startDate, endDate) });
+  },
+  
+  onboardingPerformance: (startDate?: string, endDate?: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingPerformance(startDate, endDate) });
+  },
+  
+  onboardingUserJourney: (userId: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingUserJourney(userId) });
   },
 } as const;
 
