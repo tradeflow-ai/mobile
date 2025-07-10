@@ -42,19 +42,13 @@ export default function SuppliersScreen() {
 
   // Transform preferences to form data
   const getInitialSuppliers = () => {
-    console.log('🔍 DEBUG: existingPreferences:', existingPreferences);
-    console.log('🔍 DEBUG: preferred_suppliers:', existingPreferences?.preferred_suppliers);
-    
     if (existingPreferences) {
       const suppliers = [];
       
       // Check new preferred_suppliers field first
       if (existingPreferences.preferred_suppliers && existingPreferences.preferred_suppliers.length > 0) {
-        const transformedSuppliers = existingPreferences.preferred_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-'));
-        console.log('🔍 DEBUG: Transformed suppliers:', transformedSuppliers);
-        suppliers.push(...transformedSuppliers);
+        suppliers.push(...existingPreferences.preferred_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-')));
       } else {
-        console.log('🔍 DEBUG: No preferred_suppliers found, checking fallback fields');
         // Fallback to deprecated fields for backward compatibility
         if (existingPreferences.primary_supplier) {
           suppliers.push(existingPreferences.primary_supplier.toLowerCase().replace(/\s+/g, '-'));
@@ -64,10 +58,8 @@ export default function SuppliersScreen() {
         }
       }
       
-      console.log('🔍 DEBUG: Final suppliers array:', suppliers);
       return suppliers.length > 0 ? suppliers : ['home-depot'];
     }
-    console.log('🔍 DEBUG: No existingPreferences, using default');
     return ['home-depot'];
   };
 
