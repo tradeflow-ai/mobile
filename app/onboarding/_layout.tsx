@@ -17,6 +17,7 @@ import { Header } from '@/components/Header';
 import { typography, spacing, touchTargets } from '@/constants/Theme';
 import { PreferencesService, UserPreferences } from '@/services/preferencesService';
 import { AuthManager } from '@/services/authManager';
+import { supabase } from '@/services/supabase';
 
 const ONBOARDING_STEPS = [
   { key: 'work-schedule', label: 'Schedule' },
@@ -90,13 +91,20 @@ export default function OnboardingLayout() {
       }
 
       try {
-        const { data: preferences, error } = await PreferencesService.getUserPreferences(currentUser.id);
+        // Get raw preferences without defaults to avoid polluting clean profiles
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', currentUser.id)
+          .single();
         
         if (error) {
           console.error('Error loading existing preferences:', error);
           setExistingPreferences(null);
         } else {
-          setExistingPreferences(preferences);
+          // Only use the raw stored preferences, don't merge with defaults
+          const rawPreferences = profile?.preferences || {};
+          setExistingPreferences(rawPreferences as UserPreferences);
         }
       } catch (error) {
         console.error('Error loading existing preferences:', error);
