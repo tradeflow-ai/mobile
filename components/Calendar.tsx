@@ -124,7 +124,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         ];
         
         const priorities = ['high', 'medium', 'low'] as const;
-        const jobTypes = ['maintenance', 'inspection', 'delivery', 'pickup', 'service', 'emergency'] as const;
+        const jobTypes = ['service', 'inspection', 'emergency'] as const;
         
         const startTime = new Date(jobDate.getFullYear(), jobDate.getMonth(), jobDate.getDate(), startHour, startMinutes);
         const endTime = new Date(startTime.getTime() + duration * 60 * 1000);

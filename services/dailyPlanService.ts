@@ -39,7 +39,7 @@ export interface DispatchOutput {
     estimated_start_time: string;
     estimated_end_time: string;
     priority_reason: string;
-    job_type: 'demand' | 'maintenance' | 'emergency';
+    job_type: 'service' | 'inspection' | 'emergency';
     buffer_time_minutes: number;
   }>;
   scheduling_constraints: {
@@ -602,7 +602,7 @@ export class DailyPlanService {
             user_id: userId,
             title: `Hardware Store Run - ${store.store_name}`,
             description: `Pick up parts: ${store.items_available.join(', ')}`,
-            job_type: 'pickup',
+            job_type: 'service',
             priority: 'medium',
             status: 'pending',
             latitude: store.coordinates.latitude,

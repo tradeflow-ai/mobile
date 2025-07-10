@@ -12,7 +12,7 @@ import { useInventory } from '@/hooks/useInventory';
 interface JobFormData {
   title: string;
   description?: string;
-  job_type: 'delivery' | 'pickup' | 'service' | 'inspection' | 'maintenance' | 'emergency';
+  job_type: 'service' | 'inspection' | 'emergency';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   estimated_duration?: number;
 }
@@ -28,11 +28,8 @@ const defaultFormValues: JobFormData = {
 
 // Job type options
 const jobTypeOptions: SelectOption[] = [
-  { label: 'Delivery', value: 'delivery' },
-  { label: 'Pickup', value: 'pickup' },
   { label: 'Service', value: 'service' },
   { label: 'Inspection', value: 'inspection' },
-  { label: 'Maintenance', value: 'maintenance' },
   { label: 'Emergency', value: 'emergency' },
 ];
 
