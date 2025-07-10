@@ -18,6 +18,7 @@ import { typography, spacing, touchTargets } from '@/constants/Theme';
 import { PreferencesService, UserPreferences } from '@/services/preferencesService';
 import { AuthManager } from '@/services/authManager';
 import { supabase } from '@/services/supabase';
+import { userAtom } from '@/store/atoms';
 
 const ONBOARDING_STEPS = [
   { key: 'work-schedule', label: 'Schedule' },
@@ -198,7 +199,7 @@ export default function OnboardingLayout() {
         
         // Supplier Preferences
         preferred_suppliers: finalOnboardingData['suppliers']?.preferredSuppliers?.map((supplier: string) =>
-          supplier.replace('-', ' ')
+          supplier.replace(/-/g, ' ')
             .split(' ')
             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ')
@@ -224,7 +225,18 @@ export default function OnboardingLayout() {
         throw error;
       }
 
-      // Navigate to main app
+      // Mark onboarding as completed in the profiles table
+      const { error: completionError } = await supabase
+        .from('profiles')
+        .update({ onboarding_completed_at: new Date().toISOString() })
+        .eq('id', currentUser.id);
+
+      if (completionError) {
+        console.error('Failed to mark onboarding as completed:', completionError);
+        // Don't throw here - preferences were saved successfully
+      }
+
+      // Navigate to main app - AuthGuard will detect completion and refresh profile data
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Error completing onboarding:', error);

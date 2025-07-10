@@ -183,6 +183,10 @@ export class OnboardingService {
    */
   static async initializeOnboarding(userId: string): Promise<{ data: OnboardingPreferences | null; error: any }> {
     try {
+      // Check if onboarding is already initialized
+      const { data: existing } = await this.getUserOnboardingPreferences(userId);
+      const isFirstInitialization = !existing;
+
       // Get default configuration
       const { data: config, error: configError } = await this.getOnboardingConfiguration();
       if (configError) throw configError;
@@ -199,7 +203,7 @@ export class OnboardingService {
         time_buffers_completed: false,
         suppliers_data: config?.step_definitions?.['suppliers']?.default_values || {},
         suppliers_completed: false,
-        started_at: new Date().toISOString(),
+        started_at: existing?.started_at || new Date().toISOString(),
         last_accessed_at: new Date().toISOString(),
         onboarding_version: config?.config_version || '1.0',
         skip_reasons: {},
@@ -213,12 +217,14 @@ export class OnboardingService {
 
       if (error) throw error;
 
-      // Track onboarding started event
-      await this.trackOnboardingProgress({
-        user_id: userId,
-        event_type: 'onboarding_started',
-        onboarding_version: config?.config_version || '1.0',
-      });
+      // Only track onboarding started event for first initialization
+      if (isFirstInitialization) {
+        await this.trackOnboardingProgress({
+          user_id: userId,
+          event_type: 'onboarding_started',
+          onboarding_version: config?.config_version || '1.0',
+        });
+      }
 
       return { data, error: null };
     } catch (error) {
