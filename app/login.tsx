@@ -9,6 +9,7 @@ import {
   Alert,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAtom } from 'jotai';
@@ -132,8 +133,12 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-              <FontAwesome name="truck" size={32} color={colors.background} />
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('@/assets/images/TradeFlowSampleIconCircle.png')} 
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>
               Welcome Back
@@ -246,6 +251,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   title: {
     fontSize: 28,
