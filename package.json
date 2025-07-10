@@ -6,12 +6,7 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "test:phase2": "cd agent && npx tsx run-phase2-tests.ts",
-    "test:workflow": "cd agent && npx tsx test-complete-workflow.ts",
-    "test:hardware": "cd agent && npx tsx test-hardware-store-jobs.ts",
-    "test:preferences": "cd agent && npx tsx test-user-preferences.ts",
-    "test:agent-routing": "node tests/validation-test.js"
+    "web": "expo start --web"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -56,7 +51,6 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "axios": "^1.10.0",
     "typescript": "~5.8.3"
   },
   "private": true

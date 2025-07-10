@@ -45,33 +45,41 @@ export default function PlanYourDayIndex() {
   } = useTodaysPlan();
 
   /**
-   * Handle automatic navigation based on daily plan current_step
+   * Handle automatic navigation based on daily plan status
    */
   useEffect(() => {
     if (!dailyPlan || isProcessing) return;
 
-<<<<<<< HEAD
-    // Navigate based on current_step, not status
-    switch (dailyPlan.current_step) {
-      case 'route':
-        router.push('./schedule-review');
-=======
     // Navigate to appropriate step based on current status
     switch (dailyPlan.status) {
       case 'dispatch_complete':
         if (currentStep === 'route') {
           router.push('./calendar-review');
         }
->>>>>>> 60235479fa24964be552f55ca3836fbd452b4c08
         break;
-      case 'inventory': 
-        router.push('./map-view');
+      case 'route_complete':
+        if (currentStep === 'inventory') {
+          router.push('./map-view');
+        }
         break;
-      case 'complete':
-        router.push('./inventory-checklist');
+      case 'inventory_complete':
+        if (currentStep === 'complete') {
+          router.push('./inventory-checklist');
+        }
+        break;
+      case 'approved':
+        // Planning complete - show success and navigate to execution
+        Alert.alert(
+          'Planning Complete!',
+          'Your daily plan is ready. Time to start your day!',
+          [
+            { text: 'Back to Home', onPress: () => router.push('/(tabs)') },
+            { text: 'Start Working', onPress: () => router.push('/(tabs)') },
+          ]
+        );
         break;
     }
-  }, [dailyPlan?.current_step, isProcessing, router]);
+  }, [dailyPlan?.status, currentStep, isProcessing, router]);
 
   /**
    * Handle starting the planning workflow
