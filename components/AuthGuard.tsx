@@ -13,6 +13,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { userAtom, isAuthLoadingAtom } from '@/store/atoms';
 import { AuthManager } from '@/services/authManager';
+import { OnboardingService } from '@/services/onboardingService';
 import { useOnboardingStatus } from '@/hooks/useOnboarding';
 
 interface AuthGuardProps {
@@ -108,6 +109,17 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         } else {
           // User needs to complete onboarding
           console.log('AuthGuard: Redirecting to onboarding - not completed');
+          
+          // Initialize onboarding preferences for the user
+          console.log('AuthGuard: Initializing onboarding for user:', user.id);
+          OnboardingService.initializeOnboarding(user.id).then(result => {
+            if (result.error) {
+              console.error('AuthGuard: Failed to initialize onboarding:', result.error);
+            } else {
+              console.log('AuthGuard: Successfully initialized onboarding');
+            }
+          });
+          
           router.replace('/onboarding/work-schedule');
         }
       } else if (!inOnboardingGroup) {
@@ -121,6 +133,17 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         if (!onboardingStatus?.isCompleted) {
           // User needs to complete onboarding
           console.log('AuthGuard: Redirecting to onboarding - not in onboarding group but not completed');
+          
+          // Initialize onboarding preferences for the user
+          console.log('AuthGuard: Initializing onboarding for user:', user.id);
+          OnboardingService.initializeOnboarding(user.id).then(result => {
+            if (result.error) {
+              console.error('AuthGuard: Failed to initialize onboarding:', result.error);
+            } else {
+              console.log('AuthGuard: Successfully initialized onboarding');
+            }
+          });
+          
           router.replace('/onboarding/work-schedule');
         }
         // If in main app and onboarding is completed, let them stay
