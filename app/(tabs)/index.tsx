@@ -19,6 +19,7 @@ import { Button, Card } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
+import { useTodaysPlan } from '@/hooks/useDailyPlan';
 
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   
   const { data: inventoryItems = [] } = useInventory();
+  const { dailyPlan, isLoading: planLoading } = useTodaysPlan();
 
   const [userProfile] = useAtom(userProfileAtom);
 
@@ -58,8 +60,15 @@ export default function HomeScreen() {
   };
 
   const handleStartDay = () => {
-    setIsDayStarted(true);
-    setIsOnBreak(false);
+    // If there's already an approved plan, just start the day
+    if (dailyPlan?.status === 'approved') {
+      setIsDayStarted(true);
+      setIsOnBreak(false);
+      return;
+    }
+    
+    // Otherwise, navigate to Plan Your Day workflow
+    navigate('/plan-your-day');
   };
 
   const handleEndDay = () => {
@@ -75,63 +84,15 @@ export default function HomeScreen() {
     setIsOnBreak(false);
   };
 
-  // ========================================
-  // JEREMIAH'S TEMPORARY CODE - START
-  // This function runs the dispatch agent CLIENT-SIDE per tech stack requirements
-  // TODO: Josh to redesign this as part of the proper "Plan Your Day" UI flow
-  // ========================================
-  const handlePlanYourDay = async () => {
-    try {
-      // Import Jeremiah's agent service for client-side execution
-      const { AgentService } = await import('../../services/agentService');
-      
-      Alert.alert('Planning Your Day', 'AI Agent workflow starting...', [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Start', 
-          onPress: async () => {
-            try {
-              // Check if Supabase is available
-              const isHealthy = await AgentService.checkHealth();
-              if (!isHealthy) {
-                Alert.alert('Error', 'Supabase service is not available. Please check your connection.');
-                return;
-              }
-              
-              // Run dispatch agent client-side and save to Supabase
-              const result = await AgentService.planDay(
-                'test-user-123',
-                ['job-1', 'job-2', 'job-3'],
-                new Date().toISOString().split('T')[0]
-              );
-              
-              if (result.success) {
-                Alert.alert('Success!', `Daily plan created: ${result.planId}\nStatus: ${result.currentStep || result.status}`);
-              } else {
-                Alert.alert('Error', `Agent workflow failed: ${result.error}`);
-              }
-            } catch (error) {
-              Alert.alert('Error', `Agent workflow failed: ${error instanceof Error ? error.message : String(error)}`);
-            }
-          }
-        }
-      ]);
-    } catch (error) {
-      Alert.alert('Error', `Failed to start planning: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  /**
+   * Handle Plan Your Day navigation
+   * Opens the complete AI-powered daily planning workflow
+   */
+  const handlePlanYourDay = () => {
+    navigate('/plan-your-day');
   };
-  // ========================================
-  // JEREMIAH'S TEMPORARY CODE - END
-  // ========================================
 
   const quickActions = [
-    // JEREMIAH'S TEMPORARY CODE: Plan Your Day button for testing backend integration
-    {
-      id: 'plan-day',
-      title: 'Plan Your Day',
-      icon: 'calendar',
-      onPress: handlePlanYourDay,
-    },
     {
       id: 'inventory',
       title: 'Inventory',
@@ -192,7 +153,7 @@ export default function HomeScreen() {
                  <FontAwesome name="briefcase" size={20} color={colors.primary} />
                </View>
                <Text style={[styles.statNumber, { color: colors.text }]}>
-                 0
+                 {dailyPlan?.job_ids?.length || 0}
                </Text>
                <Text style={[styles.statLabel, { color: colors.placeholder }]}>
                  Today's Jobs
@@ -204,7 +165,7 @@ export default function HomeScreen() {
                  <FontAwesome name="clock-o" size={20} color={colors.success} />
                </View>
                <Text style={[styles.statNumber, { color: colors.text }]}>
-                 0h
+                 {dailyPlan?.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : '0h'}
                </Text>
                <Text style={[styles.statLabel, { color: colors.placeholder }]}>
                  Estimated Time
@@ -217,8 +178,13 @@ export default function HomeScreen() {
              <Button
                variant="primary"
                onPress={handleStartDay}
-               title="▶ Start My Day"
+               title={
+                 planLoading ? 'Loading...' :
+                 dailyPlan?.status === 'approved' ? '▶ Start My Day' : 
+                 '🧠 Plan & Start My Day'
+               }
                style={styles.startDayButton}
+               disabled={planLoading}
              />
            ) : (
              <View style={styles.dayButtonsContainer}>
@@ -244,17 +210,31 @@ export default function HomeScreen() {
                  Today's Schedule
                </Text>
                <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
-                 0 jobs
+                 {dailyPlan?.job_ids?.length || 0} jobs
                </Text>
              </View>
              
              <Card style={styles.scheduleCard}>
-               <View style={styles.emptySchedule}>
-                 <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
-                 <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
-                   No jobs scheduled for today
-                 </Text>
-               </View>
+               {dailyPlan?.job_ids?.length ? (
+                 <View style={styles.scheduleWithJobs}>
+                   <Text style={[styles.scheduleStatus, { color: colors.success }]}>
+                     {dailyPlan.status === 'approved' ? 
+                       '✓ Daily plan optimized and ready' : 
+                       '🧠 AI planning in progress...'
+                     }
+                   </Text>
+                   <Text style={[styles.scheduleDetails, { color: colors.placeholder }]}>
+                     {dailyPlan.job_ids.length} jobs • {dailyPlan.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : 'Calculating'} estimated
+                   </Text>
+                 </View>
+               ) : (
+                 <View style={styles.emptySchedule}>
+                   <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
+                   <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
+                     No jobs scheduled for today
+                   </Text>
+                 </View>
+               )}
                <TouchableOpacity 
                  onPress={() => Alert.alert('Full Schedule', 'This will show the complete schedule view')} 
                  style={[
@@ -490,6 +470,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.s,
   },
   recentTime: {
+    ...typography.caption,
+  },
+  scheduleWithJobs: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  scheduleStatus: {
+    ...typography.h4,
+    marginBottom: spacing.s,
+  },
+  scheduleDetails: {
     ...typography.caption,
   },
 });
