@@ -183,17 +183,13 @@ export default function OnboardingLayout() {
           : '',
         
         // Time Buffers
-        travel_buffer_percentage: finalOnboardingData['time-buffers']?.travelBufferMinutes,
+        travel_buffer_minutes: finalOnboardingData['time-buffers']?.travelBufferMinutes,
         job_duration_buffer_minutes: finalOnboardingData['time-buffers']?.jobBufferMinutes,
         enable_smart_buffers: finalOnboardingData['time-buffers']?.enableSmartBuffers,
         emergency_travel_buffer_percentage: finalOnboardingData['time-buffers']?.enableSmartBuffers ? 25 : 0,
         
         // Supplier Preferences
-        primary_supplier: finalOnboardingData['suppliers']?.preferredSuppliers?.[0]?.replace('-', ' ')
-          ?.split(' ')
-          ?.map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-          ?.join(' '),
-        secondary_suppliers: finalOnboardingData['suppliers']?.preferredSuppliers?.slice(1)?.map((supplier: string) =>
+        preferred_suppliers: finalOnboardingData['suppliers']?.preferredSuppliers?.map((supplier: string) =>
           supplier.replace('-', ' ')
             .split(' ')
             .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))

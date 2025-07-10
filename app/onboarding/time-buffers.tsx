@@ -29,7 +29,7 @@ export default function TimeBuffersScreen() {
   const getDefaultValues = () => {
     if (existingPreferences) {
       return {
-        travelBufferMinutes: existingPreferences.travel_buffer_percentage,
+        travelBufferMinutes: existingPreferences.travel_buffer_minutes || existingPreferences.travel_buffer_percentage || 15,
         jobBufferMinutes: existingPreferences.job_duration_buffer_minutes,
         enableSmartBuffers: existingPreferences.emergency_travel_buffer_percentage > 0,
       };

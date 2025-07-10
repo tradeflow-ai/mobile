@@ -21,7 +21,8 @@ export interface UserPreferences {
   break_buffer_minutes: number;
 
   // Buffer Times
-  travel_buffer_percentage: number;
+  travel_buffer_percentage?: number; // DEPRECATED: Use travel_buffer_minutes instead
+  travel_buffer_minutes: number; // Added: Flat minutes for travel buffer (replaces percentage)
   emergency_travel_buffer_percentage: number;
   peak_hour_buffer_percentage: number;
   weather_buffer_percentage: number;
@@ -48,8 +49,9 @@ export interface UserPreferences {
   parking_difficulty_areas: string[];
 
   // Supplier Preferences
-  primary_supplier: string;
-  secondary_suppliers: string[];
+  primary_supplier?: string; // DEPRECATED: Use preferred_suppliers instead
+  secondary_suppliers?: string[]; // DEPRECATED: Use preferred_suppliers instead
+  preferred_suppliers: string[]; // Added: List of all preferred suppliers (equal treatment)
   specialty_suppliers: Record<string, string>;
   supplier_preferences: 'price' | 'quality' | 'availability' | 'location';
   supplier_account_numbers: Record<string, string>;
@@ -94,7 +96,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   break_buffer_minutes: 5,
 
   // Buffer Times
-  travel_buffer_percentage: 15,
+  travel_buffer_minutes: 15, // Default: 15 minutes travel buffer
   emergency_travel_buffer_percentage: 25,
   peak_hour_buffer_percentage: 10,
   weather_buffer_percentage: 20,
@@ -121,8 +123,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   parking_difficulty_areas: [],
 
   // Supplier Preferences
-  primary_supplier: 'Home Depot',
-  secondary_suppliers: ['Lowe\'s', 'Ferguson'],
+  preferred_suppliers: ['Home Depot', 'Lowe\'s'], // Default: Equal preference for main suppliers
   specialty_suppliers: {
     'electrical': 'Grainger',
     'plumbing': 'Ferguson',
@@ -230,7 +231,7 @@ export class PreferencesService {
       work_end_time: preferences.work_end_time,
       lunch_break_start: preferences.lunch_break_start,
       lunch_break_end: preferences.lunch_break_end,
-      travel_buffer_percentage: preferences.travel_buffer_percentage,
+      travel_buffer_percentage: preferences.travel_buffer_percentage || 15, // Fallback for compatibility
       job_duration_buffer_minutes: preferences.job_duration_buffer_minutes,
       emergency_response_time_minutes: preferences.emergency_response_time_minutes,
       demand_response_time_hours: preferences.demand_response_time_hours,
@@ -250,7 +251,8 @@ export class PreferencesService {
     return {
       work_start_time: preferences.work_start_time,
       work_end_time: preferences.work_end_time,
-      travel_buffer_percentage: preferences.travel_buffer_percentage,
+      travel_buffer_percentage: preferences.travel_buffer_percentage || 15, // Fallback for compatibility
+      travel_buffer_minutes: preferences.travel_buffer_minutes,
       emergency_travel_buffer_percentage: preferences.emergency_travel_buffer_percentage,
       peak_hour_buffer_percentage: preferences.peak_hour_buffer_percentage,
       weather_buffer_percentage: preferences.weather_buffer_percentage,
@@ -279,8 +281,9 @@ export class PreferencesService {
    */
   static formatInventoryPreferences(preferences: UserPreferences): Record<string, any> {
     return {
-      primary_supplier: preferences.primary_supplier,
-      secondary_suppliers: preferences.secondary_suppliers.join(', '),
+      primary_supplier: preferences.primary_supplier || preferences.preferred_suppliers?.[0] || '',
+      secondary_suppliers: (preferences.secondary_suppliers || preferences.preferred_suppliers?.slice(1) || []).join(', '),
+      preferred_suppliers: preferences.preferred_suppliers.join(', '),
       specialty_suppliers: Object.entries(preferences.specialty_suppliers)
         .map(([category, supplier]) => `${category}: ${supplier}`)
         .join(', '),
