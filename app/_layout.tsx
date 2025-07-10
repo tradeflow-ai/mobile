@@ -290,6 +290,54 @@ function RootLayoutNav() {
         }} 
       />
       <Stack.Screen 
+        name="plan-summary"
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          title: 'Daily Plan Summary',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
+        name="inventory-summary"
+        options={({ navigation }) => ({
+          presentation: 'modal',
+          title: 'Inventory Summary',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+      <Stack.Screen 
         name="login" 
         options={{ 
           headerShown: false,

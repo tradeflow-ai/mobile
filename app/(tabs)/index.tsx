@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { typography, spacing, shadows, radius } from '@/constants/Theme';
+import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
 import { Button, Card } from '@/components/ui';
@@ -23,6 +24,7 @@ import { useTodaysPlan } from '@/hooks/useDailyPlan';
 
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
+import { MockAgentService } from '@/services/mockAgentService';
 
 
 export default function HomeScreen() {
@@ -36,8 +38,19 @@ export default function HomeScreen() {
 
   const [isDayStarted, setIsDayStarted] = useState(false);
   const [isOnBreak, setIsOnBreak] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Automatically consider day started if we have an approved plan
+  const isActuallyDayStarted = isDayStarted || dailyPlan?.status === 'approved';
 
   const { navigate } = useAppNavigation();
+
+  // Refresh data when screen comes into focus (helps with reset)
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, [])
+  );
 
   // Get user's first name from ProfileManager
   const profileManager = ProfileManager.getInstance();
@@ -59,11 +72,11 @@ export default function HomeScreen() {
     }
   };
 
-  const handleStartDay = () => {
+    const handleStartDay = () => {
     // If there's already an approved plan, just start the day
     if (dailyPlan?.status === 'approved') {
-    setIsDayStarted(true);
-    setIsOnBreak(false);
+      setIsDayStarted(true);
+      setIsOnBreak(false);
       return;
     }
     
@@ -72,8 +85,11 @@ export default function HomeScreen() {
   };
 
   const handleEndDay = () => {
+    // Clear the daily plan and reset day state
+    MockAgentService.clearTodaysPlan('mock-user-123');
     setIsDayStarted(false);
     setIsOnBreak(false);
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleTakeBreak = () => {
@@ -121,6 +137,29 @@ export default function HomeScreen() {
     navigate('/inventory');
   };
 
+  const handleResetPlan = () => {
+    Alert.alert(
+      'Reset Daily Plan',
+      'This will clear your current daily plan and allow you to plan again. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          style: 'destructive',
+          onPress: () => {
+            MockAgentService.clearTodaysPlan('mock-user-123');
+            // Force refresh of this screen
+            setRefreshTrigger(prev => prev + 1);
+            // Force a small delay to allow state to update
+            setTimeout(() => {
+              Alert.alert('Plan Reset', 'Your daily plan has been cleared. You can now plan your day again.');
+            }, 100);
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
@@ -165,7 +204,7 @@ export default function HomeScreen() {
                  <FontAwesome name="clock-o" size={20} color={colors.success} />
                </View>
                <Text style={[styles.statNumber, { color: colors.text }]}>
-                 {dailyPlan?.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : '0h'}
+                 {(dailyPlan as any)?.total_estimated_duration ? `${Math.round((dailyPlan as any).total_estimated_duration / 60)}h` : '0h'}
                </Text>
                <Text style={[styles.statLabel, { color: colors.placeholder }]}>
                  Estimated Time
@@ -173,8 +212,8 @@ export default function HomeScreen() {
              </Card>
            </View>
 
-           {/* Start My Day Button */}
-           {!isDayStarted ? (
+           {/* Start My Day Button - Only show if no approved plan */}
+           {!isActuallyDayStarted && (
              <Button
                variant="primary"
                onPress={handleStartDay}
@@ -186,40 +225,36 @@ export default function HomeScreen() {
                style={styles.startDayButton}
                disabled={planLoading}
              />
-           ) : (
-             <View style={styles.dayButtonsContainer}>
-               <Button
-                 variant="primary"
-                 onPress={handleEndDay}
-                 title="End Day"
-                 style={styles.dayButtonLeft}
-               />
-               <Button
-                 variant="primary"
-                 onPress={isOnBreak ? handleEndBreak : handleTakeBreak}
-                 title={isOnBreak ? 'End Break' : 'Take Break'}
-                 style={styles.dayButtonRight}
-               />
-             </View>
            )}
 
            {/* Today's Calendar */}
            <View style={styles.scheduleSection}>
-             <TouchableOpacity 
-               style={styles.scheduleHeader}
-               onPress={() => navigate('/calendar')}
-               activeOpacity={0.7}
-             >
-               <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-                 Today's Calendar
-               </Text>
-               <View style={styles.scheduleHeaderRight}>
-                 <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
-                   {dailyPlan?.job_ids?.length || 0} jobs
+             <View style={styles.scheduleHeader}>
+               <TouchableOpacity 
+                 style={styles.scheduleHeaderLeft}
+                 onPress={() => navigate('/calendar')}
+                 activeOpacity={0.7}
+               >
+                 <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+                   Today's Calendar
                  </Text>
-                 <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
-               </View>
-             </TouchableOpacity>
+                 <View style={styles.scheduleHeaderRight}>
+                   <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
+                     {dailyPlan?.job_ids?.length || 0} jobs
+                   </Text>
+                   <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
+                 </View>
+               </TouchableOpacity>
+               {dailyPlan?.status === 'approved' && (
+                 <TouchableOpacity 
+                   style={styles.resetButton}
+                   onPress={handleResetPlan}
+                   activeOpacity={0.7}
+                 >
+                   <FontAwesome name="refresh" size={16} color={colors.primary} />
+                 </TouchableOpacity>
+               )}
+             </View>
              
              <Card style={styles.scheduleCard}>
                {dailyPlan?.job_ids?.length ? (
@@ -231,7 +266,7 @@ export default function HomeScreen() {
                      }
                    </Text>
                    <Text style={[styles.scheduleDetails, { color: colors.placeholder }]}>
-                     {dailyPlan.job_ids.length} jobs • {dailyPlan.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : 'Calculating'} estimated
+                     {dailyPlan.job_ids.length} jobs • {(dailyPlan as any)?.total_estimated_duration ? `${Math.round((dailyPlan as any).total_estimated_duration / 60)}h` : 'Calculating'} estimated
                    </Text>
                  </View>
                ) : (
@@ -310,6 +345,8 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </View>
+
+
 
           {/* Recent Activity */}
           <Card style={styles.recentCard}>
@@ -399,10 +436,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.m,
   },
+  scheduleHeaderLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   scheduleHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.s,
+  },
+  resetButton: {
+    ...touchTargets.styles.minimum,
+    ...spacing.helpers.padding('xs'),
+    marginLeft: spacing.s,
   },
   scheduleTitle: {
     ...typography.h3,
@@ -495,4 +543,5 @@ const styles = StyleSheet.create({
   scheduleDetails: {
     ...typography.caption,
   },
+
 });

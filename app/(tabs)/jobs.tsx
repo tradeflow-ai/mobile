@@ -7,7 +7,8 @@ import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { SearchBar, EmptyState, TabSelector, TabOption } from '@/components/ui';
-import { useJobs, useTodaysJobs, JobLocation } from '@/hooks/useJobs';
+import { JobLocation } from '@/hooks/useJobs';
+import { useMockJobs } from '@/hooks/useMockJobs';
 import { formatDate } from '@/utils/dateUtils';
 
 export default function JobsScreen() {
@@ -19,9 +20,15 @@ export default function JobsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedJobFilter, setSelectedJobFilter] = useState('today');
 
-  // Data fetching
-  const { data: allJobs = [], isLoading: isLoadingAll } = useJobs();
-  const { data: todaysJobs = [], isLoading: isLoadingToday } = useTodaysJobs();
+  // Data fetching - using mock data
+  const { data: allJobs = [], isLoading: isLoadingAll } = useMockJobs();
+  
+  // Filter for today's jobs from mock data
+  const today = new Date().toISOString().split('T')[0];
+  const todaysJobs = allJobs.filter(job => 
+    job.scheduled_start && job.scheduled_start.startsWith(today)
+  );
+  const isLoadingToday = isLoadingAll;
 
   // Determine which jobs to show
   const jobs = selectedJobFilter === 'today' ? todaysJobs : allJobs;

@@ -13,12 +13,24 @@ import { TabSelector, TabOption } from '@/components/ui';
 import { Calendar, CalendarView } from '@/components/Calendar';
 import { JobLocation } from '@/hooks/useJobs';
 import { useAppNavigation } from '@/hooks/useNavigation';
+import { useMockJobs } from '@/hooks/useMockJobs';
 
 export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
   const { navigate } = useAppNavigation();
+
+  // Get mock jobs data from the planning system
+  const { data: mockJobs = [] } = useMockJobs();
+
+  // Debug logging to see what jobs the calendar receives
+  console.log('📅 Calendar received jobs:', mockJobs.map(job => ({
+    id: job.id,
+    title: job.title,
+    scheduled_start: job.scheduled_start,
+    scheduled_end: (job as any).scheduled_end
+  })));
 
   // Calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -88,6 +100,7 @@ export default function CalendarScreen() {
           onTimeSlotPress={handleTimeSlotPress}
           view={currentView}
           onViewChange={handleViewChange}
+          jobs={mockJobs}
         />
       </View>
     </SafeAreaView>

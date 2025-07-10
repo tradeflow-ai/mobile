@@ -2,12 +2,7 @@
  * TradeFlow Mobile App - Plan Your Day Workflow Orchestrator
  * 
  * This is the main entry point for the AI-powered daily planning workflow.
- * It manages the three-step process and routes users through each stage:
- * 1. Schedule Review (Dispatch Strategist)
- * 2. Map View (Route Optimizer)
- * 3. Inventory Checklist (Inventory Specialist)
- * 
- * Features real-time agent status updates and seamless progression.
+ * It manages the planning process and shows the results to the user.
  */
 
 import React, { useEffect } from 'react';
@@ -21,7 +16,7 @@ import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { LoadingStepUI } from '../../components/LoadingStepUI';
 import { ErrorStepUI } from '../../components/ErrorStepUI';
 import { StartPlanningUI } from '../../components/StartPlanningUI';
-import { useJobs } from '@/hooks/useJobs';
+import { useMockJobs } from '@/hooks/useMockJobs';
 
 export default function PlanYourDayIndex() {
   const router = useRouter();
@@ -29,7 +24,7 @@ export default function PlanYourDayIndex() {
   const colors = Colors[colorScheme ?? 'light'];
   
   // Get today's jobs for initial planning
-  const { data: jobs, isLoading: jobsLoading } = useJobs({ status: 'pending' });
+  const { data: jobs, isLoading: jobsLoading } = useMockJobs({ status: 'pending' });
   
   // Get today's daily plan with real-time updates
   const {
@@ -45,41 +40,16 @@ export default function PlanYourDayIndex() {
   } = useTodaysPlan();
 
   /**
-   * Handle automatic navigation based on daily plan status
+   * Handle automatic navigation when planning is complete
    */
   useEffect(() => {
     if (!dailyPlan || isProcessing) return;
 
-    // Navigate to appropriate step based on current status
-    switch (dailyPlan.status) {
-      case 'dispatch_complete':
-        if (currentStep === 'route') {
-          router.push('./calendar-review');
-        }
-        break;
-      case 'route_complete':
-        if (currentStep === 'inventory') {
-          router.push('./map-view');
-        }
-        break;
-      case 'inventory_complete':
-        if (currentStep === 'complete') {
-          router.push('./inventory-checklist');
-        }
-        break;
-      case 'approved':
-        // Planning complete - show success and navigate to execution
-        Alert.alert(
-          'Planning Complete!',
-          'Your daily plan is ready. Time to start your day!',
-          [
-            { text: 'Back to Home', onPress: () => router.push('/(tabs)') },
-            { text: 'Start Working', onPress: () => router.push('/(tabs)') },
-          ]
-        );
-        break;
+    // Navigate to plan summary when planning is complete
+    if (dailyPlan.status === 'approved') {
+      router.push('/plan-summary');
     }
-  }, [dailyPlan?.status, currentStep, isProcessing, router]);
+  }, [dailyPlan?.status, isProcessing, router]);
 
   /**
    * Handle starting the planning workflow
@@ -147,44 +117,48 @@ export default function PlanYourDayIndex() {
     );
   }
 
-  // No plan exists - show start planning UI
-  if (!dailyPlan) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <StartPlanningUI 
-          onStartPlanning={handleStartPlanning}
-          availableJobs={jobs?.filter(job => job.status === 'pending') || []}
-        />
-      </SafeAreaView>
-    );
-  }
-
   // Agent is processing - show loading with current step
-  if (isProcessing) {
+  if (isProcessing || (dailyPlan && dailyPlan.status !== 'approved')) {
     const stepMessages = {
-      dispatch: 'Analyzing and prioritizing your jobs...',
-      route: 'Optimizing your travel route...',
-      inventory: 'Checking parts and creating shopping list...',
+      dispatch: '🎯 Prioritizing your jobs...',
+      route: '🗺️ Optimizing your travel route...',
+      inventory: '📦 Checking parts and creating shopping list...',
+      complete: '✅ Finalizing your daily plan...',
     };
+
+    const currentMessage = stepMessages[currentStep as keyof typeof stepMessages] || '🧠 AI agents working...';
 
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <LoadingStepUI 
-          step={stepMessages[currentStep as keyof typeof stepMessages] || 'Processing...'}
+          step={currentMessage}
           isConnected={isConnected}
-          planId={dailyPlan.id}
+          planId={dailyPlan?.id}
         />
       </SafeAreaView>
     );
   }
 
-  // Plan exists but no automatic navigation triggered
-  // This is a fallback that shouldn't normally happen
+  // Plan is complete - show success message (this shouldn't be visible due to navigation)
+  if (dailyPlan && dailyPlan.status === 'approved') {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <View style={styles.container}>
+          <LoadingStepUI 
+            step="🎉 Daily plan complete! Redirecting to summary..."
+            isConnected={isConnected}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // No plan exists - show start planning UI
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <LoadingStepUI 
-        step="Preparing your daily plan..."
-        isConnected={isConnected}
+      <StartPlanningUI 
+        onStartPlanning={handleStartPlanning}
+        availableJobs={jobs?.filter(job => job.status === 'pending') || []}
       />
     </SafeAreaView>
   );

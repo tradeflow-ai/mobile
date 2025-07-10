@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Platform, Modal, Animated, Dimensions, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Platform, Modal, Animated, Dimensions, ScrollView, AppState } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { useAtom } from 'jotai';
@@ -8,8 +9,10 @@ import Colors from '@/constants/Colors';
 import { 
   currentLocationAtom, 
 } from '@/store/atoms';
-import { useJobs, JobLocation } from '@/hooks/useJobs';
+import { JobLocation } from '@/hooks/useJobs';
+import { useMockJobs } from '@/hooks/useMockJobs';
 import { LocationService } from '@/services/location';
+import { MockAgentService } from '@/services/mockAgentService';
 import { 
   openDirectionsToJob, 
   getJobMarkerColor,
@@ -33,9 +36,24 @@ export default function MapScreen() {
   const colors = Colors[colorScheme ?? 'light'];
 
   // State management
-  const { data: jobLocations = [] } = useJobs();
+  const { data: jobLocations = [] } = useMockJobs();
   const [currentLocation, setCurrentLocation] = useAtom(currentLocationAtom);
   const [selectedJobLocation, setSelectedJobLocation] = useState<JobLocation | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // Check if it's an active day with any plan in progress
+  const isActiveDay = useMemo(() => {
+    const mockUser = { id: 'mock-user-123' };
+    const activePlan = MockAgentService.getTodaysMockDailyPlan(mockUser.id);
+    // Show current job panel for any plan that's at least started
+    return activePlan && ['dispatch_complete', 'route_complete', 'inventory_complete', 'approved'].includes(activePlan.status);
+  }, [refreshTrigger]);
+  
+  // Get current/next job (first pending job)
+  const currentJob = useMemo(() => {
+    if (!isActiveDay) return null;
+    return jobLocations.find(job => job.status === 'pending') || jobLocations[0];
+  }, [isActiveDay, jobLocations]);
   
   // Local state
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -55,6 +73,13 @@ export default function MapScreen() {
   useEffect(() => {
     initializeLocation();
   }, []);
+
+  // Refresh plan status when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, [])
+  );
 
   // Update map region when user location changes
   useEffect(() => {
@@ -105,8 +130,8 @@ export default function MapScreen() {
     
     // Center map on selected location
     setMapRegion({
-      latitude: jobLocation.coordinates.latitude,
-      longitude: jobLocation.coordinates.longitude,
+      latitude: jobLocation.latitude,
+      longitude: jobLocation.longitude,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     });
@@ -161,6 +186,22 @@ export default function MapScreen() {
     }
   }, [isJobModalVisible, modalAnimation]);
 
+  const handleCurrentJobDirections = useCallback(() => {
+    if (currentJob) {
+      openDirectionsToJob(currentJob);
+    }
+  }, [currentJob]);
+
+  const handleCurrentJobDetails = useCallback(() => {
+    if (currentJob) {
+      Alert.alert(
+        currentJob.title,
+        `${currentJob.description}\n\nAddress: ${currentJob.address}\nClient: ${currentJob.customer_name}\nPhone: ${currentJob.customer_phone}\nPriority: ${currentJob.priority}`,
+        [{ text: 'OK' }]
+      );
+    }
+  }, [currentJob]);
+
 
 
   const modalTranslateY = modalAnimation.interpolate({
@@ -188,10 +229,10 @@ export default function MapScreen() {
         onRegionChangeComplete={setMapRegion}
       >
         {/* Job Location Markers with Stop Numbers */}
-        {jobLocations.map((job, index) => (
+        {jobLocations.map((job: JobLocation, index: number) => (
           <Marker
             key={job.id}
-            coordinate={job.coordinates}
+            coordinate={{ latitude: job.latitude, longitude: job.longitude }}
             title={job.title}
             description={job.description}
             onPress={() => handleJobMarkerPress(job)}
@@ -219,24 +260,71 @@ export default function MapScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* Bottom Job Toggle Button - Only show when modal is closed */}
+      {/* Current Job Panel - Show on active day, otherwise show job toggle button */}
       {!isJobModalVisible && (
         <SafeAreaView style={styles.bottomControls}>
-          <TouchableOpacity
-            style={[styles.jobToggleButton, { backgroundColor: colors.primary }]}
-            onPress={toggleJobModal}
-          >
-            <View style={styles.jobToggleContent}>
-              <Text style={[styles.jobCountText, { color: colors.background }]}>
-                {jobLocations.length} Jobs
-              </Text>
-              <FontAwesome 
-                name="chevron-up" 
-                size={12} 
-                color={colors.background} 
-              />
+          {isActiveDay && currentJob ? (
+            // Current Job Panel for active day
+            <View style={[styles.currentJobPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.currentJobHeader}>
+                <View style={styles.currentJobInfo}>
+                  <Text style={[styles.currentJobLabel, { color: colors.placeholder }]}>
+                    Current Job
+                  </Text>
+                  <Text style={[styles.currentJobTitle, { color: colors.text }]} numberOfLines={1}>
+                    {currentJob.title}
+                  </Text>
+                  <Text style={[styles.currentJobAddress, { color: colors.placeholder }]} numberOfLines={1}>
+                    {currentJob.address}
+                  </Text>
+                </View>
+                <View style={[styles.currentJobNumber, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.currentJobNumberText, { color: colors.background }]}>
+                    {jobLocations.findIndex(job => job.id === currentJob.id) + 1}
+                  </Text>
+                </View>
+              </View>
+              
+              <View style={styles.currentJobActions}>
+                <TouchableOpacity
+                  style={[styles.currentJobButton, { backgroundColor: colors.primary }]}
+                  onPress={handleCurrentJobDirections}
+                >
+                  <FontAwesome name="location-arrow" size={16} color={colors.background} />
+                  <Text style={[styles.currentJobButtonText, { color: colors.background }]}>
+                    Directions
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.currentJobButton, styles.currentJobSecondaryButton, { borderColor: colors.primary }]}
+                  onPress={handleCurrentJobDetails}
+                >
+                  <FontAwesome name="info-circle" size={16} color={colors.primary} />
+                  <Text style={[styles.currentJobButtonText, { color: colors.primary }]}>
+                    Details
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </TouchableOpacity>
+          ) : (
+            // Job Toggle Button for non-active days
+            <TouchableOpacity
+              style={[styles.jobToggleButton, { backgroundColor: colors.primary }]}
+              onPress={toggleJobModal}
+            >
+              <View style={styles.jobToggleContent}>
+                <Text style={[styles.jobCountText, { color: colors.background }]}>
+                  {jobLocations.length} Jobs
+                </Text>
+                <FontAwesome 
+                  name="chevron-up" 
+                  size={12} 
+                  color={colors.background} 
+                />
+              </View>
+            </TouchableOpacity>
+          )}
         </SafeAreaView>
       )}
 
@@ -294,7 +382,7 @@ export default function MapScreen() {
               showsVerticalScrollIndicator={false}
               ref={setScrollViewRef}
             >
-              {jobLocations.map((job, index) => (
+              {jobLocations.map((job: JobLocation, index: number) => (
                 <View
                   key={job.id}
                   style={[
@@ -311,8 +399,8 @@ export default function MapScreen() {
                       setSelectedJobLocation(job);
                       // Center map on selected location
                       setMapRegion({
-                        latitude: job.coordinates.latitude,
-                        longitude: job.coordinates.longitude,
+                        latitude: job.latitude,
+                        longitude: job.longitude,
                         latitudeDelta: 0.01,
                         longitudeDelta: 0.01,
                       });
@@ -323,16 +411,16 @@ export default function MapScreen() {
                         <Text style={styles.stopNumberText}>{index + 1}</Text>
                       </View>
                       <Text style={[styles.jobTitle, { color: colors.text }]}>{job.title}</Text>
-                      <Text style={[styles.jobType, { color: colors.placeholder }]}>{job.jobType}</Text>
+                      <Text style={[styles.jobType, { color: colors.placeholder }]}>{job.job_type}</Text>
                     </View>
                     <Text style={[styles.jobDescription, { color: colors.placeholder }]}>{job.description}</Text>
                     <Text style={[styles.jobAddress, { color: colors.placeholder }]}>{job.address}</Text>
                     <View style={styles.jobMeta}>
-                      <Text style={[styles.jobPriority, { color: getJobMarkerColor(job.jobType, job.priority) }]}>
+                      <Text style={[styles.jobPriority, { color: getJobMarkerColor(job.job_type, job.priority) }]}>
                         {job.priority.toUpperCase()} PRIORITY
                       </Text>
                       <Text style={[styles.jobDuration, { color: colors.placeholder }]}>
-                        {job.estimatedDuration}min
+                        {job.estimated_duration || 60}min
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -393,13 +481,12 @@ const styles = StyleSheet.create({
   bottomControls: {
     position: 'absolute',
     bottom: 100,
-    left: 0,
-    right: 0,
+    left: 16,
+    right: 16,
     zIndex: 1,
     pointerEvents: 'box-none',
   },
   jobToggleButton: {
-    margin: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 24,
@@ -557,5 +644,75 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+
+  currentJobPanel: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  currentJobHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  currentJobInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  currentJobLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  currentJobTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  currentJobAddress: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  currentJobNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currentJobNumberText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  currentJobActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  currentJobButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  currentJobSecondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+  },
+  currentJobButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

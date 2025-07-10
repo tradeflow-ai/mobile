@@ -30,6 +30,7 @@ interface CalendarProps {
   onTimeSlotPress?: (date: Date, hour: number) => void;
   view: CalendarView;
   onViewChange: (view: CalendarView) => void;
+  jobs?: JobLocation[];
 }
 
 interface DayData {
@@ -56,15 +57,15 @@ export const Calendar: React.FC<CalendarProps> = ({
   onTimeSlotPress,
   view,
   onViewChange,
+  jobs = [],
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Get jobs for the current day(s)
-  const { data: todaysJobs = [] } = useTodaysJobs();
-
-  // Mock job data atom for persistence
-  const [mockJobs, setMockJobs] = useAtom(mockJobDataAtom);
+  // Use passed jobs prop or fallback to empty array
+  // Remove dependency on useTodaysJobs and mockJobDataAtom
+  // const { data: todaysJobs = [] } = useTodaysJobs();
+  // const [mockJobs, setMockJobs] = useAtom(mockJobDataAtom);
 
   // Constants for timeline layout
   const HOUR_HEIGHT = 60;
@@ -154,12 +155,12 @@ export const Calendar: React.FC<CalendarProps> = ({
     return jobs;
   };
 
-  // Initialize mock jobs if empty
-  useEffect(() => {
-    if (mockJobs.length === 0) {
-      setMockJobs(generateMockJobs());
-    }
-  }, [mockJobs.length, setMockJobs]);
+  // Remove mock job initialization - using passed jobs prop
+  // useEffect(() => {
+  //   if (mockJobs.length === 0) {
+  //     setMockJobs(generateMockJobs());
+  //   }
+  // }, [mockJobs.length, setMockJobs]);
 
   // Refs for week view synchronized scrolling
   const headerScrollRef = useRef<ScrollView>(null);
@@ -173,7 +174,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   const isScrollingSynced = useRef(false);
   const lastScrollX = useRef(0);
 
-  const allJobs = [...todaysJobs, ...mockJobs];
+  const allJobs = jobs; // Use passed jobs prop
 
   // Generate week days for week view
   const generateWeekDays = (date: Date): DayData[] => {
