@@ -39,9 +39,9 @@ export const scale = {
    */
   font: (size: number, min?: number, max?: number): number => {
     const scaled = scale.size(size);
-    const minSize = min || size * 0.8;
-    const maxSize = max || size * 1.2;
-    return Math.max(minSize, Math.min(maxSize, scaled));
+    const minSize = Math.round(min || size * 0.8);
+    const maxSize = Math.round(max || size * 1.2);
+    return Math.round(Math.max(minSize, Math.min(maxSize, scaled)));
   },
   
   /**

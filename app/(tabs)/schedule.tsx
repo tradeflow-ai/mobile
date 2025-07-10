@@ -1,126 +1,94 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
-  Alert,
 } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { typography, spacing, shadows, radius } from '@/constants/Theme';
+import { spacing } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { Card, Button } from '@/components/ui';
-import { formatDate } from '@/utils/dateUtils';
+import { TabSelector, TabOption } from '@/components/ui';
+import { Calendar, CalendarView } from '@/components/Calendar';
+import { JobLocation } from '@/hooks/useJobs';
+import { useAppNavigation } from '@/hooks/useNavigation';
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const router = useRouter();
+  const { navigate } = useAppNavigation();
+
+  // Calendar state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState<CalendarView>('month');
+
+  // View options for TabSelector - Apple Calendar order
+  const viewOptions: TabOption[] = [
+    { key: 'day', label: 'Day' },
+    { key: 'week', label: 'Week' },
+    { key: 'month', label: 'Month' },
+    { key: 'agenda', label: 'List' },
+  ];
 
   const handleAddJob = () => {
-    Alert.alert('Add Job', 'This will open the add job modal');
+    navigate('/create-job');
   };
 
-  const handleViewCalendar = () => {
-    Alert.alert('Calendar View', 'This will show the calendar view');
+  const handleJobPress = (job: JobLocation) => {
+    navigate('/job-details');
+  };
+
+  const handleTimeSlotPress = (date: Date, hour: number) => {
+    // Navigate to create job with pre-filled date and time
+    navigate('/create-job');
+  };
+
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const handleViewChange = (view: CalendarView) => {
+    setCurrentView(view);
+  };
+
+  const handleTabSelectorChange = (key: string) => {
+    setCurrentView(key as CalendarView);
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
-        <Header
-          title="Schedule"
-          rightAction={{
-            icon: 'plus',
-            onPress: handleAddJob,
-          }}
-        />
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Today's Overview */}
-          <Card style={styles.todayCard}>
-            <View style={styles.todayHeader}>
-              <Text style={[styles.todayTitle, { color: colors.text }]}>
-                Today's Schedule
-              </Text>
-              <Text style={[styles.todayDate, { color: colors.placeholder }]}>
-                {formatDate(new Date())}
-              </Text>
-            </View>
-
-            <View style={styles.todayStats}>
-              <View style={styles.statItem}>
-                <FontAwesome name="briefcase" size={16} color={colors.primary} />
-                <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-                <Text style={[styles.statLabel, { color: colors.placeholder }]}>Jobs</Text>
-              </View>
-              <View style={styles.statItem}>
-                <FontAwesome name="clock-o" size={16} color={colors.success} />
-                <Text style={[styles.statNumber, { color: colors.text }]}>0h</Text>
-                <Text style={[styles.statLabel, { color: colors.placeholder }]}>Est. Time</Text>
-              </View>
-              <View style={styles.statItem}>
-                <FontAwesome name="map-marker" size={16} color={colors.accent} />
-                <Text style={[styles.statNumber, { color: colors.text }]}>0</Text>
-                <Text style={[styles.statLabel, { color: colors.placeholder }]}>Locations</Text>
-              </View>
-            </View>
-          </Card>
-
-          {/* Calendar View Button */}
-          <Button
-            variant="outline"
-            onPress={handleViewCalendar}
-            title="📅 View Calendar"
-            style={styles.calendarButton}
+        <View style={styles.headerContainer}>
+          <Header
+            title="Schedule"
+            rightAction={{
+              icon: 'plus',
+              onPress: handleAddJob,
+            }}
           />
+        </View>
 
-          {/* Upcoming Jobs */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Upcoming Jobs
-            </Text>
-            
-            <Card style={styles.emptyCard}>
-              <View style={styles.emptyState}>
-                <FontAwesome name="calendar-o" size={48} color={colors.placeholder} />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  No jobs scheduled
-                </Text>
-                <Text style={[styles.emptyDescription, { color: colors.placeholder }]}>
-                  Your schedule is clear. Add a new job to get started.
-                </Text>
-                <Button
-                  variant="primary"
-                  onPress={handleAddJob}
-                  title="Add New Job"
-                  style={styles.addButton}
-                />
-              </View>
-            </Card>
-          </View>
+        {/* View Selector */}
+        <View style={styles.viewSelectorContainer}>
+          <TabSelector
+            options={viewOptions}
+            selectedKey={currentView}
+            onSelectionChange={handleTabSelectorChange}
+            containerStyle={styles.viewSelector}
+          />
+        </View>
 
-          {/* Recent Jobs */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Jobs
-            </Text>
-            
-            <Card style={styles.recentCard}>
-              <View style={styles.recentItem}>
-                <FontAwesome name="circle" size={8} color={colors.placeholder} />
-                <Text style={[styles.recentText, { color: colors.placeholder }]}>
-                  No recent jobs
-                </Text>
-              </View>
-            </Card>
-          </View>
-        </ScrollView>
+        {/* Calendar Content */}
+        <Calendar
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          onJobPress={handleJobPress}
+          onTimeSlotPress={handleTimeSlotPress}
+          view={currentView}
+          onViewChange={handleViewChange}
+        />
       </View>
     </SafeAreaView>
   );
@@ -132,81 +100,16 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    ...spacing.helpers.padding('m'),
+    ...spacing.helpers.paddingVertical('m'),
   },
-  scrollContent: {
-    paddingBottom: spacing.xl,
+  headerContainer: {
+    ...spacing.helpers.paddingHorizontal('m'),
   },
-  todayCard: {
-    ...spacing.helpers.padding('m'),
+  viewSelectorContainer: {
+    ...spacing.helpers.paddingHorizontal('m'),
     marginBottom: spacing.m,
   },
-  todayHeader: {
-    marginBottom: spacing.m,
+  viewSelector: {
+    // Custom styles for view selector if needed
   },
-  todayTitle: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
-  },
-  todayDate: {
-    ...typography.body,
-  },
-  todayStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    ...typography.h3,
-    marginVertical: spacing.xs,
-  },
-  statLabel: {
-    ...typography.caption,
-  },
-  calendarButton: {
-    marginBottom: spacing.l,
-  },
-  section: {
-    marginBottom: spacing.l,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.m,
-  },
-  emptyCard: {
-    ...spacing.helpers.padding('xl'),
-  },
-  emptyState: {
-    alignItems: 'center',
-  },
-  emptyTitle: {
-    ...typography.h3,
-    marginTop: spacing.m,
-    marginBottom: spacing.s,
-  },
-  emptyDescription: {
-    ...typography.body,
-    textAlign: 'center',
-    marginBottom: spacing.l,
-  },
-  addButton: {
-    minWidth: 120,
-  },
-  recentCard: {
-    ...spacing.helpers.padding('m'),
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.s,
-  },
-  recentText: {
-    ...typography.body,
-    marginLeft: spacing.s,
-  },
-}); 
+});

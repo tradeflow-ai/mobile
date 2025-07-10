@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/services/profileService';
+import type { JobLocation } from '@/hooks/useJobs';
 
 // Theme types
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -49,23 +50,7 @@ export interface UserLocation {
   timestamp: Date;
 }
 
-// Job location types
-export interface JobLocation {
-  id: string;
-  title: string;
-  description: string;
-  jobType: 'delivery' | 'pickup' | 'service' | 'inspection';
-  priority: 'high' | 'medium' | 'low';
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-  address: string;
-  scheduledDate: Date;
-  status: 'pending' | 'in_progress' | 'completed';
-  estimatedDuration: number; // in minutes
-}
-
+// Job route types (keeping only the route interface)
 export interface JobRoute {
   id: string;
   name: string;
@@ -143,5 +128,8 @@ export const profileStateAtom = atom<ProfileState>((get) => {
     error,
   };
 });
+
+// Mock job data atom for calendar persistence
+export const mockJobDataAtom = atom<JobLocation[]>([]);
 
 
