@@ -620,12 +620,17 @@ export class OnboardingService {
       let nextStep: string | null = null;
 
       if (preferences) {
+        // Use new onboarding system
         const { score, isFullyCompleted } = await this.calculateCompletionScore(userId);
         completionScore = score;
         isCompleted = isFullyCompleted;
         nextStep = isCompleted ? null : preferences.current_step;
       } else {
-        nextStep = 'work-schedule';
+        // Fallback: Check old preferences system for completion
+        const legacyCompletion = await this.checkLegacyOnboardingCompletion(userId);
+        isCompleted = legacyCompletion.isCompleted;
+        completionScore = legacyCompletion.completionScore;
+        nextStep = isCompleted ? null : 'work-schedule';
       }
 
       return {
@@ -641,6 +646,56 @@ export class OnboardingService {
     } catch (error) {
       console.error('Error getting onboarding status:', error);
       return { data: null, error };
+    }
+  }
+
+  /**
+   * Check if user has completed onboarding via the legacy preferences system
+   * This provides compatibility with the existing onboarding UI
+   */
+  private static async checkLegacyOnboardingCompletion(userId: string): Promise<{
+    isCompleted: boolean;
+    completionScore: number;
+  }> {
+    try {
+      // Check if user has preferences saved via the old system
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.log('No profile preferences found for legacy check');
+        return { isCompleted: false, completionScore: 0 };
+      }
+
+      const prefs = profile?.preferences || {};
+      let score = 0;
+
+      // Check work schedule completion (30 points)
+      if (prefs.work_days && prefs.work_start_time && prefs.work_end_time) {
+        score += 30;
+      }
+
+      // Check time buffers completion (30 points)
+      if (prefs.travel_buffer_percentage !== undefined && prefs.job_duration_buffer_minutes !== undefined) {
+        score += 30;
+      }
+
+      // Check supplier preferences completion (40 points)
+      if (prefs.primary_supplier) {
+        score += 40;
+      }
+
+      const isCompleted = score >= 75; // At least work schedule + time buffers OR work schedule + suppliers
+
+      console.log('Legacy onboarding check:', { userId, score, isCompleted, hasPrefs: !!prefs.work_days });
+
+      return { isCompleted, completionScore: score };
+    } catch (error) {
+      console.error('Error checking legacy onboarding completion:', error);
+      return { isCompleted: false, completionScore: 0 };
     }
   }
 

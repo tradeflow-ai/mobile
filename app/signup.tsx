@@ -21,6 +21,7 @@ import { FormProvider, FormTextInput } from '@/components/forms';
 import { Button } from '@/components/ui';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
+import { OnboardingService } from '@/services/onboardingService';
 import { supabase } from '@/services/supabase';
 import { authErrorAtom } from '@/store/atoms';
 import { signupSchema, type SignupFormData } from '@/components/forms/validationSchemas';
@@ -97,17 +98,49 @@ export default function SignupScreen() {
           }
         }
         
-        // Show success message
-        Alert.alert(
-          'Account Created!',
-          `Welcome ${data.firstName}! Your account has been created successfully. Please check your email to verify your account.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/login'),
-            },
-          ]
-        );
+        // Initialize onboarding for the new user
+        try {
+          const onboardingResult = await OnboardingService.initializeOnboarding(user.id);
+          if (onboardingResult.error) {
+            console.warn('Failed to initialize onboarding during signup:', onboardingResult.error);
+          } else {
+            console.log('Onboarding initialized successfully for user:', user.id);
+          }
+        } catch (onboardingError) {
+          console.warn('Unexpected error initializing onboarding:', onboardingError);
+        }
+        
+        // Show success message based on email verification setting
+        const isDevelopment = __DEV__; // True in development mode
+        
+        if (isDevelopment) {
+          // Development mode - email verification likely disabled
+          Alert.alert(
+            'Account Created!',
+            `Welcome ${data.firstName}! Your account has been created successfully. Redirecting you to complete your setup.`,
+            [
+              {
+                text: 'Get Started',
+                onPress: () => {
+                  // AuthGuard will handle the redirect to onboarding or main app
+                  router.replace('/(tabs)');
+                },
+              },
+            ]
+          );
+        } else {
+          // Production mode - email verification enabled
+          Alert.alert(
+            'Account Created!',
+            `Welcome ${data.firstName}! Your account has been created successfully. Please check your email to verify your account, then sign in to complete your setup.`,
+            [
+              {
+                text: 'OK',
+                onPress: () => router.replace('/login'),
+              },
+            ]
+          );
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Signup failed';
