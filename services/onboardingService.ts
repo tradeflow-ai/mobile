@@ -620,11 +620,29 @@ export class OnboardingService {
       let nextStep: string | null = null;
 
       if (preferences) {
-        // Use new onboarding system
+        // Use new onboarding system, but also check legacy preferences as fallback
         const { score, isFullyCompleted } = await this.calculateCompletionScore(userId);
-        completionScore = score;
-        isCompleted = isFullyCompleted;
-        nextStep = isCompleted ? null : preferences.current_step;
+        
+        // If new system shows incomplete, double-check with legacy system
+        if (!isFullyCompleted) {
+          const legacyCompletion = await this.checkLegacyOnboardingCompletion(userId);
+          if (legacyCompletion.isCompleted) {
+            // Legacy system shows complete, use those results
+            completionScore = legacyCompletion.completionScore;
+            isCompleted = true;
+            nextStep = null;
+          } else {
+            // Both systems show incomplete
+            completionScore = score;
+            isCompleted = isFullyCompleted;
+            nextStep = preferences.current_step;
+          }
+        } else {
+          // New system shows complete
+          completionScore = score;
+          isCompleted = isFullyCompleted;
+          nextStep = null;
+        }
       } else {
         // Fallback: Check old preferences system for completion
         const legacyCompletion = await this.checkLegacyOnboardingCompletion(userId);
@@ -679,12 +697,12 @@ export class OnboardingService {
       }
 
       // Check time buffers completion (30 points)
-      if (prefs.travel_buffer_percentage !== undefined && prefs.job_duration_buffer_minutes !== undefined) {
+      if ((prefs.travel_buffer_percentage !== undefined || prefs.travel_buffer_minutes !== undefined) && prefs.job_duration_buffer_minutes !== undefined) {
         score += 30;
       }
 
       // Check supplier preferences completion (40 points)
-      if (prefs.primary_supplier) {
+      if (prefs.primary_supplier || (prefs.preferred_suppliers && prefs.preferred_suppliers.length > 0)) {
         score += 40;
       }
 

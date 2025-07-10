@@ -40,27 +40,27 @@ export interface UserPreferences {
   vehicle_type: string;
   tool_capacity_cubic_feet: number;
   parts_capacity_weight_lbs: number;
-  specialty_equipment_list: string[];
+  specialty_equipment_list?: string[];
   load_unload_time_minutes: number;
-  preferred_routes: string[];
-  avoided_areas: string[];
+  preferred_routes?: string[];
+  avoided_areas?: string[];
   toll_preference: 'avoid' | 'minimize' | 'accept';
   highway_preference: 'prefer_highways' | 'avoid_highways' | 'flexible';
-  parking_difficulty_areas: string[];
+  parking_difficulty_areas?: string[];
 
   // Supplier Preferences
   primary_supplier?: string; // DEPRECATED: Use preferred_suppliers instead
   secondary_suppliers?: string[]; // DEPRECATED: Use preferred_suppliers instead
   preferred_suppliers: string[]; // Added: List of all preferred suppliers (equal treatment)
-  specialty_suppliers: Record<string, string>;
+  specialty_suppliers?: Record<string, string>;
   supplier_preferences: 'price' | 'quality' | 'availability' | 'location';
-  supplier_account_numbers: Record<string, string>;
-  supplier_priority_order: any[];
+  supplier_account_numbers?: Record<string, string>;
+  supplier_priority_order?: any[];
 
   // Inventory Thresholds
   critical_items_min_stock: number;
   standard_items_min_stock: number;
-  seasonal_inventory_adjustments: Record<string, number>;
+  seasonal_inventory_adjustments?: Record<string, number>;
   reorder_point_percentage: number;
   safety_stock_percentage: number;
 
@@ -79,7 +79,7 @@ export interface UserPreferences {
   emergency_stock_items: string[];
 
   // Client Management
-  vip_client_ids: string[];
+  vip_client_ids?: string[];
 }
 
 // Default preferences for new users
@@ -106,7 +106,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   // Emergency Response
   emergency_response_time_minutes: 60,
   emergency_buffer_minutes: 30,
-  emergency_job_types: ['emergency', 'urgent', 'gas_leak', 'flooding', 'electrical_hazard'],
+  emergency_job_types: [],
   demand_response_time_hours: 4,
   maintenance_response_time_days: 7,
 
@@ -114,55 +114,33 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   vehicle_type: 'Service Van',
   tool_capacity_cubic_feet: 200,
   parts_capacity_weight_lbs: 1500,
-  specialty_equipment_list: [],
   load_unload_time_minutes: 10,
-  preferred_routes: [],
-  avoided_areas: [],
   toll_preference: 'minimize',
   highway_preference: 'flexible',
-  parking_difficulty_areas: [],
 
   // Supplier Preferences
   preferred_suppliers: ['Home Depot', 'Lowe\'s'], // Default: Equal preference for main suppliers
-  specialty_suppliers: {
-    'electrical': 'Grainger',
-    'plumbing': 'Ferguson',
-    'hvac': 'Johnstone Supply'
-  },
   supplier_preferences: 'availability',
-  supplier_account_numbers: {},
-  supplier_priority_order: [],
 
   // Inventory Thresholds
   critical_items_min_stock: 5,
   standard_items_min_stock: 2,
-  seasonal_inventory_adjustments: {},
   reorder_point_percentage: 25,
   safety_stock_percentage: 10,
 
   // BOMs and Parts
-  job_type_templates: {
-    'leaky_faucet': ['faucet_cartridge', 'o_rings', 'plumbers_putty'],
-    'outlet_installation': ['outlet', 'wire_nuts', '12_awg_wire'],
-    'hvac_maintenance': ['air_filter', 'belt', 'motor_oil']
-  },
-  common_job_types: ['plumbing_repair', 'electrical_service', 'hvac_maintenance'],
+  job_type_templates: {},
+  common_job_types: [],
   quality_preference: 'standard',
-  preferred_brands: ['Kohler', 'Leviton', 'Honeywell'],
-  substitution_rules: {
-    'kohler_faucet': ['moen_faucet', 'delta_faucet'],
-    'leviton_outlet': ['pass_seymour_outlet', 'hubbell_outlet']
-  },
+  preferred_brands: [],
+  substitution_rules: {},
 
   // Availability Preferences
   stock_preference: 'immediate_availability',
   delivery_preference: 'pickup',
   lead_time_tolerance_days: 3,
   bulk_purchase_threshold: 15,
-  emergency_stock_items: ['pipe_fittings', 'electrical_tape', 'fuses'],
-
-  // Client Management
-  vip_client_ids: []
+  emergency_stock_items: []
 };
 
 export class PreferencesService {
@@ -191,6 +169,26 @@ export class PreferencesService {
   }
 
   /**
+   * Get raw user preferences without defaults (for internal use)
+   */
+  private static async getRawUserPreferences(userId: string): Promise<{ data: any; error: any }> {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      return { data: profile?.preferences || {}, error: null };
+    } catch (error) {
+      console.error('Error getting raw user preferences:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
    * Update user preferences
    */
   static async updateUserPreferences(
@@ -198,12 +196,12 @@ export class PreferencesService {
     preferences: Partial<UserPreferences>
   ): Promise<{ data: UserPreferences | null; error: any }> {
     try {
-      // First get current preferences
-      const { data: currentPrefs, error: fetchError } = await this.getUserPreferences(userId);
+      // Get current raw preferences (without defaults to avoid overwriting clean data)
+      const { data: currentRawPrefs, error: fetchError } = await this.getRawUserPreferences(userId);
       if (fetchError) throw fetchError;
 
-      // Merge with new preferences
-      const updatedPreferences = { ...currentPrefs, ...preferences };
+      // Merge with new preferences (only merge existing user data, not defaults)
+      const updatedPreferences = { ...currentRawPrefs, ...preferences };
 
       // Update in database
       const { data, error } = await supabase
@@ -215,7 +213,9 @@ export class PreferencesService {
 
       if (error) throw error;
 
-      return { data: data.preferences, error: null };
+      // Return the merged result with defaults for the API response
+      const mergedWithDefaults = { ...DEFAULT_PREFERENCES, ...data.preferences };
+      return { data: mergedWithDefaults, error: null };
     } catch (error) {
       console.error('Error updating user preferences:', error);
       return { data: null, error };
@@ -240,7 +240,7 @@ export class PreferencesService {
       emergency_buffer_minutes: preferences.emergency_buffer_minutes,
       emergency_travel_buffer_percentage: preferences.emergency_travel_buffer_percentage,
       work_days: preferences.work_days.join(', '),
-      vip_client_ids: preferences.vip_client_ids.join(', ')
+      vip_client_ids: (preferences.vip_client_ids || []).join(', ')
     };
   }
 
@@ -265,13 +265,13 @@ export class PreferencesService {
       vehicle_type: preferences.vehicle_type,
       tool_capacity_cubic_feet: preferences.tool_capacity_cubic_feet,
       parts_capacity_weight_lbs: preferences.parts_capacity_weight_lbs,
-      specialty_equipment_list: preferences.specialty_equipment_list.join(', '),
+      specialty_equipment_list: (preferences.specialty_equipment_list || []).join(', '),
       load_unload_time_minutes: preferences.load_unload_time_minutes,
-      preferred_routes: preferences.preferred_routes.join(', '),
-      avoided_areas: preferences.avoided_areas.join(', '),
+      preferred_routes: (preferences.preferred_routes || []).join(', '),
+      avoided_areas: (preferences.avoided_areas || []).join(', '),
       toll_preference: preferences.toll_preference,
       highway_preference: preferences.highway_preference,
-      parking_difficulty_areas: preferences.parking_difficulty_areas.join(', '),
+      parking_difficulty_areas: (preferences.parking_difficulty_areas || []).join(', '),
       job_duration_buffer_minutes: preferences.job_duration_buffer_minutes
     };
   }
@@ -284,16 +284,16 @@ export class PreferencesService {
       primary_supplier: preferences.primary_supplier || preferences.preferred_suppliers?.[0] || '',
       secondary_suppliers: (preferences.secondary_suppliers || preferences.preferred_suppliers?.slice(1) || []).join(', '),
       preferred_suppliers: preferences.preferred_suppliers.join(', '),
-      specialty_suppliers: Object.entries(preferences.specialty_suppliers)
+      specialty_suppliers: Object.entries(preferences.specialty_suppliers || {})
         .map(([category, supplier]) => `${category}: ${supplier}`)
         .join(', '),
       supplier_preferences: preferences.supplier_preferences,
-      supplier_account_numbers: Object.entries(preferences.supplier_account_numbers)
+      supplier_account_numbers: Object.entries(preferences.supplier_account_numbers || {})
         .map(([supplier, account]) => `${supplier}: ${account}`)
         .join(', '),
       critical_items_min_stock: preferences.critical_items_min_stock,
       standard_items_min_stock: preferences.standard_items_min_stock,
-      seasonal_inventory_adjustments: Object.entries(preferences.seasonal_inventory_adjustments)
+      seasonal_inventory_adjustments: Object.entries(preferences.seasonal_inventory_adjustments || {})
         .map(([item, adjustment]) => `${item}: ${adjustment}`)
         .join(', '),
       reorder_point_percentage: preferences.reorder_point_percentage,

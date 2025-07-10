@@ -42,25 +42,42 @@ export default function SuppliersScreen() {
 
   // Transform preferences to form data
   const getInitialSuppliers = () => {
+    console.log('🔍 DEBUG: existingPreferences:', existingPreferences);
+    console.log('🔍 DEBUG: preferred_suppliers:', existingPreferences?.preferred_suppliers);
+    
     if (existingPreferences) {
       const suppliers = [];
-      if (existingPreferences.primary_supplier) {
-        suppliers.push(existingPreferences.primary_supplier.toLowerCase().replace(/\s+/g, '-'));
+      
+      // Check new preferred_suppliers field first
+      if (existingPreferences.preferred_suppliers && existingPreferences.preferred_suppliers.length > 0) {
+        const transformedSuppliers = existingPreferences.preferred_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-'));
+        console.log('🔍 DEBUG: Transformed suppliers:', transformedSuppliers);
+        suppliers.push(...transformedSuppliers);
+      } else {
+        console.log('🔍 DEBUG: No preferred_suppliers found, checking fallback fields');
+        // Fallback to deprecated fields for backward compatibility
+        if (existingPreferences.primary_supplier) {
+          suppliers.push(existingPreferences.primary_supplier.toLowerCase().replace(/\s+/g, '-'));
+        }
+        if (existingPreferences.secondary_suppliers) {
+          suppliers.push(...existingPreferences.secondary_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-')));
+        }
       }
-      if (existingPreferences.secondary_suppliers) {
-        suppliers.push(...existingPreferences.secondary_suppliers.map(s => s.toLowerCase().replace(/\s+/g, '-')));
-      }
+      
+      console.log('🔍 DEBUG: Final suppliers array:', suppliers);
       return suppliers.length > 0 ? suppliers : ['home-depot'];
     }
+    console.log('🔍 DEBUG: No existingPreferences, using default');
     return ['home-depot'];
   };
 
   const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>(getInitialSuppliers());
-  const [priorityOrder, setPriorityOrder] = useState(
-    (existingPreferences && existingPreferences.supplier_priority_order && existingPreferences.supplier_priority_order.length > 0)
-      ? existingPreferences.supplier_priority_order 
-      : DEFAULT_PRIORITY_ORDER
-  );
+  const [priorityOrder, setPriorityOrder] = useState(() => {
+    if (existingPreferences && existingPreferences.supplier_priority_order && existingPreferences.supplier_priority_order.length > 0) {
+      return existingPreferences.supplier_priority_order;
+    }
+    return DEFAULT_PRIORITY_ORDER;
+  });
 
   const methods = useForm({
     resolver: zodResolver(supplierPreferencesSchema),
