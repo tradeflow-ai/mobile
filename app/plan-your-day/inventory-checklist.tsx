@@ -18,8 +18,8 @@ import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { typography, spacing, radius } from '@/constants/Theme';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
-import { LoadingStepUI } from '../../components/LoadingStepUI';
-import { ErrorStepUI } from '../../components/ErrorStepUI';
+import { LoadingStepUI } from '@/components/LoadingStepUI';
+import { ErrorStepUI } from '@/components/ErrorStepUI';
 import type { InventoryOutput } from '@/services/dailyPlanService';
 
 interface InventoryItem {
@@ -216,9 +216,9 @@ export default function InventoryChecklistScreen() {
    */
   const getItemIcon = (category: string) => {
     switch (category.toLowerCase()) {
-      case 'electrical': return 'bolt';
+      case 'electrical': return 'flash';
       case 'plumbing': return 'wrench';
-      case 'tools': return 'hammer';
+      case 'tools': return 'gears';
       case 'hardware': return 'cog';
       case 'materials': return 'cube';
       case 'safety': return 'shield';
@@ -393,8 +393,8 @@ export default function InventoryChecklistScreen() {
                 <View key={item.id} style={styles.inventoryItem}>
                   <Checkbox
                     checked={item.isChecked}
-                    onCheckedChange={() => handleInventoryToggle(item.id)}
-                    style={styles.checkbox}
+                    onPress={() => handleInventoryToggle(item.id)}
+                    containerStyle={styles.checkbox}
                   />
                   
                   {/* Item Image */}
@@ -466,8 +466,8 @@ export default function InventoryChecklistScreen() {
                 <View key={item.id} style={styles.shoppingItem}>
                   <Checkbox
                     checked={item.isChecked}
-                    onCheckedChange={() => handleShoppingToggle(item.id)}
-                    style={styles.checkbox}
+                    onPress={() => handleShoppingToggle(item.id)}
+                    containerStyle={styles.checkbox}
                   />
                   
                   <View style={styles.itemContent}>
@@ -510,7 +510,7 @@ export default function InventoryChecklistScreen() {
           <Card style={styles.storeCard}>
             <View style={styles.sectionHeader}>
               <FontAwesome 
-                name="store" 
+                name="home" 
                 size={18} 
                 color={colors.primary}
               />
@@ -714,6 +714,14 @@ const styles = StyleSheet.create({
     marginRight: spacing.m,
     marginTop: spacing.xs,
   },
+  itemImageContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.m,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.m,
+  },
   itemContent: {
     flex: 1,
   },
@@ -728,6 +736,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     marginRight: spacing.s,
+  },
+  itemDescription: {
+    ...typography.caption,
+    lineHeight: 16,
   },
   statusBadge: {
     paddingHorizontal: spacing.s,

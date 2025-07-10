@@ -62,8 +62,8 @@ export default function HomeScreen() {
   const handleStartDay = () => {
     // If there's already an approved plan, just start the day
     if (dailyPlan?.status === 'approved') {
-      setIsDayStarted(true);
-      setIsOnBreak(false);
+    setIsDayStarted(true);
+    setIsOnBreak(false);
       return;
     }
     
@@ -228,12 +228,12 @@ export default function HomeScreen() {
                    </Text>
                  </View>
                ) : (
-                 <View style={styles.emptySchedule}>
-                   <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
-                   <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
-                     No jobs scheduled for today
-                   </Text>
-                 </View>
+               <View style={styles.emptySchedule}>
+                 <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
+                 <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
+                   No jobs scheduled for today
+                 </Text>
+               </View>
                )}
                <TouchableOpacity 
                  onPress={() => Alert.alert('Full Schedule', 'This will show the complete schedule view')} 
