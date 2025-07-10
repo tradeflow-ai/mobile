@@ -13,212 +13,193 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { userAtom, isAuthLoadingAtom } from '@/store/atoms';
 import { AuthManager } from '@/services/authManager';
-import { OnboardingService } from '@/services/onboardingService';
-import { useOnboardingStatus } from '@/hooks/useOnboarding';
+import { PreferencesService } from '@/services/preferencesService';
+import { supabase } from '@/services/supabase';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
-  
   const [user, setUser] = useAtom(userAtom);
   const [isAuthLoading, setIsAuthLoading] = useAtom(isAuthLoadingAtom);
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // Get onboarding status for authenticated users
-  const { 
-    data: onboardingStatus, 
-    isLoading: isOnboardingLoading, 
-    error: onboardingError 
-  } = useOnboardingStatus(user?.id);
-  
-  // Timeout to prevent infinite loading
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!isInitialized) {
-        console.log('AuthGuard: Forcing initialization after timeout');
-        setIsInitialized(true);
-        setIsAuthLoading(false);
-      }
-    }, 10000); // 10 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [isInitialized, setIsAuthLoading]);
-  
+  const [userPreferences, setUserPreferences] = useState<any>(null);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const router = useRouter();
   const segments = useSegments();
-  const authManager = AuthManager.getInstance();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
+  // Initialize auth state and load preferences
   useEffect(() => {
+    const authManager = AuthManager.getInstance();
+    
     // Subscribe to auth state changes
-    const unsubscribe = authManager.onAuthStateChange((authState) => {
+    const unsubscribe = authManager.onAuthStateChange(async (authState) => {
       console.log('AuthGuard: Auth state update:', {
         user: authState.user?.email || 'none',
         isLoading: authState.isLoading,
-        isAuthenticated: authState.isAuthenticated,
-        isInitialized
+        isAuthenticated: authState.isAuthenticated
       });
       
+      // Update atoms to keep them in sync
       setUser(authState.user);
       setIsAuthLoading(authState.isLoading);
+      setIsInitialized(true);
       
-      if (!isInitialized && !authState.isLoading) {
-        setIsInitialized(true);
+      // Load user profile data (including onboarding completion status) when user changes
+      if (authState.user?.id) {
+        setIsLoadingPreferences(true);
+        try {
+          // Get both preferences and onboarding completion status from profile
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('preferences, onboarding_completed_at')
+            .eq('id', authState.user.id)
+            .single();
+
+          if (error) {
+            console.error('AuthGuard: Failed to load user profile:', error);
+            setUserPreferences(null);
+          } else {
+            setUserPreferences({
+              preferences: profile?.preferences || null,
+              onboarding_completed_at: profile?.onboarding_completed_at || null,
+              has_ever_completed_onboarding: Boolean(profile?.onboarding_completed_at)
+            });
+          }
+        } catch (error) {
+          console.error('AuthGuard: Error loading profile:', error);
+          setUserPreferences(null);
+        } finally {
+          setIsLoadingPreferences(false);
+        }
+      } else {
+        setUserPreferences(null);
+        setIsLoadingPreferences(false);
       }
     });
 
     return unsubscribe;
-  }, [setUser, setIsAuthLoading, isInitialized]);
+  }, [setUser, setIsAuthLoading]);
 
+  // Check if user needs onboarding (only if they've never completed it)
+  const needsOnboarding = (profileData: any): boolean => {
+    if (!profileData) return false;
+    
+    // Only redirect to onboarding if user has NEVER completed it before
+    // This ensures existing users with incomplete preferences aren't forced back
+    return !profileData.has_ever_completed_onboarding;
+  };
+
+  // Navigation logic
   useEffect(() => {
-    if (!isInitialized || isAuthLoading) return;
+    if (!isInitialized || isAuthLoading || isLoadingPreferences) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
     const inOnboardingGroup = segments[0] === 'onboarding';
+    const inMainApp = segments[0] === '(tabs)';
+    const wasInOnboarding = segments.length > 0 && segments[0] === 'onboarding';
 
-    console.log('AuthGuard: Navigation logic check:', {
+    console.log('AuthGuard: Navigation check:', {
       user: user?.email || 'none',
       segments: segments.join('/'),
       inAuthGroup,
       inOnboardingGroup,
-      onboardingStatus: onboardingStatus?.isCompleted,
-      isOnboardingLoading
+      inMainApp,
+      hasCompletedOnboarding: userPreferences?.has_ever_completed_onboarding,
     });
+
+    // If user is navigating to main app and we suspect they might have just completed onboarding,
+    // refresh their profile data to get the latest onboarding_completed_at status
+    if (user && inMainApp && userPreferences && !userPreferences.has_ever_completed_onboarding) {
+      console.log('AuthGuard: Refreshing profile data - user may have just completed onboarding');
+      
+      // Re-fetch profile data to check for onboarding completion
+      supabase
+        .from('profiles')
+        .select('preferences, onboarding_completed_at')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: profile, error }) => {
+          if (!error && profile) {
+            setUserPreferences({
+              preferences: profile?.preferences || null,
+              onboarding_completed_at: profile?.onboarding_completed_at || null,
+              has_ever_completed_onboarding: Boolean(profile?.onboarding_completed_at)
+            });
+            console.log('AuthGuard: Profile data refreshed, onboarding status:', Boolean(profile?.onboarding_completed_at));
+          }
+        });
+      
+      // Don't proceed with navigation logic yet, let the refresh complete
+      return;
+    }
 
     if (!user && !inAuthGroup) {
       // User is not authenticated and not in auth screens, redirect to login
       console.log('AuthGuard: Redirecting to login - no user');
       router.replace('/login');
-    } else if (user) {
-      // User is authenticated, check onboarding status
-      if (inAuthGroup) {
-        // User is authenticated but in auth screens
-        if (isOnboardingLoading) {
-          // Wait for onboarding status to load
-          console.log('AuthGuard: Waiting for onboarding status to load');
-          return;
-        }
-        
-        if (onboardingStatus?.isCompleted) {
-          // User completed onboarding, redirect to main app
-          console.log('AuthGuard: Redirecting to main app - onboarding completed');
-          router.replace('/(tabs)');
-        } else {
-          // User needs to complete onboarding
-          console.log('AuthGuard: Redirecting to onboarding - not completed');
-          
-          // Initialize onboarding preferences for the user
-          console.log('AuthGuard: Initializing onboarding for user:', user.id);
-          OnboardingService.initializeOnboarding(user.id).then(result => {
-            if (result.error) {
-              console.error('AuthGuard: Failed to initialize onboarding:', result.error);
-            } else {
-              console.log('AuthGuard: Successfully initialized onboarding');
-            }
-          });
-          
-          router.replace('/onboarding/work-schedule');
-        }
-      } else if (!inOnboardingGroup) {
-        // User is authenticated but not in onboarding screens
-        if (isOnboardingLoading) {
-          // Wait for onboarding status to load
-          console.log('AuthGuard: Waiting for onboarding status to load');
-          return;
-        }
-        
-        if (!onboardingStatus?.isCompleted) {
-          // User needs to complete onboarding
-          console.log('AuthGuard: Redirecting to onboarding - not in onboarding group but not completed');
-          
-          // Initialize onboarding preferences for the user
-          console.log('AuthGuard: Initializing onboarding for user:', user.id);
-          OnboardingService.initializeOnboarding(user.id).then(result => {
-            if (result.error) {
-              console.error('AuthGuard: Failed to initialize onboarding:', result.error);
-            } else {
-              console.log('AuthGuard: Successfully initialized onboarding');
-            }
-          });
-          
-          router.replace('/onboarding/work-schedule');
-        }
-        // If in main app and onboarding is completed, let them stay
-      }
-      // If in onboarding group, let them stay (they can navigate within onboarding)
+      return;
     }
-  }, [user, segments, router, isInitialized, isAuthLoading, onboardingStatus, isOnboardingLoading]);
 
-  // Show loading screen while initializing or checking onboarding status
-  if (!isInitialized || isAuthLoading || (user && isOnboardingLoading)) {
-    const loadingMessage = user && isOnboardingLoading 
-      ? 'Checking your setup...' 
-      : 'Loading your workspace...';
-    
+    if (user) {
+      // User is authenticated
+      if (inAuthGroup) {
+        // User is authenticated but in auth screens, redirect to main app
+        console.log('AuthGuard: Redirecting to main app - authenticated user in auth screens');
+        router.replace('/(tabs)');
+        return;
+      }
+
+      // Check if user needs onboarding
+      if (needsOnboarding(userPreferences)) {
+        if (!inOnboardingGroup) {
+          // User needs onboarding and is not in onboarding screens
+          console.log('AuthGuard: Redirecting to onboarding - incomplete preferences');
+          router.replace('/onboarding/work-schedule');
+          return;
+        }
+      } else {
+        // User has completed onboarding
+        if (inOnboardingGroup && !inMainApp) {
+          // Allow manual access to onboarding from profile, but don't redirect away
+          console.log('AuthGuard: Allowing manual onboarding access');
+          return;
+        }
+      }
+    }
+  }, [isInitialized, isAuthLoading, isLoadingPreferences, user, userPreferences, segments, router]);
+
+  // Show loading screen while initializing
+  if (!isInitialized || isAuthLoading || (user && isLoadingPreferences)) {
     return (
-      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContent}>
-          <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-            <FontAwesome name="truck" size={40} color={colors.background} />
-          </View>
-          <Text style={[styles.loadingTitle, { color: colors.text }]}>
-            TradeFlow
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>
+            Loading...
           </Text>
-          <Text style={[styles.loadingSubtitle, { color: colors.placeholder }]}>
-            {loadingMessage}
-          </Text>
-          <ActivityIndicator 
-            size="large" 
-            color={colors.primary} 
-            style={styles.loader}
-          />
         </View>
       </SafeAreaView>
     );
   }
 
-  // Handle onboarding error - allow user to continue but log error
-  if (onboardingError) {
-    console.error('AuthGuard: Onboarding status error:', onboardingError);
-    // Continue to app - we'll handle this gracefully
-  }
-
-  // Render the protected content - routing will handle auth redirects
   return <>{children}</>;
 };
 
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
+    flex: 1,
+  },
+  loadingContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingContent: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  loadingTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  loadingSubtitle: {
+  loadingText: {
+    marginTop: 12,
     fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  loader: {
-    marginTop: 16,
   },
 }); 
