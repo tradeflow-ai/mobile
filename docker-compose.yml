@@ -1,26 +1,4 @@
-version: '3.8'
-
 services:
-  # LangGraph Backend Service (NEW - for React Native compatibility)
-  langgraph-backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "3001:3001"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    networks:
-      - tradeflow-network
-    depends_on:
-      - redis
-      - postgres
-
   # VROOM routing engine service
   vroom:
     build:
@@ -31,52 +9,30 @@ services:
     environment:
       - VROOM_PORT=3000
       - OSRM_URL=http://osrm:5000
-    depends_on:
-      - osrm
     volumes:
       - ./docker/vroom/config:/app/config
     networks:
       - tradeflow-network
+    depends_on:
+      - osrm
 
-  # OSRM routing engine service
+  # OSRM routing engine service - Real backend for production routing
   osrm:
     image: osrm/osrm-backend:latest
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./docker/osrm/data:/data
     command: osrm-routed --algorithm mld /data/north-america-latest.osrm
     networks:
       - tradeflow-network
-
-  # Optional: Redis for caching routing results
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - tradeflow-network
-
-  # Optional: PostgreSQL for routing engine data
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: tradeflow_routing
-      POSTGRES_USER: routing_user
-      POSTGRES_PASSWORD: routing_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - tradeflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/nearest/v1/driving/-122.4194,37.7749"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 networks:
   tradeflow-network:
-    driver: bridge
-
-volumes:
-  redis_data:
-  postgres_data: 
+    driver: bridge 

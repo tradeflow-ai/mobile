@@ -45,7 +45,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 **Jeremiah - Routing Engine Deployment:**
 1.  **Build Docker Image:** Create a `Dockerfile` for the VROOM/OSRM routing engine.
-2.  **Deploy to AWS Lightsail:** Deploy the container to AWS Lightsail.
+2.  **Deploy via Docker Containers:** Deploy the containerized services using Docker and docker-compose.
 
 **Trevor - Routing Engine Client Service:**
 3.  **Create Routing Service:** In `/services`, create `routing.ts`. This service must accept and pass advanced constraints like **`time windows`**, **`technician breaks`**, and **`vehicle capacity`** to the VROOM engine.

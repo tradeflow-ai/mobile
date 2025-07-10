@@ -82,14 +82,19 @@ This document provides a comprehensive overview of the technical architecture, c
 
 ### Proprietary Routing Engine: VROOM + OSRM
 -   **Description:** The self-hosted engine that provides our core competitive advantage in route optimization.
+-   **Deployment:** Docker containerized for flexible deployment across different infrastructure providers.
+-   **Production:** Self-hosted on memory-optimized infrastructure with sufficient RAM for OSRM's in-memory map data requirements.
+-   **Development:** Local Docker environment with docker-compose for easy setup and testing.
 -   **Best Practices:**
-    -   The engine must be run on dedicated, memory-optimized servers to handle OSRM's in-memory map data requirements.
-    -   The server should expose a simple, stateless HTTP API for our application to consume.
+    -   The engine must be run on systems with adequate RAM to handle OSRM's in-memory map data requirements (minimum 16GB for North America).
+    -   The server exposes a simple, stateless HTTP API for our application to consume.
+    -   Use multi-stage Docker builds to optimize image size and security.
 -   **Limitations:**
     -   OSRM's performance comes from pre-computation, making it ill-suited for incorporating real-time traffic data. Our routing is based on historical averages. This is a known and accepted trade-off.
 -   **Common Pitfalls:**
     -   Under-provisioning server RAM, which will cause the OSRM process to fail.
     -   Not having a clear process for periodically updating the underlying OpenStreetMap data.
+    -   Forgetting to set up OSRM data preprocessing before deployment.
 
 ---
 
@@ -121,15 +126,20 @@ This document provides a comprehensive overview of the technical architecture, c
 
 ## DevOps & Deployment
 
-### Routing Engine Deployment: Docker & AWS Lightsail
--   **Description:** The VROOM/OSRM engine is containerized with Docker and deployed on AWS Lightsail.
+### Routing Engine Deployment: Docker Containerization
+-   **Description:** The VROOM/OSRM engine is containerized with Docker for flexible deployment across different infrastructure providers.
 -   **Best Practices:**
-    -   Use multi-stage Docker builds to create lean production images.
+    -   Use multi-stage Docker builds to create lean production images with compiled VROOM binary.
     -   Manage all secrets (API keys, etc.) via environment variables, never hardcoded in the `Dockerfile`.
+    -   Implement proper health checks for both VROOM and OSRM services.
+    -   Use Docker networks to facilitate secure communication between services.
 -   **Conventions:**
-    -   The project will include a `docker-compose.yml` file to facilitate easy local development and testing of the routing engine.
--   **Limitations & Considerations:**
-    -   Lightsail provides simplicity at the cost of scalability. We have a hard memory ceiling of 32GB. A formal plan to migrate to AWS EC2 must be maintained as part of our technical roadmap.
+    -   The project includes a `docker-compose.yml` file to facilitate easy local development and testing of the routing engine.
+    -   OSRM data setup is automated through scripts in the `docker/osrm/` directory.
+-   **Scalability Considerations:**
+    -   Memory requirements scale with geographic coverage - North America requires minimum 16GB RAM.
+    -   For larger deployments, consider hosting preprocessed OSRM data files externally.
+    -   Container orchestration (Kubernetes) can be implemented for high-availability deployments.
 
 ### Application Deployment: Expo Application Services (EAS)
 -   **Description:** EAS is used for building and deploying the React Native application.

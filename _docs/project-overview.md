@@ -72,7 +72,7 @@ Our technical architecture is designed to be robust, scalable, and powerful, ref
 
 - **Agentic Framework:** The core logic will be orchestrated using **LangGraph**, with agents powered by **OpenAI's GPT-4o** model. This framework is specifically chosen for its first-class support for stateful, cyclical workflows and its ability to natively handle Human-in-the-Loop (HITL) verification, which is essential for our three-step approval process.
 
-- **Backend & Routing Engine:** We will build a proprietary, self-hosted dynamic routing engine using **VROOM** for solving Vehicle Routing Problems (VRP) and **OSRM** as the underlying routing data engine. The engine will be containerized using **Docker** and initially deployed on **AWS Lightsail** for its simplicity and predictable pricing, with a clear path to migrate to AWS EC2 for future scalability. This core component allows us to offer unique features standard APIs cannot, such as:
+- **Backend & Routing Engine:** We will build a proprietary, self-hosted dynamic routing engine using **VROOM** for solving Vehicle Routing Problems (VRP) and **OSRM** as the underlying routing data engine. The engine will be containerized using **Docker** for flexible deployment across different infrastructure providers. This core component allows us to offer unique features standard APIs cannot, such as:
     - Honoring time windows and technician breaks.
     - Applying capacity constraints to prevent vehicle overloading.
     - Real-time rescheduling and re-optimization of unfinished routes.
@@ -112,7 +112,7 @@ Our development will follow the `MVP -> CORE -> POLISH` structure outlined in th
     *   Build the user onboarding flow for setting preferences.
 2.  **CORE: Build the Agentic Loop & Backend**
     *   Implement the `Dispatch Strategist`, `Route Optimizer`, and `Inventory & Prep Specialist` agents in LangGraph using GPT-4o.
-    *   Build and deploy the self-hosted VROOM/OSRM routing engine on **AWS Lightsail using Docker**.
+    *   Build and deploy the self-hosted VROOM/OSRM routing engine using **Docker containerization**.
     *   Integrate the routing engine as a tool for the `Route Optimizer` agent.
     *   Develop the core UI components for visualizing the outputs of each agent and handling the HITL approval steps (drag-and-drop list, view-only map, and checklist).
 3.  **POLISH: Integration & Documentation**

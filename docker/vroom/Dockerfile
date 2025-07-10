@@ -1,40 +1,62 @@
 # TradeFlow VROOM Routing Engine
 # 
-# This Dockerfile builds a containerized VROOM routing engine for TradeFlow's
-# proprietary routing optimization capabilities. VROOM provides advanced
-# Vehicle Routing Problem (VRP) solving with time windows and capacity constraints.
+# Production VROOM service with compiled binary
+# Multi-stage build: compile VROOM binary then copy to runtime image
 
-FROM node:18-alpine
+# Build stage - Compile VROOM binary
+FROM ubuntu:20.04 AS builder
 
-# Install system dependencies
-RUN apk add --no-cache \
-    build-base \
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies for VROOM
+RUN apt-get update && apt-get install -y \
+    build-essential \
     cmake \
+    libboost-all-dev \
+    libasio-dev \
+    libssl-dev \
+    pkg-config \
     git \
-    libcrypto3 \
-    libssl3 \
-    openssl-dev \
-    pkgconfig
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory for build
+WORKDIR /build
+
+# Clone VROOM source code
+RUN git clone --depth 1 --branch v1.14.0 https://github.com/VROOM-Project/vroom.git
+
+# Build VROOM binary
+WORKDIR /build/vroom
+RUN make
+
+# Verify binary was created
+RUN ls -la bin/ && test -f bin/vroom
+
+# Runtime stage - Node.js server with VROOM binary
+FROM node:18-alpine AS runtime
+
+# Install curl for health checks and runtime dependencies
+RUN apk add --no-cache curl libstdc++
 
 # Create app directory
 WORKDIR /app
 
-# Clone and build VROOM
-RUN git clone https://github.com/VROOM-Project/vroom.git . && \
-    git checkout v1.14.0
+# Create bin directory and copy VROOM binary from builder stage
+RUN mkdir -p bin
+COPY --from=builder /build/vroom/bin/vroom /app/bin/vroom
 
-# Install VROOM dependencies and build
-RUN make
+# Make VROOM binary executable
+RUN chmod +x /app/bin/vroom
 
 # Install Node.js dependencies for API server
 COPY package*.json ./
 RUN npm install --production
 
-# Copy configuration files
-COPY config/ ./config/
-
 # Copy API server
 COPY server.js ./
+COPY config/ ./config/
 
 # Create non-root user
 RUN addgroup -g 1001 -S vroom && \
@@ -44,6 +66,10 @@ RUN addgroup -g 1001 -S vroom && \
 RUN chown -R vroom:vroom /app
 
 USER vroom
+
+# Set environment variables
+ENV VROOM_BIN_PATH=/app/bin/vroom
+ENV VROOM_PORT=3000
 
 # Expose port
 EXPOSE 3000
