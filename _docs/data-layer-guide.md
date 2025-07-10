@@ -22,7 +22,7 @@ services/
 ├── supabase.ts          # Supabase client and auth services
 ├── authManager.ts       # Authentication state management
 ├── profileService.ts    # Profile-specific operations
-├── routing.ts          # VROOM routing engine integration
+├── routing.ts          # Coordinate utilities for AI spatial reasoning
 └── queryClient.ts      # TanStack Query configuration
 
 hooks/
@@ -281,16 +281,17 @@ await createRoute.mutateAsync({
   planned_date: '2024-02-15'
 });
 
-// Optimize route using VROOM
-const { data: optimizedRoute } = await optimizeRoute.mutateAsync({
-  job_location_ids: ['job1', 'job2', 'job3'],
-  start_location: { lat: 37.7749, lng: -122.4194 }
-});
+// Route optimization using AI spatial reasoning
+const coordinateService = CoordinateService.getInstance();
+const distance = coordinateService.calculateDistance(
+  { latitude: 37.7749, longitude: -122.4194 },
+  { latitude: 37.7849, longitude: -122.4094 }
+);
 ```
 
 **Key Features:**
 - Route planning and optimization
-- VROOM routing engine integration
+- Coordinate utilities for AI spatial reasoning
 - Route status tracking
 - Geographic optimization
 - Route statistics and analytics

@@ -77,12 +77,11 @@ We follow a **feature-branch workflow** with the following conventions:
 
 Our team is organized into four distinct domains:
 
-| Role | Responsibilities | Focus Areas |
-|------|------------------|-------------|
-| **AI & Systems Lead** | Agents, LLM prompts, LangGraph, VROOM/OSRM deployment | The Brain |
-| **Backend & Data Lead** | Supabase (schema, RLS), services, data hooks, API clients | The Data Layer |
-| **UI/UX Lead** | Design system, UI components, visual polish, animations | The Look & Feel |
-| **Frontend App Lead** | App structure, navigation, screen composition, performance | The Application |
+| **Role** | **Core Responsibilities** | **Description** |
+| :--- | :--- | :--- |
+| **Frontend & UX Lead** | React Native, UI/UX, Expo Router, component development | Building Experiences |
+| **Backend & Data Lead** | TanStack Query, Supabase, database, API integration | Managing Data |
+| **AI & Systems Lead** | Agents, LLM prompts, LangGraph, AI-powered route optimization | The Brain |
 
 ### Project Structure
 

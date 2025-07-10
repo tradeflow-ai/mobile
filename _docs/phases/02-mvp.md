@@ -6,7 +6,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 ##  deliverables
 - A functional user authentication and onboarding flow.
 - A live, three-step "Plan Your Day" feature powered by a LangGraph agent crew.
-- A self-hosted routing engine (VROOM/OSRM) deployed and integrated.
+- AI-powered spatial reasoning for route optimization using coordinate analysis.
 - A map view that visualizes the AI-generated route.
 
 ---
@@ -32,24 +32,48 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 3.  **Refactor Screens for Server State:** Replace any placeholder or Jotai-managed server data with live data from the `useJobs` hook.
 4.  **Implement Mutations:** Build hooks for data modification (e.g., `useUpdateJob()`, `useCreateJob()`) and integrate them.
 
-### Feature 3: The AI Agent Crew (Jeremiah)
+### Feature 3: AI Agent Crew & Spatial Reasoning (Jeremiah)
 
-1.  **Architect Communication Layer:** The state of the agentic workflow will be persisted to a `daily_plans` table in Supabase. The LangGraph agent will update this record as it transitions between states. The client will use a **Supabase real-time subscription** to listen for changes to this record and update the UI accordingly.
-2.  **Define Agent Prompts & Integrate Preferences:** Define detailed prompts for all three agents. Critically, update these prompts and the agent logic to **utilize the user's preferences** (Work Schedule, Buffers, Priority Rules) captured during onboarding.
-3.  **Build LangGraph Graph:** Create the state machine in LangGraph. This workflow must include a new step to create a routable **"Hardware Store Run"** job if the inventory check results in a shopping list.
-4.  **Implement Dispatch Agent Node:** Write the logic for the `Dispatch Strategist`.
-5.  **Implement Route Optimizer Agent Node:** Write the logic for the `Route Optimizer`, ensuring it gathers and uses advanced constraints (`time windows`, `breaks`) from user preferences and job data when calling the routing tool.
-6.  **Implement Inventory Agent Node:** Write the logic for the `Inventory & Prep Specialist` using a mock/simulated API for external stock checks.
+**Objective:** Build the complete AI-powered daily planning workflow using LangGraph agents with spatial reasoning for route optimization.
 
-### Feature 4: The Proprietary Routing Engine (Jeremiah + Trevor)
+1.  **Implement LangGraph State Machine:** Build the core workflow orchestration using LangGraph with three specialized agents:
+    *   **Dispatch Strategist:** Job prioritization and scheduling
+    *   **Route Optimizer:** AI-powered spatial reasoning for route optimization
+    *   **Inventory Specialist:** Parts analysis and shopping list generation
 
-**Jeremiah - Routing Engine Deployment:**
-1.  **Build Docker Image:** Create a `Dockerfile` for the VROOM/OSRM routing engine.
-2.  **Deploy via Docker Containers:** Deploy the containerized services using Docker and docker-compose.
+2.  **Build AI Agent Prompt System:** Create comprehensive prompt templates for each agent:
+    *   Dispatch reasoning prompts with business logic
+    *   Spatial reasoning prompts for route optimization using coordinate analysis
+    *   Inventory analysis prompts with parts knowledge
 
-**Trevor - Routing Engine Client Service:**
-3.  **Create Routing Service:** In `/services`, create `routing.ts`. This service must accept and pass advanced constraints like **`time windows`**, **`technician breaks`**, and **`vehicle capacity`** to the VROOM engine.
-4.  **Integrate Engine as a Tool:** Make the `routing.ts` function available as a "tool" for the `Route Optimizer` agent.
+3.  **Implement Coordinate-Based Route Optimization:** Replace external routing engines with AI spatial reasoning:
+    *   Simple coordinate formatting tools for agent input
+    *   GPT-4o spatial reasoning for optimal route determination
+    *   Zero external dependencies - pure AI-powered optimization
+
+4.  **Build Agent-Database Integration:** Connect agents to Supabase for state persistence:
+    *   Real-time workflow state tracking
+    *   Agent output storage and retrieval
+    *   Human-in-the-loop verification support
+
+5.  **Deploy Agents as Supabase Edge Functions:** Deploy the LangGraph workflow to Supabase Edge Functions for serverless execution.
+
+### Feature 4: Agent Prompt Optimization (Continued)
+
+1.  **Optimize Spatial Reasoning Prompts:** Fine-tune the Route Optimizer agent prompts:
+    *   Enhance geographic analysis instructions
+    *   Improve coordinate processing guidance
+    *   Refine route efficiency algorithms in prompt form
+
+2.  **Validate Agent Decision Quality:** Test agent reasoning outputs:
+    *   Dispatch prioritization logic validation
+    *   Route optimization spatial accuracy
+    *   Inventory analysis completeness
+
+3.  **Implement Agent Performance Monitoring:** Track agent execution metrics:
+    *   Response time optimization
+    *   Decision quality scoring
+    *   Error rate monitoring
 
 ### Feature 5: The "Plan Your Day" UI (Josh)
 
@@ -74,22 +98,22 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 3.  **Implement Re-planning Logic:** Connect the trigger to the LangGraph agent, allowing it to re-run the dispatch and routing sequence with the updated job list while preserving the state of completed jobs.
 4.  **Integrate with Map View:** Ensure the map view dynamically updates to reflect the new, re-optimized route.
 
-### Feature 8: Basic Client Management (Trevor)
+### Feature 8: Client Management (Trevor)
 
-1.  **Create Client Management UI:** Build a simple UI to allow users to list and add new clients.
-2.  **Update Job Forms:** In the 'Add/Edit Job' UI, add a feature to associate a job with a client from the user's client list.
+1.  **Client CRUD Operations:** Build full client management with TanStack Query integration.
+2.  **Client-Job Association:** Connect clients to jobs with proper relationship management.
+3.  **Client Contact Management:** Store and manage client contact preferences and history.
 
-### Feature 9: In-Field Execution UI & Logic (Josh)
+### Feature 9: In-Field Execution UI (Josh)
 
-1.  **Build Active Job UI:** Create the primary in-field screen that shows the current job destination, details, and required parts.
-2.  **Integrate Native Navigation:** Add a "Navigate" button that hands off the destination coordinates to the user's default mapping application (e.g., Apple Maps, Google Maps).
-3.  **Implement Job Completion Logic:** Add functionality for the user to "Mark as Complete".
-4.  **Implement Parts Usage Logging:** Upon job completion, create a UI for the user to confirm which parts were used. This action should automatically decrement the quantities in the user's inventory via a call to Supabase.
+1.  **Job Progress Tracking:** Real-time job status updates and completion tracking.
+2.  **Navigation Integration:** Connect with device navigation apps for turn-by-turn directions.
+3.  **Inventory Usage Tracking:** Track parts used during job completion.
 
-### Feature 10: Bill of Materials Management (Trevor)
+### Feature 10: BoM Management (Trevor)
 
-1.  **Build Job Types UI:** Create a UI for users to define and manage the types of jobs they perform (e.g., "Leaky Faucet Repair," "HVAC Tune-up").
-2.  **Implement BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.
+1.  **Job Type Templates:** Create reusable job type definitions with standard parts lists.
+2.  **BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.
 3.  **Update Seed Script:** Ensure the database seed script populates this data structure with sensible defaults that the user can later edit.
 
 ---
@@ -100,7 +124,6 @@ This is the most complex phase where the swimlanes become critical. The work is 
 
 | Package & Features | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
-| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Routing Engine (Deployment) | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the LangGraph agents to deploying the Dockerized routing engine and architecting the real-time communication layer. |
-| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Routing Engine (Client Service) <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the `routing.ts` client and all TanStack Query hooks needed for the frontend to manage jobs, clients, and bills of materials. |
-| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. |
-| **Data Management & Dynamic UI** <br/> • F6: CRUD UIs <br/> • F7: Dynamic Replanning | Frontend & UI/UX | **Jack** | This package focuses on all the "management" and "reactive" parts of the UI. Jack will own the screens for manually managing jobs and inventory, as well as the UI triggers and modals required for the dynamic re-planning flow, ensuring a robust data management experience. | 
+| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Agent Prompt Optimization | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the LangGraph agents to implementing AI-powered spatial reasoning and architecting the real-time communication layer. |
+| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Coordinate Service Integration <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the coordinate service client and all TanStack Query hooks needed for the frontend to manage jobs, clients, and bills of materials. |
+| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. | 

@@ -4,7 +4,7 @@
 The TradeFlow AI agent crew consists of three specialized agents orchestrated by LangGraph:
 
 1. **Dispatch Strategist** - Prioritizes and sequences jobs
-2. **Route Optimizer** - Calculates optimal travel routes  
+2. **Route Optimizer** - Calculates optimal travel routes using AI spatial reasoning
 3. **Inventory Specialist** - Generates parts lists and shopping lists
 
 ## 🧪 Testing Individual Agents
@@ -40,7 +40,7 @@ The core LangGraph state machine that orchestrates all three agents:
 ### Agent Implementations (`agents/`)
 Individual agent classes with specialized logic:
 - **DispatchStrategistAgent**: Job prioritization and scheduling
-- **RouteOptimizerAgent**: VROOM integration and route optimization
+- **RouteOptimizerAgent**: AI-powered spatial reasoning for route optimization
 - **InventorySpecialistAgent**: Parts analysis and shopping list generation
 
 ### Prompts (`prompts/`)
@@ -51,7 +51,7 @@ LLM prompt templates for consistent agent behavior:
 
 ### Tools (`tools/`)
 External integrations and utilities:
-- VROOM routing engine client
+- Coordinate formatting tools for spatial reasoning
 - Mock supplier APIs
 - Database query helpers
 
@@ -60,21 +60,16 @@ External integrations and utilities:
 ### Integration Testing
 The most reliable way to test the complete agent workflow:
 
-1. **Start the routing engine:**
-   ```bash
-   docker-compose up -d
-   ```
-
-2. **Start the mobile app:**
+1. **Start the mobile app:**
    ```bash
    npm start
    ```
 
-3. **Navigate to Home screen and tap "Plan Your Day"**
+2. **Navigate to Home screen and tap "Plan Your Day"**
 
-4. **Verify agent execution:**
+3. **Verify agent execution:**
    - ✅ Dispatch agent completes with job prioritization
-   - ✅ Route agent completes with optimized route
+   - ✅ Route agent completes with optimized route using AI spatial reasoning
    - ✅ Inventory agent completes with shopping list
    - ✅ Real-time UI updates show progress
 
@@ -125,7 +120,6 @@ pending → dispatch_complete → route_complete → inventory_complete → appr
 node ../validation-test.js
 
 # Expected results:
-# - VROOM API: <2000ms response time
 # - Agent workflow: <5000ms total time
 # - All tests passing: 3/3
 ```
@@ -135,45 +129,65 @@ node ../validation-test.js
 ### Agent Development Best Practices
 1. **Keep prompts specific and structured**
 2. **Use low LLM temperature for consistency**
-3. **Validate all agent outputs**
-4. **Handle errors gracefully with fallbacks**
-5. **Test with diverse input scenarios**
+3. **Test with various input scenarios**
+4. **Monitor token usage and costs**
+5. **Implement proper error handling**
 
-### Testing Strategy
-1. **Unit Tests:** Test individual agent logic
-2. **Integration Tests:** Test agent interactions
-3. **End-to-End Tests:** Test complete workflow via mobile app
-4. **Performance Tests:** Benchmark response times
+### Debugging Workflow Issues
+1. **Check agent logs in mobile app console**
+2. **Verify real-time state updates in Supabase dashboard**
+3. **Test individual agents before full workflow**
+4. **Monitor network requests and API responses**
 
-### Mock Data for Testing
-Use consistent test data for reliable testing:
-- Sample jobs with different priorities
-- Test inventory with known parts
-- Predictable locations for routing tests
+### Agent Reasoning Quality
+1. **Spatial reasoning for route optimization**
+2. **Business logic for job prioritization**
+3. **Inventory analysis accuracy**
+4. **Clear explanation of decisions**
 
-## 📚 Additional Resources
+## 🚀 Deployment
 
-### Related Documentation
-- `_docs/frontend-handoff-josh.md` - Real-time UI integration
-- `_docs/daily-plans-data-contract.md` - Database schema
-- `_docs/testing-guide.md` - Comprehensive testing guide
+### Supabase Edge Functions
+The agents are deployed as serverless functions:
+- Zero infrastructure management
+- Automatic scaling
+- Real-time database integration
+- Cost-effective execution
 
-### Debug Commands
-```bash
-# Check agent service status
-docker-compose ps
+### Environment Variables
+Required for agent execution:
+- `OPENAI_API_KEY`: OpenAI API access
+- `SUPABASE_URL`: Database connection
+- `SUPABASE_ANON_KEY`: Database authentication
 
-# View VROOM logs
-docker logs mobile-vroom-1
+## 📈 Performance Optimization
 
-# Test VROOM directly
-curl http://localhost:3000/health
+### Response Time Targets
+- **Individual Agent:** <2 seconds
+- **Complete Workflow:** <5 seconds
+- **Real-time Updates:** <1 second
 
-# Monitor database changes
-# Use Supabase dashboard real-time tab
-```
+### Cost Optimization
+- Efficient prompt design
+- Appropriate model selection (GPT-4o)
+- Smart caching where applicable
+- Minimal token usage
 
----
+## 🔬 Testing Strategy
 
-**Last Updated:** December 2024  
-**Version:** 1.0.0 
+### Unit Testing
+- Individual agent logic
+- Prompt template validation
+- Output format verification
+
+### Integration Testing
+- End-to-end workflow testing
+- Real-time state updates
+- Error handling scenarios
+
+### Performance Testing
+- Response time benchmarks
+- Load testing for multiple users
+- Memory and resource usage
+
+This architecture provides a robust, scalable AI agent system that delivers intelligent daily planning without external infrastructure dependencies. 

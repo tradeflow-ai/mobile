@@ -50,10 +50,19 @@ export default function PlanYourDayIndex() {
   useEffect(() => {
     if (!dailyPlan || isProcessing) return;
 
+<<<<<<< HEAD
     // Navigate based on current_step, not status
     switch (dailyPlan.current_step) {
       case 'route':
         router.push('./schedule-review');
+=======
+    // Navigate to appropriate step based on current status
+    switch (dailyPlan.status) {
+      case 'dispatch_complete':
+        if (currentStep === 'route') {
+          router.push('./calendar-review');
+        }
+>>>>>>> 60235479fa24964be552f55ca3836fbd452b4c08
         break;
       case 'inventory': 
         router.push('./map-view');

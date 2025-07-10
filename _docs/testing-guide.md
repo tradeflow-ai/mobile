@@ -1,12 +1,11 @@
 # TradeFlow Testing Guide
 
-## 🚀 Quick Validation Checklist
+**Complete Agent Reasoning Validation Checklist**
 
 ### Environment Setup
-- [ ] Start Docker: `docker-compose up -d`
-- [ ] Test VROOM: `curl http://localhost:3000/health`
-- [ ] Run agent test: `cd agent && npx tsx test-graph.ts`
-- [ ] Test mobile app: `npm start` → "Plan Your Day"
+- [ ] Test agent workflow: `npm run test:workflow`
+- [ ] Test individual agents: `npm run test:phase2`
+- [ ] Run mobile app: `npm start` → "Plan Your Day"
 
 ### Core Functionality Tests
 - [ ] Verify Dispatch agent completes successfully
@@ -16,44 +15,16 @@
 
 ## 🧪 Detailed Testing Instructions
 
-### 1. VROOM Routing Engine Test
+### 1. AI Agent Workflow Test
 ```bash
-# Start the routing engine
-docker-compose up -d
+# Test complete agent workflow
+npm run test:workflow
 
-# Test health endpoint
-curl http://localhost:3000/health
+# Test individual agent components
+npm run test:phase2
 
-# Test routing functionality
-curl -X POST http://localhost:3000/vroom \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jobs": [
-      {"id": 1, "location": [-122.4194, 37.7749], "service": 3600}
-    ],
-    "vehicles": [
-      {"id": 1, "start": [-122.4194, 37.7749], "end": [-122.4194, 37.7749]}
-    ]
-  }'
-```
-
-**Expected Results:**
-- Health endpoint returns `{"status": "healthy"}`
-- Routing endpoint returns valid route data
-- Response time <2 seconds
-
-### 2. AI Agent Workflow Test
-```bash
-# Navigate to agent directory
-cd agent
-
-# Run complete workflow test
-npx tsx test-graph.ts
-
-# Test individual agents (if available)
-npx tsx test-dispatch.ts
-npx tsx test-route.ts
-npx tsx test-inventory.ts
+# Test agent reasoning quality
+npm run test:agent-routing
 ```
 
 **Expected Results:**
@@ -62,7 +33,7 @@ npx tsx test-inventory.ts
 - Real-time database updates occur
 - Generated outputs include job prioritization, routes, and shopping lists
 
-### 3. Mobile App Integration Test
+### 2. Mobile App Integration Test
 ```bash
 # Start the mobile app
 npm start
@@ -77,120 +48,101 @@ npm start
 **Expected Results:**
 - "Plan Your Day" button exists and is functional
 - Agent workflow starts without errors
-- Real-time progress updates appear in UI
-- Final plan displays correctly
+- Real-time updates show agent progress
+- UI displays agent outputs correctly
 
-### 4. Database Integration Test
-1. Open Supabase dashboard
-2. Navigate to `daily_plans` table
-3. Trigger a plan creation via mobile app
-4. Verify new record appears in real-time
-5. Verify status transitions: `pending` → `dispatch_complete` → `route_complete` → `inventory_complete`
+### 3. Agent Reasoning Quality Test
+Test the AI agents with sample job data to verify spatial reasoning and decision quality.
 
-**Expected Results:**
-- Real-time database updates
-- Proper JSON data in output fields
-- Correct state transitions
-- Hardware store jobs created when needed
-
-## 📊 Performance Requirements
-
-| Component | Requirement | Validation Method |
-|-----------|-------------|-------------------|
-| Complete agent workflow | <5 seconds | Time from trigger to completion |
-| VROOM response time | <2 seconds | API call timing |
-| Real-time UI updates | Immediate | Visual verification |
-| Database operations | <1 second | Query timing |
-
-## 🔧 Troubleshooting
-
-### Common Issues & Solutions
-
-**VROOM Engine Fails:**
-- Check Docker container status: `docker ps`
-- Restart containers: `docker-compose restart`
-- Check logs: `docker-compose logs vroom`
-
-**Agents Timeout:**
-- Verify OpenAI API key in environment variables
-- Check network connectivity
-- Review agent logs in mobile app console
-
-**UI Doesn't Update:**
-- Verify Supabase connection
-- Check real-time subscription setup
-- Confirm user authentication
-
-**Performance Issues:**
-- Monitor network latency
-- Check Docker resource allocation
-- Review agent prompt complexity
-
-### Debug Commands
 ```bash
-# Check Docker status
-docker ps
-docker-compose logs
-
-# Test database connection
-# (Use Supabase dashboard or direct SQL queries)
-
-# Monitor network requests
-# (Use browser dev tools or React Native Flipper)
-
-# Check mobile app logs
-# (Use Expo dev tools or device console)
+# Test with sample data
+cd agent
+npx tsx test-complete-workflow.ts
 ```
 
-## 🎯 Success Criteria
+**Expected Results:**
+- Dispatch agent prioritizes jobs logically
+- Route agent provides efficient spatial routing
+- Inventory agent generates accurate parts lists
+- Agent reasoning explanations are clear and helpful
 
-### Core Functionality ✅
-- [ ] User can trigger "Plan Your Day" workflow
-- [ ] Three agents execute in sequence with real-time updates
-- [ ] Generated plans respect user preferences and constraints
-- [ ] VROOM routing engine provides optimized routes
-- [ ] Inventory analysis generates accurate shopping lists
+## 📊 Performance Benchmarks
 
-### Technical Requirements ✅
-- [ ] Sub-5 second agent response times
-- [ ] Real-time UI updates during agent execution
-- [ ] Robust error handling and recovery
-- [ ] Scalable architecture for multiple users
-- [ ] Comprehensive logging and monitoring
+| Metric | Target | Description |
+|--------|--------|-------------|
+| Agent response time | <2 seconds | Individual agent execution |
+| Complete workflow time | <5 seconds | End-to-end planning |
+| Route efficiency | Logical routing | Spatial reasoning quality |
 
-### Integration Success ✅
-- [ ] Seamless handoff to frontend team for UI implementation
-- [ ] Clear API contracts for backend team integration
-- [ ] Documented deployment process for production
-- [ ] Comprehensive testing coverage
+## 🔧 Troubleshooting Agent Issues
 
-## 📝 Test Results Template
+**Agent Workflow Fails:**
+- Check OpenAI API key in environment variables
+- Verify Supabase connection is working
+- Review agent logs in mobile app console
+- Check LangGraph state transitions
 
-Use this template to document test results:
+**Invalid Agent Responses:**
+- Review prompt templates in `agent/prompts/`
+- Check LLM temperature settings (should be ~0.1)
+- Verify agent output validation logic
+- Test with different input scenarios
 
-```markdown
-## Test Execution Results - [Date]
+**State Transitions Fail:**
+- Check LangGraph state machine definition
+- Verify Supabase real-time subscriptions
+- Review state validation logic
+- Check for race conditions in state updates
 
-### Performance Metrics
-- Dispatch agent execution time: _____ seconds
-- Route agent execution time: _____ seconds
-- Inventory agent execution time: _____ seconds
-- Total workflow time: _____ seconds
-- VROOM response time: _____ seconds
+## ✅ Testing Checklist
 
-### Functionality Tests
-- [ ] ✅/❌ VROOM engine health check
-- [ ] ✅/❌ Complete agent workflow
-- [ ] ✅/❌ Real-time UI updates
-- [ ] ✅/❌ Database state transitions
-- [ ] ✅/❌ Hardware store job creation
-- [ ] ✅/❌ User preferences integration
+### Agent Quality Validation
+- [ ] Agent spatial reasoning produces logical routes
+- [ ] Dispatch prioritization follows business rules
+- [ ] Inventory analysis is accurate and complete
+- [ ] Agent explanations are clear and helpful
+
+### Performance Validation  
+- [ ] Individual agents respond in <2 seconds
+- [ ] Complete workflow completes in <5 seconds
+- [ ] Real-time updates work smoothly
+- [ ] UI remains responsive during processing
+
+### Integration Validation
+- [ ] Mobile app integrates with agent workflow
+- [ ] Database state persists correctly
+- [ ] Error handling works properly
+- [ ] User modifications are saved correctly
+
+### System Validation
+- [ ] Agent reasoning quality meets expectations
+- [ ] Spatial calculations are accurate
+- [ ] All agent outputs are well-formatted
+- [ ] Workflow handles edge cases gracefully
+
+## 📋 Test Results Template
+
+Date: ___________
+Tester: ___________
+
+### Core Functionality
+- Agent workflow execution: _____ seconds
+- Dispatch reasoning: ✅/❌
+- Route optimization: ✅/❌
+- Inventory analysis: ✅/❌
+
+### Performance Results
+- [ ] ✅/❌ Agent workflow completes in <5 seconds
+- [ ] ✅/❌ Individual agents respond in <2 seconds  
+- [ ] ✅/❌ Real-time UI updates work smoothly
+- [ ] ✅/❌ Spatial reasoning produces logical results
 
 ### Issues Found
-- Issue 1: Description and resolution
-- Issue 2: Description and resolution
+1. _______________
+2. _______________
+3. _______________
 
-### Recommendations
-- Recommendation 1
-- Recommendation 2
-``` 
+### Overall Assessment
+- [ ] ✅ Ready for production
+- [ ] ⚠️ Minor issues to address
+- [ ] ❌ Major issues require fixes 
