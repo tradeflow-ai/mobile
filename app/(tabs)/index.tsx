@@ -203,16 +203,23 @@ export default function HomeScreen() {
              </View>
            )}
 
-           {/* Today's Schedule */}
+           {/* Today's Calendar */}
            <View style={styles.scheduleSection}>
-             <View style={styles.scheduleHeader}>
+             <TouchableOpacity 
+               style={styles.scheduleHeader}
+               onPress={() => navigate('/calendar')}
+               activeOpacity={0.7}
+             >
                <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-                 Today's Schedule
+                 Today's Calendar
                </Text>
-               <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
-                 {dailyPlan?.job_ids?.length || 0} jobs
-               </Text>
-             </View>
+               <View style={styles.scheduleHeaderRight}>
+                 <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
+                   {dailyPlan?.job_ids?.length || 0} jobs
+                 </Text>
+                 <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
+               </View>
+             </TouchableOpacity>
              
              <Card style={styles.scheduleCard}>
                {dailyPlan?.job_ids?.length ? (
@@ -236,14 +243,14 @@ export default function HomeScreen() {
                </View>
                )}
                <TouchableOpacity 
-                 onPress={() => Alert.alert('Full Schedule', 'This will show the complete schedule view')} 
+                 onPress={() => navigate('/calendar')} 
                  style={[
                    styles.viewFullSchedule,
                    { borderTopColor: colors.border }
                  ]}
                >
                  <Text style={[styles.viewFullScheduleText, { color: colors.primary }]}>
-                   View Full Schedule
+                   View Full Calendar
                  </Text>
                </TouchableOpacity>
              </Card>
@@ -391,6 +398,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.m,
+  },
+  scheduleHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
   },
   scheduleTitle: {
     ...typography.h3,

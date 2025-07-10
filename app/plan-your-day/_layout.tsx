@@ -2,7 +2,7 @@
  * TradeFlow Mobile App - Plan Your Day Layout
  * 
  * This layout manages the three-step AI-powered daily planning workflow:
- * 1. Schedule Review (Dispatch Strategist output)
+ * 1. Calendar Review (Dispatch Strategist output)
  * 2. Map View (Route Optimizer output) 
  * 3. Inventory Checklist (Inventory Specialist output)
  * 
@@ -71,9 +71,9 @@ export default function PlanYourDayLayout() {
         />
         
         <Stack.Screen 
-          name="schedule-review"
+          name="calendar-review"
           options={({ navigation }) => ({
-            title: 'Review Schedule',
+            title: 'Review Calendar',
             headerBackTitle: '',
             headerLeft: () => (
               <TouchableOpacity 
