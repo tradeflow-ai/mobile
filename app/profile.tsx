@@ -118,26 +118,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <View style={[styles.statsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>156</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Items Managed</Text>
-          </View>
-          
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>24</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Routes Completed</Text>
-          </View>
-          
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          
-          <View style={styles.stat}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>8</Text>
-            <Text style={[styles.statLabel, { color: colors.placeholder }]} numberOfLines={2}>Locations</Text>
-          </View>
-        </View>
+
 
         <View style={styles.menuSection}>
           {/* Dark Mode Toggle */}
@@ -161,23 +142,9 @@ export default function ProfileScreen() {
             <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => Alert.alert('Notifications', 'Manage your notification preferences')}
-          >
-            <FontAwesome name="bell" size={20} color={colors.placeholder} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Notifications</Text>
-            <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
-          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => Alert.alert('Privacy', 'Review your privacy settings')}
-          >
-            <FontAwesome name="shield" size={20} color={colors.placeholder} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy</Text>
-            <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
-          </TouchableOpacity>
+
+
 
           <TouchableOpacity
             style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -188,14 +155,7 @@ export default function ProfileScreen() {
             <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => Alert.alert('Help', 'Get help and support')}
-          >
-            <FontAwesome name="question-circle" size={20} color={colors.placeholder} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Help & Support</Text>
-            <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
-          </TouchableOpacity>
+
         </View>
 
         <View style={styles.logoutSection}>
@@ -261,40 +221,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 14,
-  },
-  statDivider: {
-    width: 1,
-    height: 50,
-    marginHorizontal: 12,
-    alignSelf: 'center',
-  },
+
   menuSection: {
     marginBottom: 32,
   },

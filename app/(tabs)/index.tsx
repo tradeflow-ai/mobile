@@ -126,10 +126,6 @@ export default function HomeScreen() {
       <View style={styles.container}>
         <Header
           title="TradeFlow"
-          rightAction={{
-            icon: 'bell',
-            onPress: () => Alert.alert('Notifications', 'No new notifications'),
-          }}
         />
 
         <ScrollView
@@ -175,17 +171,17 @@ export default function HomeScreen() {
 
            {/* Start My Day Button */}
            {!isDayStarted ? (
-             <Button
-               variant="primary"
-               onPress={handleStartDay}
-               title={
-                 planLoading ? 'Loading...' :
-                 dailyPlan?.status === 'approved' ? '▶ Start My Day' : 
-                 '🧠 Plan & Start My Day'
-               }
-               style={styles.startDayButton}
-               disabled={planLoading}
-             />
+                        <Button
+             variant="primary"
+             onPress={handleStartDay}
+             title={
+               planLoading ? 'Loading...' :
+               dailyPlan?.status === 'approved' ? '▶ Start My Day' : 
+               'Plan & Start My Day'
+             }
+             style={styles.startDayButton}
+             disabled={planLoading}
+           />
            ) : (
              <View style={styles.dayButtonsContainer}>
                <Button

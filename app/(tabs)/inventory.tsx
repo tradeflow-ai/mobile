@@ -9,9 +9,9 @@ import {
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { spacing, shadows, radius } from '@/constants/Theme';
+import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { SearchBar, Avatar, EmptyState } from '@/components/ui';
+import { SearchBar, Avatar, EmptyState, TabSelector, TabOption } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 import { useInventory, InventoryItem } from '@/hooks/useInventory';
 import { createDataUri } from '@/utils/imageUtils';
@@ -22,11 +22,24 @@ export default function InventoryScreen() {
   
   const { data: inventoryItems = [] } = useInventory();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTab, setSelectedTab] = useState('current');
 
   const { navigate } = useAppNavigation();
 
-  // Filter items based on search query
+  // Tab options
+  const tabOptions: TabOption[] = [
+    { key: 'current', label: 'Current' },
+    { key: 'required', label: 'Required' },
+  ];
+
+  // Filter items based on search query and selected tab
   const filteredItems = useMemo(() => {
+    // For required tab, always return empty array until user starts their day
+    if (selectedTab === 'required') {
+      return [];
+    }
+
+    // For current tab, filter by search query
     if (!searchQuery.trim()) {
       return inventoryItems;
     }
@@ -35,7 +48,7 @@ export default function InventoryScreen() {
     return inventoryItems.filter(item => 
       item.name.toLowerCase().includes(query)
     );
-  }, [inventoryItems, searchQuery]);
+  }, [inventoryItems, searchQuery, selectedTab]);
 
   const handleAddItem = () => {
     navigate('/add-item');
@@ -77,17 +90,27 @@ export default function InventoryScreen() {
     </TouchableOpacity>
   );
 
-  const renderEmptyState = () => (
-    <EmptyState
-      icon="search"
-      title={searchQuery ? 'No items found' : 'No inventory items'}
-      description={searchQuery ? 'Try adjusting your search terms' : 'Add your first inventory item to get started'}
-      createButtonText={searchQuery ? undefined : 'Add Item'}
-      handleOnCreatePress={handleAddItem}
-    />
-  );
+  const renderEmptyState = () => {
+    if (selectedTab === 'required') {
+      return (
+        <EmptyState
+          icon="calendar"
+          title="No required items"
+          description="Start your day to see items you need for today's jobs"
+        />
+      );
+    }
 
-
+    return (
+      <EmptyState
+        icon="search"
+        title={searchQuery ? 'No items found' : 'No inventory items'}
+        description={searchQuery ? 'Try adjusting your search terms' : 'Add your first inventory item to get started'}
+        createButtonText={searchQuery ? undefined : 'Add Item'}
+        handleOnCreatePress={handleAddItem}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -100,20 +123,34 @@ export default function InventoryScreen() {
           }}
         />
 
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search inventory..."
-        />
+        <View style={styles.content}>
+          {/* Search Bar */}
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search inventory..."
+            style={styles.searchBar}
+          />
 
-        <FlatList
-          data={filteredItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={renderEmptyState}
-          showsVerticalScrollIndicator={false}
-        />
+          {/* Current/Required Toggle */}
+          <TabSelector
+            options={tabOptions}
+            selectedKey={selectedTab}
+            onSelectionChange={setSelectedTab}
+            containerStyle={styles.tabSelector}
+          />
+
+          {/* Inventory List */}
+          <FlatList
+            data={filteredItems}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            ListEmptyComponent={renderEmptyState}
+            showsVerticalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -127,14 +164,25 @@ const styles = StyleSheet.create({
     flex: 1,
     ...spacing.helpers.padding('m'),
   },
+  content: {
+    flex: 1,
+  },
+  searchBar: {
+    marginBottom: spacing.m,
+  },
+  tabSelector: {
+    marginBottom: spacing.m,
+  },
   listContainer: {
     flexGrow: 1,
+  },
+  separator: {
+    height: spacing.s,
   },
   card: {
     borderRadius: radius.m,
     borderWidth: 1,
     ...spacing.helpers.padding('s'),
-    marginBottom: spacing.xs,
     ...shadows.subtle,
   },
   cardContent: {
@@ -154,8 +202,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.h4,
   },
   rightSection: {
     flexDirection: 'row',
@@ -169,7 +216,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.s,
   },
   quantity: {
-    fontSize: 12,
+    ...typography.caption,
     fontWeight: '600',
   },
 });
