@@ -12,12 +12,11 @@ To ensure effective project management and equal contribution, our team will adh
 
 This project is divided into four distinct domains, with a clear owner for each. These roles are consistent across all project phases to ensure clear accountability and minimize overlap.
 
-| Role | Name | Core Responsibilities | Keywords |
+| **Role** | **Team Member** | **Core Responsibilities** | **Description** |
 | :--- | :--- | :--- | :--- |
-| **AI & Systems Lead** | Jeremiah | Agents, LLM prompts, LangGraph, VROOM/OSRM deployment. | The Brain |
-| **Backend & Data Lead**| Trevor | Supabase (schema, RLS), `services` directory, data hooks, API clients. | The Data Layer |
-| **UI/UX Lead** | Josh | Design system, UI components (`/ui`), visual polish, animations, look & feel. | The Look & Feel |
-| **Frontend App Lead** | Jack | App structure (`/app`), navigation, screen composition, feature logic, client performance & offline. | The Application |
+| **Frontend & UX Lead** | Josh | React Native, UI/UX, Expo Router, Auth flows | The User Experience |
+| **Full-Stack & Data Lead** | Trevor | TanStack Query, Supabase, API integrations, data layer | The Foundation |
+| **AI & Systems Lead** | Jeremiah | Agents, LLM prompts, LangGraph, AI-powered route optimization | The Brain |
 
 ---
 

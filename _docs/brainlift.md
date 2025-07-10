@@ -44,20 +44,20 @@ TradeFlow AI can infer tools from job notes, compare BOMs, and check API invento
   - Scheduler
   - Router
   - Inventory Assistant
-- Constraint-Based Routing:
-  - Time windows
-  - Breaks
-  - Left-turn penalties
+- AI-Powered Route Optimization:
+  - Spatial reasoning with coordinate analysis
+  - Geographic optimization through AI
+  - Zero external dependencies
 - UX Stack:
   - React Native (Expo)
   - Big Calendar + Maps
 - Inventory Strategy:
-  - Job Notes → BOM → What’s Missing → Check Grainger/Lowe’s APIs
+  - Job Notes → BOM → What's Missing → Check Grainger/Lowe's APIs
 
-5. 🛠️ What We’ve Built in TradeFlow AI (MVP)
+5. 🛠️ What We've Built in TradeFlow AI (MVP)
 - Job Intake Parser: Turns natural language/text into structured tasks
 - Multi-Day Calendar: With part availability logic + customizable priorities
-- AI Router: Optimizes job order & re-routes dynamically as changes occur
+- AI Spatial Reasoning Router: Optimizes job order & re-routes dynamically using coordinate analysis
 - Inventory Prep Assistant: Generates tool checklist and to-buy list
 - Map View + Job Queue: Visual interface for planning + execution
 
@@ -85,5 +85,4 @@ TradeFlow AI can infer tools from job notes, compare BOMs, and check API invento
 - "Given a job note like 'replace faucet', what inventory items should be checked or suggested for pickup?"
 9. 🔧 Technical Components & Tools (Powering TradeFlow AI)
 - CrewAI Docs: Agent-based architecture for role-specific LLM agents (e.g. Scheduler, Router, Inventory Assistant)
-- VROOM + OSRM/GraphHopper: Core of our proposed tech stack for dynamic route optimization with constraint-aware routing (time windows, left-turn penalties, rescheduling)
 - Odoo + Vendor APIs (Grainger, Lowe’s, SerpAPI): Inventory lookup and BOM-to-shopping-list generation

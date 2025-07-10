@@ -5,5 +5,5 @@
  * These tools provide external integrations and capabilities for the agent workflow.
  */
 
-export { routingTool, convertCoordinates, calculateDistance } from './routing';
+export { coordinateFormatterTool } from './routing';
 export { mockSupplierAPI, type SupplierAPIResponse, type StoreLocation } from './mockSupplier';

@@ -77,8 +77,9 @@ export const useDailyPlan = (
   // Derived state
   const currentStep = dailyPlan?.current_step || null;
   const isProcessing = dailyPlan?.status === 'pending' || 
-                       (dailyPlan?.status === 'dispatch_complete' && dailyPlan?.current_step === 'route') ||
-                       (dailyPlan?.status === 'route_complete' && dailyPlan?.current_step === 'inventory');
+                       dailyPlan?.current_step === 'dispatch' ||
+                       dailyPlan?.current_step === 'route' ||
+                       dailyPlan?.current_step === 'inventory';
   const canRetry = dailyPlan?.status === 'error' && 
                    (dailyPlan?.error_state?.retry_suggested || false) &&
                    (dailyPlan?.retry_count || 0) < 3;

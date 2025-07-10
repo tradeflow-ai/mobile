@@ -1,12 +1,12 @@
 /**
- * Coordinate Formatter Tool for Agent Route Optimization
+ * Coordinate Formatter Tool for Agent Route Optimization - Deno Compatible
  * 
  * Simple tool that formats job coordinates for AI agent spatial reasoning.
  * Passes lat/lng data directly to agent for route optimization decisions.
  */
 
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
+import { tool } from "https://esm.sh/@langchain/core@0.3.62/tools";
+import { z } from "https://esm.sh/zod@3.25.76";
 
 /**
  * Input schema for the coordinate formatter tool

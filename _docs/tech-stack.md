@@ -80,16 +80,23 @@ This document provides a comprehensive overview of the technical architecture, c
     -   Disabling RLS for "convenience" during development. This is a critical security risk.
     -   Exposing service role (`service_role`) keys on the client-side. Only the anonymous (`anon`) key should ever be present in the frontend app.
 
-### Proprietary Routing Engine: VROOM + OSRM
--   **Description:** The self-hosted engine that provides our core competitive advantage in route optimization.
+### AI Agent Route Optimization
+-   **Description:** Lightweight, intelligent route optimization through AI spatial reasoning using GPT-4o without external dependencies.
+-   **Architecture:** Pure Edge Function implementation leveraging AI agent reasoning for Vehicle Routing Problem (VRP) solving.
+-   **Deployment:** Zero infrastructure requirements - fully Edge Function native with no external dependencies.
 -   **Best Practices:**
-    -   The engine must be run on dedicated, memory-optimized servers to handle OSRM's in-memory map data requirements.
-    -   The server should expose a simple, stateless HTTP API for our application to consume.
--   **Limitations:**
-    -   OSRM's performance comes from pre-computation, making it ill-suited for incorporating real-time traffic data. Our routing is based on historical averages. This is a known and accepted trade-off.
+    -   Use coordinate-based spatial analysis for distance and proximity calculations.
+    -   Leverage GPT-4o's spatial reasoning capabilities for route optimization decisions.
+    -   Format geographic data clearly for agent consumption (latitude/longitude pairs with clear context).
+    -   Design prompts with spatial reasoning guidelines and output format specifications.
+-   **Advantages:**
+    -   Zero external dependencies and infrastructure overhead.
+    -   Predictable performance for 3-8 job optimization scenarios typical for tradesperson use cases.
+    -   Native integration with agent reasoning capabilities.
+    -   Eliminates containerization complexity and resource requirements.
 -   **Common Pitfalls:**
-    -   Under-provisioning server RAM, which will cause the OSRM process to fail.
-    -   Not having a clear process for periodically updating the underlying OpenStreetMap data.
+    -   Providing insufficient spatial context to the agent for optimization decisions.
+    -   Expecting routing precision beyond agent spatial reasoning capabilities.
 
 ---
 
@@ -121,15 +128,20 @@ This document provides a comprehensive overview of the technical architecture, c
 
 ## DevOps & Deployment
 
-### Routing Engine Deployment: Docker & AWS Lightsail
--   **Description:** The VROOM/OSRM engine is containerized with Docker and deployed on AWS Lightsail.
+### AI Agent Deployment: Supabase Edge Functions
+-   **Description:** AI agent route optimization is deployed as serverless Edge Functions with zero external infrastructure dependencies.
 -   **Best Practices:**
-    -   Use multi-stage Docker builds to create lean production images.
-    -   Manage all secrets (API keys, etc.) via environment variables, never hardcoded in the `Dockerfile`.
+    -   Manage all secrets (OpenAI API keys, etc.) via Supabase Environment Variables, never hardcoded.
+    -   Implement proper error handling for agent reasoning failures.
+    -   Use Deno-compatible imports for all LangGraph and AI dependencies.
+    -   Test Edge Functions locally before deployment using `supabase functions serve`.
 -   **Conventions:**
-    -   The project will include a `docker-compose.yml` file to facilitate easy local development and testing of the routing engine.
--   **Limitations & Considerations:**
-    -   Lightsail provides simplicity at the cost of scalability. We have a hard memory ceiling of 32GB. A formal plan to migrate to AWS EC2 must be maintained as part of our technical roadmap.
+    -   Agent implementations are mirrored between local development (`agent/`) and Edge Function (`supabase/functions/plan-day/`).
+    -   Coordinate formatting tools provide spatial data to agents in standardized format.
+-   **Scalability Considerations:**
+    -   Edge Functions scale automatically with usage without infrastructure management.
+    -   Agent performance is predictable for typical tradesperson job counts (3-8 jobs).
+    -   No memory or geographic coverage limitations.
 
 ### Application Deployment: Expo Application Services (EAS)
 -   **Description:** EAS is used for building and deploying the React Native application.
