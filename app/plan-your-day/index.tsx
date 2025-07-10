@@ -54,7 +54,7 @@ export default function PlanYourDayIndex() {
     switch (dailyPlan.status) {
       case 'dispatch_complete':
         if (currentStep === 'route') {
-          router.push('./schedule-review');
+          router.push('./calendar-review');
         }
         break;
       case 'route_complete':

@@ -14,7 +14,7 @@ import { Calendar, CalendarView } from '@/components/Calendar';
 import { JobLocation } from '@/hooks/useJobs';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
-export default function ScheduleScreen() {
+export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const router = useRouter();
@@ -62,7 +62,7 @@ export default function ScheduleScreen() {
       <View style={styles.container}>
         <View style={styles.headerContainer}>
           <Header
-            title="Schedule"
+            title="Calendar"
             rightAction={{
               icon: 'plus',
               onPress: handleAddJob,
@@ -112,4 +112,4 @@ const styles = StyleSheet.create({
   viewSelector: {
     // Custom styles for view selector if needed
   },
-});
+}); 

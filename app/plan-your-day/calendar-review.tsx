@@ -1,7 +1,7 @@
 /**
- * TradeFlow Mobile App - Schedule Review Screen
+ * TradeFlow Mobile App - Calendar Review Screen
  * 
- * This screen displays the AI-generated job schedule from the Dispatch Strategist
+ * This screen displays the AI-generated job calendar from the Dispatch Strategist
  * and allows users to review and reorder jobs using drag-and-drop functionality.
  * Users can approve the schedule or make modifications before proceeding to route optimization.
  */
@@ -34,7 +34,7 @@ interface JobItem {
   bufferTime: number;
 }
 
-export default function ScheduleReviewScreen() {
+export default function CalendarReviewScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -212,17 +212,42 @@ export default function ScheduleReviewScreen() {
                 </View>
                 
                 <View style={styles.timeInfo}>
-                  <Text style={[styles.timeText, { color: colors.secondary }]}>
-                    {formatTime(job.estimatedStartTime)} - {formatTime(job.estimatedEndTime)}
-                  </Text>
-                  <Text style={[styles.bufferText, { color: colors.secondary }]}>
-                    +{job.bufferTime}min buffer
-                  </Text>
+                  <View style={styles.timeRow}>
+                    <Text style={[styles.timeLabel, { color: colors.secondary }]}>
+                      Start Time:
+                    </Text>
+                    <Text style={[styles.timeValue, { color: colors.text }]}>
+                      {formatTime(job.estimatedStartTime)}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.timeRow}>
+                    <Text style={[styles.timeLabel, { color: colors.secondary }]}>
+                      End Time:
+                    </Text>
+                    <Text style={[styles.timeValue, { color: colors.text }]}>
+                      {formatTime(job.estimatedEndTime)}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.timeRow}>
+                    <Text style={[styles.timeLabel, { color: colors.secondary }]}>
+                      Buffer Time:
+                    </Text>
+                    <Text style={[styles.timeValue, { color: colors.text }]}>
+                      {job.bufferTime} minutes
+                    </Text>
+                  </View>
                 </View>
                 
-                <Text style={[styles.reasonText, { color: colors.secondary }]}>
-                  {job.priorityReason}
-                </Text>
+                <View style={styles.priorityReason}>
+                  <Text style={[styles.priorityReasonLabel, { color: colors.secondary }]}>
+                    Priority Reason:
+                  </Text>
+                  <Text style={[styles.priorityReasonText, { color: colors.text }]}>
+                    {job.priorityReason}
+                  </Text>
+                </View>
               </View>
             )}
           </TouchableOpacity>
@@ -230,6 +255,30 @@ export default function ScheduleReviewScreen() {
       </ScaleDecorator>
     );
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <LoadingStepUI 
+          step="Loading your schedule..." 
+          isConnected={isConnected}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <ErrorStepUI 
+          error={error}
+          context="Failed to load your schedule"
+        />
+      </SafeAreaView>
+    );
+  }
 
   /**
    * Handle schedule confirmation
@@ -302,175 +351,51 @@ export default function ScheduleReviewScreen() {
     }
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <LoadingStepUI 
-          step="Loading your schedule..." 
-          isConnected={isConnected}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <ErrorStepUI 
-          error={error}
-          onRetry={() => router.back()}
-          retryText="Go Back"
-        />
-      </SafeAreaView>
-    );
-  }
-
-  // No dispatch output available
-  if (!dailyPlan?.dispatch_output) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <ErrorStepUI 
-          error="No schedule available to review"
-          onRetry={() => router.back()}
-          retryText="Go Back"
-        />
-      </SafeAreaView>
-    );
-  }
-
-  const dispatchOutput = dailyPlan.dispatch_output as DispatchOutput;
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header Card */}
-        <Card style={styles.headerCard}>
-          <View style={styles.headerContent}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-              <FontAwesome 
-                name="calendar-check-o" 
-                size={24} 
-                color={colors.background}
-              />
-            </View>
-            
-            <View style={styles.headerText}>
-              <Text style={[styles.titleText, { color: colors.text }]}>
-                Review Your Schedule
-              </Text>
-              <Text style={[styles.subtitleText, { color: colors.secondary }]}>
-                AI has prioritized your jobs. Long press and drag to reorder.
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        {/* Schedule Summary */}
-        <Card style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Text style={[styles.summaryTitle, { color: colors.text }]}>
-              Schedule Summary
-            </Text>
-          </View>
-          
-          <View style={styles.summaryContent}>
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: colors.secondary }]}>
-                Total Jobs
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {jobs.length}
-              </Text>
-            </View>
-            
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: colors.secondary }]}>
-                Work Hours
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {Math.round(dispatchOutput.scheduling_constraints.total_work_hours)}h
-              </Text>
-            </View>
-            
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: colors.secondary }]}>
-                Start Time
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatTime(dispatchOutput.scheduling_constraints.work_start_time)}
-              </Text>
-            </View>
-          </View>
-        </Card>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Review Your Schedule
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.secondary }]}>
+            {jobs.length} jobs planned • Drag to reorder
+          </Text>
+        </View>
 
         {/* Job List */}
-        <Card style={styles.jobsCard}>
-          <View style={styles.jobsHeader}>
-            <Text style={[styles.jobsTitle, { color: colors.text }]}>
-              Prioritized Jobs
-            </Text>
-            {hasChanges && (
-              <View style={styles.changesIndicator}>
-                <FontAwesome 
-                  name="pencil" 
-                  size={12} 
-                  color={colors.warning}
-                />
-                <Text style={[styles.changesText, { color: colors.warning }]}>
-                  Modified
-                </Text>
-              </View>
-            )}
-          </View>
-
+        <View style={styles.jobList}>
           <DraggableFlatList
             data={jobs}
-            renderItem={renderJobItem}
-            keyExtractor={(item) => item.id}
             onDragEnd={handleDragEnd}
-            containerStyle={styles.jobsList}
-            contentContainerStyle={styles.jobsListContent}
-          />
-        </Card>
-
-        {/* AI Reasoning */}
-        <Card style={styles.reasoningCard}>
-          <View style={styles.reasoningHeader}>
-            <FontAwesome 
-              name="lightbulb-o" 
-              size={20} 
-              color={colors.primary}
-            />
-            <Text style={[styles.reasoningTitle, { color: colors.text }]}>
-              AI Reasoning
-            </Text>
-          </View>
-          
-          <Text style={[styles.reasoningText, { color: colors.secondary }]}>
-            {dispatchOutput.agent_reasoning}
-          </Text>
-        </Card>
-
-        {/* Action Buttons */}
-        <View style={styles.actionContainer}>
-          <Button
-            title={isConfirming ? 'Confirming...' : 'Confirm Schedule'}
-            onPress={handleConfirmSchedule}
-            variant="primary"
-            disabled={isConfirming}
-            style={styles.confirmButton}
-          />
-          
-          <Button
-            title="Make Changes"
-            onPress={() => router.back()}
-            variant="outline"
-            style={styles.backButton}
+            keyExtractor={(item) => item.id}
+            renderItem={renderJobItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
           />
         </View>
-      </ScrollView>
+
+        {/* Actions */}
+                 <View style={styles.actions}>
+           <Button
+             title="Cancel"
+             variant="outline"
+             onPress={() => router.back()}
+             disabled={isConfirming}
+             style={styles.cancelButton}
+           />
+           
+           <Button
+             title={isConfirming ? 'Confirming...' : 'Confirm Schedule'}
+             variant="primary"
+             onPress={handleConfirmSchedule}
+             disabled={isConfirming}
+             loading={isConfirming}
+             style={styles.confirmButton}
+           />
+         </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -481,165 +406,85 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    ...spacing.helpers.padding('m'),
+    ...spacing.helpers.paddingHorizontal('m'),
   },
-  headerCard: {
-    marginBottom: spacing.m,
-  },
-  headerContent: {
-    flexDirection: 'row',
+  header: {
+    ...spacing.helpers.paddingVertical('m'),
     alignItems: 'center',
   },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.m,
-  },
-  headerText: {
-    flex: 1,
-  },
-  titleText: {
+  title: {
     ...typography.h2,
     marginBottom: spacing.xs,
   },
-  subtitleText: {
+  subtitle: {
     ...typography.body,
-    lineHeight: 20,
   },
-  summaryCard: {
+  jobList: {
+    flex: 1,
     marginBottom: spacing.m,
   },
-  summaryHeader: {
-    marginBottom: spacing.m,
-  },
-  summaryTitle: {
-    ...typography.h3,
-  },
-  summaryContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryItem: {
-    alignItems: 'center',
-  },
-  summaryLabel: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-  },
-  summaryValue: {
-    ...typography.h3,
-    fontWeight: 'bold',
-  },
-  jobsCard: {
-    marginBottom: spacing.m,
-  },
-  jobsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.m,
-  },
-  jobsTitle: {
-    ...typography.h3,
-  },
-  changesIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  changesText: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-  jobsList: {
-    gap: spacing.m,
-  },
-  jobsListContent: {
-    gap: spacing.m,
+  listContainer: {
+    paddingBottom: spacing.m,
   },
   jobCard: {
-    backgroundColor: 'rgba(244, 164, 96, 0.05)',
-    borderRadius: radius.m,
-    padding: spacing.m,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 164, 96, 0.2)',
     marginBottom: spacing.m,
-  },
-  jobContent: {
-    flex: 1,
+    borderRadius: radius.m,
+    overflow: 'hidden',
   },
   activeJobCard: {
-    backgroundColor: 'rgba(244, 164, 96, 0.15)',
-    borderColor: 'rgba(244, 164, 96, 0.4)',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    opacity: 0.8,
+    transform: [{ scale: 1.02 }],
+  },
+  jobContent: {
+    backgroundColor: 'white',
+    ...spacing.helpers.padding('m'),
   },
   jobHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.m,
+    marginBottom: spacing.s,
   },
   jobRank: {
     width: 32,
     height: 32,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(244, 164, 96, 0.2)',
-    alignItems: 'center',
+    borderRadius: 16,
+    backgroundColor: '#e3f2fd',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: spacing.m,
   },
   rankText: {
-    ...typography.body,
-    fontWeight: 'bold',
+    ...typography.bodyBold,
   },
   jobInfo: {
     flex: 1,
   },
   jobTitle: {
-    ...typography.body,
-    fontWeight: '600',
+    ...typography.bodyBold,
     marginBottom: spacing.xs,
   },
   jobAddress: {
     ...typography.caption,
   },
   jobActions: {
-    marginLeft: spacing.m,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.s,
+    gap: spacing.m,
   },
   expandButton: {
-    padding: spacing.s,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.s,
-    backgroundColor: 'rgba(244, 164, 96, 0.1)',
+    padding: spacing.xs,
   },
   dragHandle: {
-    padding: spacing.s,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.s,
-    backgroundColor: 'rgba(244, 164, 96, 0.1)',
+    padding: spacing.xs,
   },
   jobSummary: {
-    marginTop: spacing.m,
-    gap: spacing.s,
-  },
-  jobDetails: {
-    gap: spacing.s,
+    marginTop: spacing.s,
   },
   jobMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.s,
   },
   jobType: {
     flexDirection: 'row',
@@ -658,51 +503,48 @@ const styles = StyleSheet.create({
   priorityText: {
     ...typography.caption,
     fontWeight: 'bold',
-    fontSize: 10,
-  },
-  timeInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   timeText: {
     ...typography.caption,
-    fontWeight: '600',
   },
-  bufferText: {
-    ...typography.caption,
-    fontStyle: 'italic',
+  jobDetails: {
+    marginTop: spacing.s,
   },
-  reasonText: {
-    ...typography.caption,
-    fontStyle: 'italic',
-    lineHeight: 16,
+  timeInfo: {
+    marginTop: spacing.s,
+    marginBottom: spacing.s,
   },
-  reasoningCard: {
-    marginBottom: spacing.l,
-    backgroundColor: 'rgba(244, 164, 96, 0.1)',
-  },
-  reasoningHeader: {
+  timeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.m,
-    gap: spacing.s,
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
   },
-  reasoningTitle: {
-    ...typography.h4,
+  timeLabel: {
+    ...typography.caption,
   },
-  reasoningText: {
-    ...typography.body,
-    lineHeight: 20,
+  timeValue: {
+    ...typography.caption,
+    fontWeight: 'bold',
   },
-  actionContainer: {
+  priorityReason: {
+    marginTop: spacing.s,
+  },
+  priorityReasonLabel: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
+  },
+  priorityReasonText: {
+    ...typography.caption,
+  },
+  actions: {
+    flexDirection: 'row',
+    ...spacing.helpers.paddingVertical('m'),
     gap: spacing.m,
-    marginBottom: spacing.xl,
+  },
+  cancelButton: {
+    flex: 1,
   },
   confirmButton: {
-    // Button styles handled by Button component
-  },
-  backButton: {
-    // Button styles handled by Button component
+    flex: 2,
   },
 }); 
