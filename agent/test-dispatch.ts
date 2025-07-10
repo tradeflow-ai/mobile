@@ -8,14 +8,14 @@
 import { DispatchStrategistAgent } from './agents';
 import type { AgentContext } from './agents';
 
-// Mock job data for testing
+// Mock job data for testing - Updated for unified dispatcher
 const mockJobs = [
   {
     id: 'job-1',
     title: 'Emergency Gas Leak Repair',
     description: 'Urgent gas leak at residential property - safety hazard',
     job_type: 'emergency',
-    priority: 'urgent',
+    priority: 'urgent', // Emergency jobs are automatically urgent
     estimated_duration: 120,
     scheduled_date: new Date().toISOString(),
     customer_id: 'customer-1',
@@ -24,9 +24,9 @@ const mockJobs = [
   },
   {
     id: 'job-2', 
-    title: 'VIP Client HVAC Maintenance',
-    description: 'Quarterly maintenance for high-value client',
-    job_type: 'maintenance',
+    title: 'High Priority Electrical Inspection',
+    description: 'Electrical safety inspection for commercial property',
+    job_type: 'inspection',
     priority: 'high',
     estimated_duration: 90,
     scheduled_date: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
@@ -48,8 +48,8 @@ const mockJobs = [
   },
   {
     id: 'job-4',
-    title: 'Electrical Outlet Installation',
-    description: 'Install new electrical outlets in kitchen',
+    title: 'HVAC Service Call',
+    description: 'Service call for heating system repair',
     job_type: 'service',
     priority: 'low',
     estimated_duration: 75,
@@ -147,52 +147,51 @@ export async function testDispatchAgent(): Promise<void> {
     // Execute the dispatch algorithm directly to test Task 4.1
     console.log('⚡ Executing Core Dispatch Algorithm (Task 4.1)...\n');
     
-    // Test job classification
+    // Test job classification - Updated for unified dispatcher
     console.log('🏷️  Job Classification Results:');
     const classifiedJobs = mockJobs.map(job => {
-      // Simulate the classification logic
-      let classification = 'maintenance';
-      if (job.job_type === 'emergency' || job.title.toLowerCase().includes('emergency')) {
-        classification = 'emergency';
-      } else if (job.priority === 'urgent' || job.priority === 'high') {
-        classification = 'demand';
-      }
-      console.log(`  • ${job.title}: ${classification.toUpperCase()}`);
-      return { ...job, classification };
+      // Use the new job type directly as the business priority tier
+      const businessPriorityTier = job.job_type;
+      console.log(`  • ${job.title}: ${businessPriorityTier.toUpperCase()}`);
+      return { ...job, business_priority_tier: businessPriorityTier };
     });
     console.log('');
 
-    // Test priority scoring
+    // Test priority scoring - Updated for unified dispatcher
     console.log('🎯 Priority Scoring Results:');
     const scoredJobs = classifiedJobs.map(job => {
       let score = 0;
       
-      // Emergency boost
-      if (job.classification === 'emergency') score += 1000;
-      else if (job.classification === 'demand') score += 500;
+      // Job type hierarchy (primary sorting)
+      if (job.job_type === 'emergency') {
+        score += 1000;
+      } else if (job.job_type === 'inspection') {
+        score += 500;
+      } else if (job.job_type === 'service') {
+        score += 100;
+      }
       
-      // VIP client bonus  
-      if (mockPreferences.vip_client_ids.includes(job.customer_id)) score += 200;
-      
-      // Priority level scoring
+      // Priority level scoring (secondary sorting)
       const priorityScores = { 'urgent': 150, 'high': 100, 'medium': 50, 'low': 10 };
       score += priorityScores[job.priority as keyof typeof priorityScores] || 25;
 
-      console.log(`  • ${job.title}: ${score} points`);
+      console.log(`  • ${job.title}: ${score} points (${job.job_type} + ${job.priority})`);
       return { ...job, priority_score: score };
     });
     console.log('');
 
-    // Test final prioritization
+    // Test final prioritization - Updated for unified dispatcher
     console.log('📋 Final Job Prioritization:');
     const finalJobs = scoredJobs
       .sort((a, b) => b.priority_score - a.priority_score)
       .map((job, index) => {
-        const reason = job.classification === 'emergency' 
+        const reason = job.job_type === 'emergency' 
           ? '🚨 EMERGENCY: Immediate safety response required'
-          : job.customer_id === 'vip-customer-1'
-          ? '⭐ VIP client with priority scheduling'
-          : `${job.priority} priority ${job.classification} job`;
+          : job.job_type === 'inspection'
+          ? `🔍 INSPECTION: ${job.priority} priority inspection job`
+          : job.job_type === 'service'
+          ? `🔧 SERVICE: ${job.priority} priority service job`
+          : `${job.priority} priority ${job.job_type} job`;
         
         console.log(`  ${index + 1}. ${job.title} (Score: ${job.priority_score})`);
         console.log(`     Reason: ${reason}`);
@@ -230,9 +229,9 @@ export async function testDispatchAgent(): Promise<void> {
 
     console.log('\n📊 Test Results Summary:');
     console.log(`• Total jobs processed: ${finalJobs.length}`);
-    console.log(`• Emergency jobs: ${finalJobs.filter(j => j.classification === 'emergency').length}`);
-    console.log(`• Demand jobs: ${finalJobs.filter(j => j.classification === 'demand').length}`);
-    console.log(`• Maintenance jobs: ${finalJobs.filter(j => j.classification === 'maintenance').length}`);
+    console.log(`• Emergency jobs: ${finalJobs.filter(j => j.job_type === 'emergency').length}`);
+    console.log(`• Inspection jobs: ${finalJobs.filter(j => j.job_type === 'inspection').length}`);
+    console.log(`• Service jobs: ${finalJobs.filter(j => j.job_type === 'service').length}`);
     console.log(`• VIP clients served: ${finalJobs.filter(j => mockPreferences.vip_client_ids.includes(j.customer_id)).length}`);
 
   } catch (error) {

@@ -115,14 +115,13 @@ serve(async (req: Request) => {
       )
     }
 
-    // Update plan with results
+    // Update plan with results - Updated for unified dispatcher
     const { error: updateError } = await supabase
       .from('daily_plans')
       .update({
         status: 'inventory_complete',
         current_step: 'complete',
         dispatch_output: workflowResult.dispatch_output,
-        route_output: workflowResult.route_output,
         inventory_output: workflowResult.inventory_output,
         completed_at: new Date().toISOString()
       })
@@ -145,7 +144,6 @@ serve(async (req: Request) => {
       ...response,
       // Include the workflow results for testing
       dispatch_output: workflowResult.dispatch_output,
-      route_output: workflowResult.route_output,
       inventory_output: workflowResult.inventory_output
     }), {
       status: 200,

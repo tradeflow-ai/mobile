@@ -8,10 +8,8 @@
 
 import { ChatOpenAI } from "https://esm.sh/@langchain/openai@0.5.18";
 import { HumanMessage, SystemMessage } from "https://esm.sh/@langchain/core@0.3.62/messages";
-import { DISPATCHER_PROMPT } from './prompts/dispatcher.ts';
-import { ROUTER_PROMPT } from './prompts/router.ts';
+import { UNIFIED_DISPATCHER_PROMPT } from './prompts/dispatcher.ts';
 import { INVENTORY_PROMPT } from './prompts/inventory.ts';
-import { routingTool } from './tools/routing.ts';
 import { mockSupplierAPI } from './tools/mockSupplier.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -246,27 +244,38 @@ export class DispatchStrategistAgent {
    * TEMPORARY: Create mock jobs for testing when real jobs are not found
    */
   private createMockJobs(jobIds: string[]): any[] {
-    return jobIds.map((jobId, index) => ({
-      id: jobId,
-      user_id: 'test-user',
-      title: `Mock Job ${index + 1}`,
-      description: `This is a mock job for testing the dispatch agent`,
-      job_type: index === 0 ? 'emergency' : index === 1 ? 'maintenance' : 'repair',
-      priority: index === 0 ? 'urgent' : index === 1 ? 'medium' : 'high',
-      status: 'pending',
-      latitude: 40.7128 + (index * 0.01),
-      longitude: -74.0060 + (index * 0.01),
-      address: `${123 + index} Test St, New York, NY 10001`,
-      customer_name: `Test Customer ${index + 1}`,
-      customer_id: index === 0 ? 'vip-customer-1' : `customer-${index + 1}`,
-      phone: `555-010${index}`,
-      scheduled_date: new Date().toISOString(),
-      estimated_duration: 90 + (index * 30),
-      instructions: `Mock instructions for job ${index + 1}`,
-      required_items: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }));
+    return jobIds.map((jobId, index) => {
+      // Cycle through the 3 job types
+      const jobTypes = ['emergency', 'inspection', 'service'];
+      const jobType = jobTypes[index % 3];
+      
+      // Emergency jobs are automatically urgent priority
+      const priority = jobType === 'emergency' ? 'urgent' : 
+                      index === 1 ? 'high' : 
+                      index === 2 ? 'medium' : 'low';
+      
+      return {
+        id: jobId,
+        user_id: 'test-user',
+        title: `Mock ${jobType} Job ${index + 1}`,
+        description: `This is a mock ${jobType} job for testing the unified dispatcher`,
+        job_type: jobType,
+        priority: priority,
+        status: 'pending',
+        latitude: 40.7128 + (index * 0.01),
+        longitude: -74.0060 + (index * 0.01),
+        address: `${123 + index} Test St, New York, NY 10001`,
+        customer_name: `Test Customer ${index + 1}`,
+        customer_id: index === 0 ? 'vip-customer-1' : `customer-${index + 1}`,
+        phone: `555-010${index}`,
+        scheduled_date: new Date().toISOString(),
+        estimated_duration: 90 + (index * 30),
+        instructions: `Mock instructions for ${jobType} job ${index + 1}`,
+        required_items: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    });
   }
 
   /**
@@ -351,34 +360,41 @@ export class DispatchStrategistAgent {
   }
 
   /**
-   * Priority Scoring Algorithm
+   * Priority Scoring Algorithm - Updated for Unified Dispatcher
    */
   private calculatePriorityScore(job: any, preferences: any): any {
     let score = 0;
     const scoringFactors: string[] = [];
 
-    // Base priority from classification
-    score += job.priority_boost;
-    if (job.priority_boost > 0) {
-      scoringFactors.push(`Classification boost: +${job.priority_boost}`);
+    // Job type hierarchy (primary sorting)
+    if (job.job_type === 'emergency') {
+      score += 1000;
+      scoringFactors.push('Emergency job: +1000');
+    } else if (job.job_type === 'inspection') {
+      score += 500;
+      scoringFactors.push('Inspection job: +500');
+    } else if (job.job_type === 'service') {
+      score += 100;
+      scoringFactors.push('Service job: +100');
     }
 
-    // VIP Client bonus
-    if (preferences.vip_client_ids?.includes(job.customer_id)) {
-      score += 200;
-      scoringFactors.push('VIP client: +200');
-    }
-
-    // Priority level scoring
+    // Priority level scoring (secondary sorting)
     const priorityScores = { 'urgent': 150, 'high': 100, 'medium': 50, 'low': 10 };
     const priorityScore = priorityScores[job.priority as keyof typeof priorityScores] || 25;
     score += priorityScore;
     scoringFactors.push(`${job.priority} priority: +${priorityScore}`);
 
+    // Geographic bonus (applied during route optimization)
+    if (job.geographic_bonus) {
+      score += job.geographic_bonus;
+      scoringFactors.push(`Geographic clustering: +${job.geographic_bonus}`);
+    }
+
     return {
       ...job,
-      priority_score: Math.max(score, 0),
-      scoring_factors: scoringFactors
+      priority_score: score,
+      scoring_factors: scoringFactors,
+      business_priority_tier: job.job_type
     };
   }
 
@@ -484,7 +500,7 @@ export class DispatchStrategistAgent {
       const enhancementPrompt = this.createEnhancementPrompt(dispatchResult, preferences);
       
       const messages = [
-        new SystemMessage(DISPATCHER_PROMPT),
+        new SystemMessage(UNIFIED_DISPATCHER_PROMPT),
         new HumanMessage(enhancementPrompt)
       ];
 
@@ -555,127 +571,7 @@ Explain your prioritization strategy, highlight any concerns, and provide action
   }
 }
 
-/**
- * Enhanced Route Optimizer Agent
- */
-export class RouteOptimizerAgent {
-  private llm: ChatOpenAI;
 
-  constructor() {
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
-
-    this.llm = new ChatOpenAI({
-      modelName: "gpt-4o",
-      temperature: 0.1,
-      openAIApiKey: openaiApiKey,
-    });
-  }
-
-  async execute(context: AgentContext, dispatchOutput: DispatchOutput): Promise<RouteOutput> {
-    const startTime = Date.now();
-
-    try {
-      const supabase = createSupabaseClient();
-
-      // Update daily plan status
-      await supabase
-        .from('daily_plans')
-        .update({ current_step: 'route' })
-        .eq('id', context.planId);
-
-      console.log(`🗺️ Route Agent: Optimizing route for ${dispatchOutput.prioritized_jobs.length} jobs`);
-
-      // Prepare jobs for VROOM routing engine
-      const routingJobs = dispatchOutput.prioritized_jobs.map((job, index) => ({
-        id: job.job_id,
-        location: [
-          -74.0060 + (index * 0.01), // Mock longitude
-          40.7128 + (index * 0.01)   // Mock latitude
-        ],
-        service: 60, // 60 minutes service time
-        timeWindow: [
-          480 + (index * 120), // Start at 8 AM + 2 hours per job
-          600 + (index * 120)  // End 2 hours later
-        ]
-      }));
-
-      const vehicle = {
-        id: 'van_001',
-        start: [-74.0060, 40.7128], // Starting location
-        end: [-74.0060, 40.7128],   // Return to start
-        capacity: [100], // Vehicle capacity
-        timeWindow: [480, 1020] // 8 AM to 5 PM
-      };
-
-      // Call VROOM routing tool
-      const vroomResult = await routingTool.invoke({
-        jobs: routingJobs,
-        vehicle,
-        options: { minimize: 'time' }
-      });
-
-      const routeOutput = this.parseRouteResponse(vroomResult, routingJobs, dispatchOutput, startTime);
-
-      // Update daily plan with route output
-      await supabase
-        .from('daily_plans')
-        .update({
-          status: 'route_complete',
-          current_step: 'inventory',
-          route_output: routeOutput
-        })
-        .eq('id', context.planId);
-
-      console.log(`✅ Route optimization complete: ${routeOutput.optimized_route.waypoints.length} waypoints in ${Date.now() - startTime}ms`);
-      return routeOutput;
-
-    } catch (error) {
-      console.error('❌ Route optimizer error:', error);
-      throw error;
-    }
-  }
-
-  private parseRouteResponse(vroomResult: any, jobs: any[], dispatchOutput: DispatchOutput, startTime: number): RouteOutput {
-    const route = vroomResult.routes?.[0];
-    if (!route) {
-      throw new Error('No route found in VROOM response');
-    }
-
-    const waypoints = route.steps
-      .filter((step: any) => step.type === 'job')
-      .map((step: any, index: number) => {
-        const job = jobs.find(j => j.id === step.job);
-        return {
-          job_id: step.job,
-          sequence_number: index + 1,
-          coordinates: {
-            latitude: job?.location[1] || 40.7128,
-            longitude: job?.location[0] || -74.0060
-          },
-          arrival_time: new Date(Date.now() + step.arrival * 60000).toISOString(),
-          departure_time: new Date(Date.now() + (step.arrival + step.duration) * 60000).toISOString(),
-          duration_at_location: step.duration || 60,
-          travel_time_to_next: 15,
-          distance_to_next: 5000
-        };
-      });
-
-    return {
-      optimized_route: {
-        waypoints,
-        route_geometry: route.geometry || 'mock_geometry',
-        total_distance: route.distance || 0,
-        total_travel_time: route.duration || 0,
-        total_work_time: dispatchOutput.prioritized_jobs.length * 60
-      },
-      agent_reasoning: `Optimized route using VROOM engine. Total distance: ${route.distance}m, travel time: ${Math.round((route.duration || 0) / 60)} minutes.`,
-      execution_time_ms: Date.now() - startTime
-    };
-  }
-}
 
 /**
  * Enhanced Inventory Specialist Agent
@@ -824,10 +720,7 @@ export async function executeDispatchStrategist(context: AgentContext): Promise<
   return agent.execute(context);
 }
 
-export async function executeRouteOptimizer(context: AgentContext, dispatchOutput: DispatchOutput): Promise<RouteOutput> {
-  const agent = new RouteOptimizerAgent();
-  return agent.execute(context, dispatchOutput);
-}
+
 
 export async function executeInventorySpecialist(context: AgentContext, dispatchOutput: DispatchOutput): Promise<InventoryOutput> {
   const agent = new InventorySpecialistAgent();
@@ -835,7 +728,7 @@ export async function executeInventorySpecialist(context: AgentContext, dispatch
 }
 
 /**
- * Main workflow execution function
+ * Main workflow execution function - Updated for Unified Dispatcher
  */
 export async function executeDailyPlanningWorkflow(input: {
   userId: string;
@@ -845,12 +738,11 @@ export async function executeDailyPlanningWorkflow(input: {
 }): Promise<{
   success: boolean;
   dispatch_output?: DispatchOutput;
-  route_output?: RouteOutput;
   inventory_output?: InventoryOutput;
   error?: string;
 }> {
   try {
-    console.log('🏗️ Building enhanced LangGraph state machine...');
+    console.log('🏗️ Building unified dispatcher workflow...');
     console.log('📊 Input:', { userId: input.userId, planId: input.planId, jobCount: input.jobIds.length });
     
     const context: AgentContext = {
@@ -860,32 +752,26 @@ export async function executeDailyPlanningWorkflow(input: {
       planDate: input.planDate
     };
 
-    // Step 1: Dispatch Agent
-    console.log('🎯 Executing Dispatch Strategist...');
+    // Step 1: Unified Dispatcher Agent (includes route optimization)
+    console.log('🎯 Executing Unified Dispatcher...');
     const dispatchOutput = await executeDispatchStrategist(context);
-    console.log('✅ Dispatch completed:', dispatchOutput.prioritized_jobs.length, 'jobs prioritized');
+    console.log('✅ Unified dispatch completed:', dispatchOutput.prioritized_jobs.length, 'jobs prioritized with routing');
 
-    // Step 2: Route Agent
-    console.log('🗺️ Executing Route Optimizer...');
-    const routeOutput = await executeRouteOptimizer(context, dispatchOutput);
-    console.log('✅ Route optimized:', routeOutput.optimized_route.total_distance, 'total distance');
-
-    // Step 3: Inventory Agent
+    // Step 2: Inventory Agent
     console.log('📦 Executing Inventory Specialist...');
     const inventoryOutput = await executeInventorySpecialist(context, dispatchOutput);
     console.log('✅ Inventory analyzed:', inventoryOutput.shopping_list.length, 'items to purchase');
 
-    console.log('🎉 Enhanced LangGraph workflow completed successfully!');
+    console.log('🎉 Unified dispatcher workflow completed successfully!');
 
     return {
       success: true,
       dispatch_output: dispatchOutput,
-      route_output: routeOutput,
       inventory_output: inventoryOutput
     };
 
   } catch (error) {
-    console.error('❌ Enhanced LangGraph workflow failed:', error);
+    console.error('❌ Unified dispatcher workflow failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'

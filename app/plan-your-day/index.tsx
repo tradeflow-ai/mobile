@@ -2,10 +2,9 @@
  * TradeFlow Mobile App - Plan Your Day Workflow Orchestrator
  * 
  * This is the main entry point for the AI-powered daily planning workflow.
- * It manages the three-step process and routes users through each stage:
- * 1. Schedule Review (Dispatch Strategist)
- * 2. Map View (Route Optimizer)
- * 3. Inventory Checklist (Inventory Specialist)
+ * It manages the two-step process and routes users through each stage:
+ * 1. Schedule Review (Unified Dispatcher with routing optimization)
+ * 2. Inventory Checklist (Inventory Specialist)
  * 
  * Features real-time agent status updates and seamless progression.
  */
@@ -45,7 +44,7 @@ export default function PlanYourDayIndex() {
   } = useTodaysPlan();
 
   /**
-   * Handle automatic navigation based on daily plan status
+   * Handle automatic navigation based on daily plan status - Updated for unified dispatcher
    */
   useEffect(() => {
     if (!dailyPlan || isProcessing) return;
@@ -53,13 +52,8 @@ export default function PlanYourDayIndex() {
     // Navigate to appropriate step based on current status
     switch (dailyPlan.status) {
       case 'dispatch_complete':
-        if (currentStep === 'route') {
-          router.push('./calendar-review');
-        }
-        break;
-      case 'route_complete':
         if (currentStep === 'inventory') {
-          router.push('./map-view');
+          router.push('./calendar-review');
         }
         break;
       case 'inventory_complete':
@@ -162,8 +156,7 @@ export default function PlanYourDayIndex() {
   // Agent is processing - show loading with current step
   if (isProcessing) {
     const stepMessages = {
-      dispatch: 'Analyzing and prioritizing your jobs...',
-      route: 'Optimizing your travel route...',
+      dispatch: 'Analyzing, prioritizing, and optimizing your schedule...',
       inventory: 'Checking parts and creating shopping list...',
     };
 

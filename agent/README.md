@@ -1,11 +1,10 @@
 # AI Agent Crew Testing
 
 ## 🧠 Overview
-The TradeFlow AI agent crew consists of three specialized agents orchestrated by LangGraph:
+The TradeFlow AI agent crew consists of two specialized agents orchestrated by LangGraph:
 
-1. **Dispatch Strategist** - Prioritizes and sequences jobs
-2. **Route Optimizer** - Calculates optimal travel routes using AI spatial reasoning
-3. **Inventory Specialist** - Generates parts lists and shopping lists
+1. **Unified Dispatcher** - Prioritizes, sequences, and optimizes job routes with integrated spatial reasoning
+2. **Inventory Specialist** - Generates parts lists and shopping lists
 
 ## 🧪 Testing Individual Agents
 
@@ -39,8 +38,7 @@ The core LangGraph state machine that orchestrates all three agents:
 
 ### Agent Implementations (`agents/`)
 Individual agent classes with specialized logic:
-- **DispatchStrategistAgent**: Job prioritization and scheduling
-- **RouteOptimizerAgent**: AI-powered spatial reasoning for route optimization
+- **DispatchStrategistAgent**: Unified job prioritization, scheduling, and route optimization with spatial reasoning
 - **InventorySpecialistAgent**: Parts analysis and shopping list generation
 
 ### Prompts (`prompts/`)
@@ -68,14 +66,13 @@ The most reliable way to test the complete agent workflow:
 2. **Navigate to Home screen and tap "Plan Your Day"**
 
 3. **Verify agent execution:**
-   - ✅ Dispatch agent completes with job prioritization
-   - ✅ Route agent completes with optimized route using AI spatial reasoning
+   - ✅ Unified dispatcher completes with job prioritization and route optimization
    - ✅ Inventory agent completes with shopping list
    - ✅ Real-time UI updates show progress
 
 ### Expected Workflow States
 ```
-pending → dispatch_complete → route_complete → inventory_complete → approved
+pending → dispatch_complete → inventory_complete → approved
 ```
 
 ## 🔍 Debugging Agent Issues
@@ -110,7 +107,7 @@ pending → dispatch_complete → route_complete → inventory_complete → appr
 
 #### Key Metrics
 - **Individual Agent Response Time:** <2 seconds per agent
-- **Complete Workflow Time:** <5 seconds total
+- **Complete Workflow Time:** <4 seconds total (reduced from 3 to 2 agents)
 - **Agent Success Rate:** >99% completion rate
 - **State Transition Reliability:** No lost state updates
 
@@ -164,7 +161,7 @@ Required for agent execution:
 
 ### Response Time Targets
 - **Individual Agent:** <2 seconds
-- **Complete Workflow:** <5 seconds
+- **Complete Workflow:** <4 seconds (optimized for 2-agent workflow)
 - **Real-time Updates:** <1 second
 
 ### Cost Optimization
