@@ -16,6 +16,7 @@ interface QuantitySelectorProps {
   disabled?: boolean;
   allowDecimals?: boolean;
   step?: number;
+  min?: number;
 }
 
 export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
@@ -28,6 +29,7 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   disabled = false,
   allowDecimals = false,
   step = 1,
+  min = 0,
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -58,7 +60,7 @@ export const QuantitySelector: React.FC<QuantitySelectorProps> = ({
 
   const handleDecrease = () => {
     const currentValue = value || 0;
-    const newValue = Math.max(0, currentValue - step);
+    const newValue = Math.max(min, currentValue - step);
     const finalValue = allowDecimals ? newValue : Math.round(newValue);
     onChangeText(finalValue);
     onDecrease();

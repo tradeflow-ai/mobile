@@ -30,7 +30,7 @@ export default function TimeBuffersScreen() {
     if (existingPreferences) {
       return {
         travelBufferMinutes: existingPreferences.travel_buffer_minutes || existingPreferences.travel_buffer_percentage || 15,
-        jobBufferMinutes: existingPreferences.job_duration_buffer_minutes,
+        jobBufferMinutes: existingPreferences.job_duration_buffer_minutes || 15,
         enableSmartBuffers: existingPreferences.emergency_travel_buffer_percentage > 0,
       };
     }
@@ -133,6 +133,8 @@ export default function TimeBuffersScreen() {
             <FormQuantitySelector
               name="travelBufferMinutes"
               label="Travel buffer (minutes)"
+              step={5}
+              min={0}
             />
 
             <View style={[styles.bufferExample, { backgroundColor: colors.card }]}>
@@ -154,6 +156,8 @@ export default function TimeBuffersScreen() {
             <FormQuantitySelector
               name="jobBufferMinutes"
               label="Job buffer (minutes)"
+              step={5}
+              min={0}
             />
 
             <View style={[styles.bufferExample, { backgroundColor: colors.card }]}>

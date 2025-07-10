@@ -1,7 +1,22 @@
 # Schema Analysis Report - Bill of Materials Verification
 *Generated during Step 1 of Backend Checklist*
 
-## ✅ **EXISTING SCHEMA STRENGTHS**
+## ⚠️ **DOCUMENTATION STATUS UPDATE**
+
+**This document has been superseded by the comprehensive database documentation:**
+👉 **See `_docs/complete-database-schema.md` for current, complete schema documentation**
+
+The information below was accurate during initial analysis but the database has since been significantly expanded. The current database includes:
+
+- ✅ **17 production tables** (vs 5 analyzed here)
+- ✅ **AI-powered daily planning system** (`daily_plans` table)
+- ✅ **Comprehensive feedback & analytics system** (7 tables)
+- ✅ **Map integration system** (4 tables)
+- ✅ **Onboarding system** (implemented but separate from core business)
+
+---
+
+## ✅ **EXISTING SCHEMA STRENGTHS** *(Still Valid)*
 
 ### Core Tables Present:
 1. **`profiles`** - User management (✅ matches auth implementation)
@@ -13,17 +28,17 @@
 ### Auth Integration:
 - ✅ Profiles table has `first_name`, `last_name` fields (matches current auth)
 - ✅ Proper UUID foreign key to `auth.users`
-- ⚠️ **ISSUE**: Role constraint limits to 'user'/'admin' (needs occupation support)
+- ✅ **RESOLVED**: Role constraint now supports flexible roles including occupations
 
 ### Current Job Type Support:
 - `job_locations.job_type` enum: 'delivery', 'pickup', 'service', 'inspection', 'maintenance', 'emergency'
 - `job_locations.required_items` as UUID array pointing to inventory
 
-## ❌ **MISSING BILL OF MATERIALS STRUCTURE**
+## ❌ **MISSING BILL OF MATERIALS STRUCTURE** *(Still Applicable)*
 
 ### Critical Missing Tables:
 
-#### 1. **`job_types` Table** (Missing)
+#### 1. **`job_types` Table** (Still Missing)
 ```sql
 -- NEEDED: Formal job type definitions
 CREATE TABLE public.job_types (
@@ -36,7 +51,7 @@ CREATE TABLE public.job_types (
 );
 ```
 
-#### 2. **`job_type_parts` Join Table** (Missing)
+#### 2. **`job_type_parts` Join Table** (Still Missing)
 ```sql
 -- NEEDED: Bill of Materials - what parts each job type typically needs
 CREATE TABLE public.job_type_parts (
@@ -50,7 +65,7 @@ CREATE TABLE public.job_type_parts (
 );
 ```
 
-#### 3. **`part_templates` Table** (Missing)
+#### 3. **`part_templates` Table** (Still Missing)
 ```sql
 -- NEEDED: Standard part definitions for Bill of Materials
 CREATE TABLE public.part_templates (
@@ -65,66 +80,75 @@ CREATE TABLE public.part_templates (
 );
 ```
 
-## ⚠️ **SCHEMA ISSUES TO FIX**
+## ✅ **RESOLVED SCHEMA ISSUES**
 
-### 1. Profile Role Constraint
-**Current Problem:**
+### 1. Profile Role Constraint *(RESOLVED)*
+**Previous Problem:**
 ```sql
 role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin'))
 ```
 
-**Needs to be:**
+**Current State: ✅ FIXED**
+- Role constraint has been removed
+- Now supports flexible role assignments including occupations
+
+### 2. Job Type Support *(PARTIALLY ADDRESSED)*
+**Current:** Operational categories (delivery, pickup, service) ✅
+**Still Needed:** Business categories (Demand, Maintenance) and Bill of Materials
+
+## 📋 **UPDATED ACTION ITEMS**
+
+### ✅ **COMPLETED**
+1. ✅ **Fixed role constraint** in profiles table
+2. ✅ **Added AI daily planning system** - `daily_plans` table with full agent workflow
+3. ✅ **Added comprehensive feedback system** - 7 tables for AI learning and analytics
+4. ✅ **Added map integration system** - 4 tables for multi-platform map support
+5. ✅ **Added onboarding system** - User onboarding flow and analytics
+
+### ⚠️ **STILL NEEDED: Bill of Materials System**
+- Add `job_types` table for formal job type definitions
+- Add `part_templates` table for standard part definitions
+- Add `job_type_parts` join table for Bill of Materials relationships
+- Add `business_category` to job_locations (Demand vs Maintenance)
+
+### Proposed Database Changes:
 ```sql
-role TEXT DEFAULT 'user' -- Remove check constraint to allow occupations
-```
-
-### 2. Job Type Mismatch
-**Current:** Operational categories (delivery, pickup, service)
-**Phase 1 Requires:** Business categories (Demand, Maintenance)
-
-**Recommendation:** Keep current enum, add new `business_category` field
-
-## 📋 **STEP 1 ACTION ITEMS**
-
-### Immediate Fixes Needed:
-1. **Fix role constraint** in profiles table
-2. **Add missing Bill of Materials tables**
-3. **Update job_locations** to support business categories
-4. **Add foreign key relationships** for proper BoM structure
-
-### Safe Additions (No Auth Conflicts):
-- Add `job_types` table
-- Add `part_templates` table  
-- Add `job_type_parts` join table
-- Add `business_category` to job_locations
-
-### Database Changes Required:
-```sql
--- 1. Fix profiles role constraint
-ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
-
--- 2. Add business category to jobs
+-- Add business category to existing jobs
 ALTER TABLE public.job_locations ADD COLUMN business_category TEXT 
 CHECK (business_category IN ('Demand', 'Maintenance'));
 
--- 3. Add new BoM tables (see full definitions above)
+-- Add new BoM tables (see full definitions above)
+-- These would be migrations 008, 009, 010
 ```
 
-## 🚨 **RISK ASSESSMENT**
+## 🚨 **CURRENT RISK ASSESSMENT**
 
-### ⚠️ **HIGH RISK:**
-- Changing role constraint (affects auth, test thoroughly)
+### ✅ **RESOLVED RISKS:**
+- ✅ Role constraint (fixed)
+- ✅ AI system integration (implemented)
+- ✅ Analytics and feedback (comprehensive system)
+- ✅ Map integration (full platform support)
 
-### ✅ **LOW RISK:**
-- Adding new tables (won't affect existing code)
-- Adding new columns with defaults (backward compatible)
+### ⚠️ **REMAINING RISKS:**
+- **MEDIUM RISK:** Bill of Materials system still missing
+- **LOW RISK:** Business category classification needs implementation
 
-## 📊 **COMPLETION STATUS**
+## 📊 **UPDATED COMPLETION STATUS**
 
-**Schema Foundation:** 60% Complete
-- ✅ Core tables exist
-- ✅ Auth integration works
-- ❌ Bill of Materials structure missing
-- ⚠️ Role constraint needs fix
+**Schema Foundation:** 85% Complete *(Updated from 60%)*
+- ✅ Core tables exist and enhanced
+- ✅ Auth integration works perfectly
+- ✅ AI agent integration complete
+- ✅ Feedback & analytics system complete
+- ✅ Map integration system complete
+- ✅ Onboarding system complete
+- ❌ Bill of Materials structure missing (15% remaining)
 
-**Next Steps:** Implement missing BoM tables and fix role constraint 
+**Next Steps:** 
+1. Implement Bill of Materials tables (migrations 008-010)
+2. Add business category support to existing job system
+3. Create BoM-aware job creation workflows
+
+---
+
+**👉 For complete, up-to-date schema information, see `_docs/complete-database-schema.md`** 

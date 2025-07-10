@@ -39,29 +39,31 @@ export default function WorkScheduleScreen() {
   const { saveStepData, navigateToNextStep, existingPreferences, isLoadingPreferences } = useOnboarding();
 
   // Transform preferences to form data
+  const formatTime = (time24: string, defaultTime: string = '8:00 AM') => {
+    if (!time24) return defaultTime;
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    return `${displayHour}:${minutes} ${period}`;
+  };
+
   const getDefaultValues = () => {
     if (existingPreferences) {
       
       // Convert 24-hour format to 12-hour format for the form
-      const formatTime = (time24: string) => {
-        if (!time24) return '8:00 AM';
-        const [hours, minutes] = time24.split(':');
-        const hour = parseInt(hours);
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-        return `${displayHour}:${minutes} ${period}`;
-      };
+      // const formatTime = (time24: string) => { removed
 
       // Convert work days to lowercase format expected by form
       const workDays = existingPreferences.work_days?.map(day => day.toLowerCase()) as WorkDay[] || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 
       const formData = {
         workDays,
-        startTime: formatTime(existingPreferences.work_start_time),
-        endTime: formatTime(existingPreferences.work_end_time),
+        startTime: formatTime(existingPreferences.work_start_time, '8:00 AM'),
+        endTime: formatTime(existingPreferences.work_end_time, '5:00 PM'),
         hasBreak: !!(existingPreferences.lunch_break_start && existingPreferences.lunch_break_start !== ''),
-        breakStartTime: existingPreferences.lunch_break_start ? formatTime(existingPreferences.lunch_break_start) : '12:00 PM',
-        breakEndTime: existingPreferences.lunch_break_end ? formatTime(existingPreferences.lunch_break_end) : '1:00 PM',
+        breakStartTime: existingPreferences.lunch_break_start ? formatTime(existingPreferences.lunch_break_start, '12:00 PM') : '12:00 PM',
+        breakEndTime: existingPreferences.lunch_break_end ? formatTime(existingPreferences.lunch_break_end, '1:00 PM') : '1:00 PM',
       };
 
       return formData;

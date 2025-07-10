@@ -87,6 +87,7 @@ export const FormQuantitySelector: React.FC<FormQuantitySelectorProps> = ({
                 disabled={disabled}
                 allowDecimals={allowDecimals}
                 step={step}
+                min={min}
               />
               <ErrorMessage message={error?.message} />
             </View>
