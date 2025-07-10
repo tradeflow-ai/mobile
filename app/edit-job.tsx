@@ -12,7 +12,7 @@ import { useInventory } from '@/hooks/useInventory';
 interface JobFormData {
   title: string;
   description?: string;
-  job_type: 'delivery' | 'pickup' | 'service' | 'inspection' | 'maintenance' | 'emergency';
+  job_type: 'service' | 'inspection' | 'emergency';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   estimated_duration?: number;
@@ -21,11 +21,8 @@ interface JobFormData {
 
 // Job type options
 const jobTypeOptions: SelectOption[] = [
-  { label: 'Delivery', value: 'delivery' },
-  { label: 'Pickup', value: 'pickup' },
   { label: 'Service', value: 'service' },
   { label: 'Inspection', value: 'inspection' },
-  { label: 'Maintenance', value: 'maintenance' },
   { label: 'Emergency', value: 'emergency' },
 ];
 
@@ -80,10 +77,12 @@ export default function EditJobScreen() {
   // Pre-populate form with existing job data
   useEffect(() => {
     if (job) {
+      const validTypes = ['service', 'inspection', 'emergency'] as const;
+      const formJobType = validTypes.includes(job.job_type) ? job.job_type : 'service';
       const formData: JobFormData = {
         title: job.title,
         description: job.description || '',
-        job_type: job.job_type,
+        job_type: formJobType,
         status: job.status,
         priority: job.priority,
         estimated_duration: job.estimated_duration || 60,

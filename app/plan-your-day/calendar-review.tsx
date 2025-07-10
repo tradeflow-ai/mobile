@@ -30,7 +30,7 @@ interface JobItem {
   estimatedStartTime: string;
   estimatedEndTime: string;
   priorityReason: string;
-  jobType: 'demand' | 'maintenance' | 'emergency';
+  jobType: 'service' | 'inspection' | 'emergency';
   bufferTime: number;
 }
 
@@ -344,9 +344,9 @@ export default function CalendarReviewScreen() {
    */
   const getJobTypeIcon = (jobType: string) => {
     switch (jobType) {
-      case 'emergency': return 'exclamation-triangle';
-      case 'demand': return 'clock-o';
-      case 'maintenance': return 'wrench';
+      case 'emergency': return 'exclamation';
+      case 'service': return 'wrench';
+      case 'inspection': return 'clipboard';
       default: return 'briefcase';
     }
   };
