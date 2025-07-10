@@ -11,7 +11,7 @@
     "test:workflow": "cd agent && npx tsx test-complete-workflow.ts",
     "test:hardware": "cd agent && npx tsx test-hardware-store-jobs.ts",
     "test:preferences": "cd agent && npx tsx test-user-preferences.ts",
-    "test:vroom": "node test-vroom-integration.js"
+    "test:agent-routing": "node tests/validation-test.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

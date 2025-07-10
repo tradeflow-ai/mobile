@@ -9,7 +9,7 @@ Independent contractors are often bogged down by non-revenue-generating activiti
 The application's intelligence is powered by a collaborative crew of specialized AI agents, orchestrated by LangGraph:
 
 -   **The Dispatch Strategist:** Analyzes all pending jobs and prioritizes them based on urgency and user-defined rules to create the most logical and profitable job sequence for the day.
--   **The Route Optimizer:** Takes the approved job list and calculates the most time and fuel-efficient travel route using a self-hosted VROOM routing engine.
+-   **The Route Optimizer:** Takes the approved job list and uses AI spatial reasoning to determine the most time and fuel-efficient travel route without external dependencies.
 -   **The Inventory & Prep Specialist:** Creates a manifest of all required parts for the day's jobs, cross-references it with on-hand inventory, and generates a precise shopping list.
 
 ### Agent Architecture
@@ -17,7 +17,7 @@ The AI agents are implemented using real LangGraph and deployed as Supabase Edge
 - **Edge Function**: `supabase/functions/plan-day/` - Deno-compatible LangGraph implementation
 - **Agent Classes**: `supabase/functions/plan-day/agents.ts` - Real LangGraph agent implementations
 - **Prompts**: `supabase/functions/plan-day/prompts/` - LLM prompt templates optimized for GPT-4o
-- **Tools**: `supabase/functions/plan-day/tools/` - VROOM/OSRM routing and supplier APIs
+- **Tools**: `supabase/functions/plan-day/tools/` - Coordinate formatting and supplier APIs
 - **Local Development**: `agent/` - Development/testing environment (mirrors Edge Function structure)
 
 ## 🛠️ Tech Stack
@@ -28,8 +28,8 @@ Our architecture is designed to be robust, scalable, and AI-first.
 - **Backend & Database:** Supabase
 - **AI Orchestration:** LangGraph with OpenAI GPT-4o
 - **AI Dependencies:** `@langchain/langgraph`, `@langchain/core`, `@langchain/openai`
-- **Proprietary Routing Engine:** VROOM & OSRM (Docker containerized)
-- **Deployment:** Docker Containerization (Routing Engine), EAS (Mobile App)
+- **AI Agent Route Optimization:** GPT-4o spatial reasoning for intelligent route optimization
+- **Deployment:** Supabase Edge Functions, EAS (Mobile App)
 
 ## 📜 Project Conventions
 This is an AI-first codebase, which means it is built to be modular, scalable, and easy for both humans and AI agents to understand.
@@ -46,7 +46,6 @@ For a complete overview of our coding standards, UI/theme rules, and development
 - Node.js (v18 or higher)
 - npm or yarn
 - Expo CLI: `npm install -g @expo/cli`
-- Docker & Docker Compose (minimum 16GB RAM for OSRM)
 
 ### Quick Start
 
@@ -67,21 +66,11 @@ For a complete overview of our coding standards, UI/theme rules, and development
         EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
         SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
         OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-        VROOM_API_URL=http://localhost:3000/vroom
         ```
     -   **⚠️ CRITICAL:** Configure environment variables in Supabase Edge Functions:
         - In Supabase Dashboard → Settings → Edge Functions → Environment Variables
         - Add: `OPENAI_API_KEY` = your OpenAI API key
-        - Add: `VROOM_API_URL` = http://your-docker-host:3000/vroom
-4.  **Phase 2 Setup (Real VROOM/OSRM):**
-    ```bash
-    # Set up OSRM data (one-time setup, takes 45-75 minutes)
-    ./docker/osrm/setup-osrm-data.sh
-    
-    # Build and start routing engine with real VROOM binary
-    docker-compose up --build -d
-    ```
-5.  **Deploy and test Edge Functions:**
+4.  **Deploy and test Edge Functions:**
     ```bash
     # Start local Edge Functions for testing
     supabase functions serve plan-day --env-file .env.local
@@ -92,45 +81,44 @@ For a complete overview of our coding standards, UI/theme rules, and development
       -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
       -d '{"userId": "test", "jobIds": ["job-1"], "planDate": "2024-12-21"}'
     ```
-6.  **Start the mobile development server:**
+5.  **Start the mobile development server:**
     ```bash
     npm start
     ```
 
 ### Full Deployment Guide
 
-For complete Phase 2 deployment with real VROOM/OSRM integration:
+For complete deployment with AI agent route optimization:
 
-📖 **[See DEPLOYMENT.md](DEPLOYMENT.md)** for detailed step-by-step instructions, troubleshooting, and production deployment guidelines.
+📖 See `_docs/phases/02-mvp.md` for detailed step-by-step instructions and deployment guidelines.
 
 ## 🧪 Testing the AI Workflow
 
 ### Quick Test
-1. Start the routing engine: `docker-compose up -d`
-2. Start Edge Functions: `supabase functions serve plan-day --env-file .env.local`
-3. Start the mobile app: `npm start`
-4. Tap "Plan Your Day" in the app
-5. Verify real LangGraph execution with:
+1. Start Edge Functions: `supabase functions serve plan-day --env-file .env.local`
+2. Start the mobile app: `npm start`
+3. Tap "Plan Your Day" in the app
+4. Verify real LangGraph execution with AI route optimization:
    - ✅ Non-zero execution times (not 0ms)
-   - ✅ GPT-4o reasoning in agent outputs
+   - ✅ GPT-4o spatial reasoning in route outputs
    - ✅ Database state progression: pending → dispatch_complete → route_complete → inventory_complete
 
 ### Automated Validation
-Run the comprehensive validation test suite:
+Run the AI agent routing validation test suite:
 ```bash
-# Basic validation test
-node validation-test.js
+# Agent routing validation test
+npm run test:agent-routing
 
-# Or comprehensive VROOM integration test
-npm run test:vroom
+# Or run tests directly
+node tests/validation-test.js
 ```
 
 This will test:
-- ✅ VROOM routing engine health and performance  
-- ✅ Real VROOM binary vs mock response detection
-- ✅ API response times and data integrity
-- ✅ Constraint handling (time windows, capacity, breaks)
-- ✅ End-to-end workflow functionality
+- ✅ Coordinate formatting for agent spatial reasoning
+- ✅ Agent route optimization quality and logic
+- ✅ Spatial analysis and distance calculations
+- ✅ Route efficiency and backtracking elimination
+- ✅ End-to-end AI workflow functionality
 
 ### Detailed Testing
 See `_docs/testing-guide.md` for comprehensive testing instructions, troubleshooting, and performance monitoring.

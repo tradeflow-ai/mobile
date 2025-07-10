@@ -53,6 +53,4 @@ _docs/josh-mvp-roadmap.md
 
 
 
-# OSRM Data
-# Ignore the large map data files, they should be downloaded during setup
-/docker/osrm/data/
+

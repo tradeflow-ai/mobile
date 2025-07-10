@@ -46,7 +46,7 @@ Instead of a single monolithic AI, we will implement a collaborative crew of spe
         *   **Role:** `Logistics and Traffic Analyst with expertise in real-time, last-mile route optimization.`
         *   **Goal:** `To calculate the most time and fuel efficient travel route to connect all job locations in the sequence provided, while accounting for current traffic data and user-defined travel buffers.`
         *   **Backstory:** `An analyst who previously worked for a major delivery service, you live and breathe maps, traffic patterns, and ETAs. You are obsessed with minimizing "windshield time".`
-        *   **Task:** Takes the verified job list from the Dispatcher and uses the self-hosted VROOM routing engine to generate the most efficient travel route, considering advanced constraints like time windows and vehicle capacity.
+        *   **Task:** Takes the verified job list from the Dispatcher and uses AI reasoning to determine optimal travel routes based on spatial analysis, considering advanced constraints like time windows and vehicle capacity.
 
     *   **Agent 3: The Inventory & Prep Specialist**
         *   **Role:** `Lead Service Technician and Inventory Manager with deep knowledge of plumbing parts and job requirements.`
@@ -72,7 +72,7 @@ Our technical architecture is designed to be robust, scalable, and powerful, ref
 
 - **Agentic Framework:** The core logic will be orchestrated using **LangGraph**, with agents powered by **OpenAI's GPT-4o** model. This framework is specifically chosen for its first-class support for stateful, cyclical workflows and its ability to natively handle Human-in-the-Loop (HITL) verification, which is essential for our three-step approval process.
 
-- **Backend & Routing Engine:** We will build a proprietary, self-hosted dynamic routing engine using **VROOM** for solving Vehicle Routing Problems (VRP) and **OSRM** as the underlying routing data engine. The engine will be containerized using **Docker** for flexible deployment across different infrastructure providers. This core component allows us to offer unique features standard APIs cannot, such as:
+- **Backend & Routing Engine:** We use AI agent reasoning for intelligent route optimization without external dependencies. The agent leverages GPT-4o's spatial reasoning capabilities to solve Vehicle Routing Problems (VRP) through coordinate analysis. This lightweight approach provides intelligent features while eliminating infrastructure complexity, such as:
     - Honoring time windows and technician breaks.
     - Applying capacity constraints to prevent vehicle overloading.
     - Real-time rescheduling and re-optimization of unfinished routes.
@@ -112,8 +112,8 @@ Our development will follow the `MVP -> CORE -> POLISH` structure outlined in th
     *   Build the user onboarding flow for setting preferences.
 2.  **CORE: Build the Agentic Loop & Backend**
     *   Implement the `Dispatch Strategist`, `Route Optimizer`, and `Inventory & Prep Specialist` agents in LangGraph using GPT-4o.
-    *   Build and deploy the self-hosted VROOM/OSRM routing engine using **Docker containerization**.
-    *   Integrate the routing engine as a tool for the `Route Optimizer` agent.
+    *   Develop AI-powered spatial reasoning for route optimization using coordinate analysis and GPT-4o intelligence.
+    *   Integrate coordinate formatting tools for the `Route Optimizer` agent to enable spatial reasoning.
     *   Develop the core UI components for visualizing the outputs of each agent and handling the HITL approval steps (drag-and-drop list, view-only map, and checklist).
 3.  **POLISH: Integration & Documentation**
     *   Refine the UI/UX into a polished, intuitive experience.

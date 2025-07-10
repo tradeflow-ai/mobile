@@ -1,233 +1,90 @@
 /**
- * Routing Tool Integration
+ * Coordinate Formatter Tool for Agent Route Optimization
  * 
- * This tool integrates with the self-hosted VROOM/OSRM routing engine to provide
- * advanced Vehicle Routing Problem (VRP) optimization capabilities.
- * It handles time windows, vehicle capacity, and other advanced constraints.
+ * Simple tool that formats job coordinates for AI agent spatial reasoning.
+ * Passes lat/lng data directly to agent for route optimization decisions.
  */
 
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 /**
- * Input schema for the routing tool
+ * Input schema for the coordinate formatter tool
  */
-const RoutingToolInputSchema = z.object({
+const CoordinateFormatterInputSchema = z.object({
+  homeBase: z.object({
+    lat: z.number(),
+    lng: z.number(),
+    address: z.string(),
+  }),
   jobs: z.array(z.object({
     id: z.string(),
-    location: z.array(z.number()).length(2), // [longitude, latitude]
-    timeWindow: z.array(z.number()).length(2).optional(), // [earliest, latest] in minutes
-    service: z.number().optional(), // Service time in minutes
-    priority: z.number().optional(), // Priority weight
+    lat: z.number(),
+    lng: z.number(),
+    address: z.string(),
+    timeWindow: z.object({
+      start: z.string(),
+      end: z.string(),
+    }).optional(),
+    duration: z.number(), // Duration in minutes
   })),
-  vehicle: z.object({
-    id: z.string(),
-    start: z.array(z.number()).length(2), // [longitude, latitude]
-    end: z.array(z.number()).length(2).optional(), // [longitude, latitude]
-    capacity: z.array(z.number()).optional(), // Vehicle capacity constraints
-    timeWindow: z.array(z.number()).length(2).optional(), // [earliest, latest] in minutes
-    profile: z.string().optional(), // 'driving', 'cycling', 'walking'
-  }),
-  options: z.object({
-    minimize: z.enum(['time', 'distance']).optional(),
-    avoidTolls: z.boolean().optional(),
-    traffic: z.boolean().optional(),
-  }).optional(),
 });
 
 /**
- * VROOM/OSRM Routing Tool
+ * Coordinate Formatter Tool
  * 
- * Integrates with the self-hosted routing engine to solve Vehicle Routing Problems
- * with advanced constraints like time windows, vehicle capacity, and driver preferences.
+ * Formats job coordinates for agent spatial reasoning. The agent will use
+ * this coordinate data to determine optimal route order through AI reasoning.
  */
-export const routingTool = tool(
-  async ({ jobs, vehicle, options = {} }) => {
-    try {
-      console.log('🚗 Routing Tool: Calling VROOM/OSRM engine...');
-      
-      // TODO: Replace with actual VROOM/OSRM API endpoint in Phase 2
-      const ROUTING_ENGINE_URL = process.env.VROOM_API_URL || 'http://localhost:3000/vroom';
-      
-      const requestBody = {
-        jobs,
-        vehicles: [vehicle],
-        options: {
-          minimize: options.minimize || 'time',
-          avoidTolls: options.avoidTolls || false,
-          traffic: options.traffic || false,
-        },
-      };
-
-      // In Phase 2, this will make actual HTTP requests to the VROOM engine
-      const mockResponse = await simulateVROOMResponse(requestBody);
-      
-      console.log('✅ Routing Tool: Route optimization completed');
-      return mockResponse;
-      
-    } catch (error) {
-      console.error('❌ Routing Tool Error:', error);
-      throw new Error(`Routing optimization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+export const coordinateFormatterTool = tool(
+  async ({ homeBase, jobs }) => {
+    console.log('📍 Coordinate Formatter: Preparing spatial data for agent...');
+    
+    const coordinateData = {
+      homeBase,
+      jobs,
+      spatialAnalysis: {
+        totalJobs: jobs.length,
+        coverageArea: calculateCoverageArea(jobs),
+        centroid: calculateCentroid(jobs),
+      },
+    };
+    
+    console.log('✅ Coordinate Formatter: Spatial data prepared for agent reasoning');
+    return coordinateData;
   },
   {
-    name: "routing_optimizer",
-    description: "Optimize vehicle routes using VROOM/OSRM engine with advanced constraints",
-    schema: RoutingToolInputSchema,
+    name: "coordinate_formatter",
+    description: "Format job coordinates for AI agent spatial reasoning and route optimization",
+    schema: CoordinateFormatterInputSchema,
   }
 );
 
 /**
- * Simulate VROOM API response for Phase 1 development
- * In Phase 2, this will be replaced with actual HTTP requests
+ * Calculate approximate coverage area of all jobs
  */
-async function simulateVROOMResponse(requestBody: any): Promise<any> {
-  // Simulate API processing delay
-  await new Promise(resolve => setTimeout(resolve, 500));
+function calculateCoverageArea(jobs: any[]): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
+  if (jobs.length === 0) return { minLat: 0, maxLat: 0, minLng: 0, maxLng: 0 };
   
-  const { jobs, vehicles } = requestBody;
-  const vehicle = vehicles[0];
+  const lats = jobs.map(job => job.lat);
+  const lngs = jobs.map(job => job.lng);
   
-  // Generate mock optimized route
-  const optimizedRoute = {
-    code: 0, // Success code
-    summary: {
-      cost: calculateMockCost(jobs),
-      duration: calculateMockDuration(jobs),
-      distance: calculateMockDistance(jobs),
-      computing_times: {
-        loading: 50,
-        solving: 200,
-        routing: 150,
-      },
-    },
-    routes: [
-      {
-        vehicle: vehicle.id,
-        cost: calculateMockCost(jobs),
-        duration: calculateMockDuration(jobs),
-        distance: calculateMockDistance(jobs),
-        steps: generateMockSteps(jobs, vehicle),
-        geometry: generateMockGeometry(jobs, vehicle),
-      },
-    ],
+  return {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs),
   };
-  
-  return optimizedRoute;
 }
 
 /**
- * Calculate mock cost for the route
+ * Calculate centroid of all job locations
  */
-function calculateMockCost(jobs: any[]): number {
-  return jobs.length * 30; // 30 minutes per job average
-}
-
-/**
- * Calculate mock duration for the route
- */
-function calculateMockDuration(jobs: any[]): number {
-  const serviceTime = jobs.reduce((total, job) => total + (job.service || 60), 0);
-  const travelTime = (jobs.length - 1) * 20; // 20 minutes travel between jobs
-  return serviceTime + travelTime;
-}
-
-/**
- * Calculate mock distance for the route
- */
-function calculateMockDistance(jobs: any[]): number {
-  return jobs.length * 10000; // 10km per job average (in meters)
-}
-
-/**
- * Generate mock route steps
- */
-function generateMockSteps(jobs: any[], vehicle: any): any[] {
-  const steps = [];
+function calculateCentroid(jobs: any[]): { lat: number; lng: number } {
+  if (jobs.length === 0) return { lat: 0, lng: 0 };
   
-  // Start step
-  steps.push({
-    type: 'start',
-    location: vehicle.start,
-    arrival: 0,
-    duration: 0,
-    distance: 0,
-  });
+  const avgLat = jobs.reduce((sum, job) => sum + job.lat, 0) / jobs.length;
+  const avgLng = jobs.reduce((sum, job) => sum + job.lng, 0) / jobs.length;
   
-  // Job steps
-  jobs.forEach((job, index) => {
-    const arrivalTime = (index + 1) * 80; // 80 minutes per job cycle
-    const departureTime = arrivalTime + (job.service || 60);
-    
-    steps.push({
-      type: 'job',
-      id: job.id,
-      location: job.location,
-      arrival: arrivalTime,
-      duration: departureTime - arrivalTime,
-      distance: 10000, // 10km
-      job: job.id,
-    });
-  });
-  
-  // End step
-  const endLocation = vehicle.end || vehicle.start;
-  steps.push({
-    type: 'end',
-    location: endLocation,
-    arrival: calculateMockDuration(jobs),
-    duration: 0,
-    distance: 5000, // 5km back to base
-  });
-  
-  return steps;
-}
-
-/**
- * Generate mock geometry (polyline) for the route
- */
-function generateMockGeometry(jobs: any[], vehicle: any): string {
-  // In Phase 2, this will be actual encoded polyline from OSRM
-  return `mock_polyline_${jobs.length}_jobs`;
-}
-
-/**
- * Utility function to convert coordinates between different formats
- */
-export function convertCoordinates(
-  coordinates: [number, number],
-  from: 'latlng' | 'lnglat',
-  to: 'latlng' | 'lnglat'
-): [number, number] {
-  if (from === to) return coordinates;
-  
-  if (from === 'latlng' && to === 'lnglat') {
-    return [coordinates[1], coordinates[0]]; // [lat, lng] -> [lng, lat]
-  } else if (from === 'lnglat' && to === 'latlng') {
-    return [coordinates[1], coordinates[0]]; // [lng, lat] -> [lat, lng]
-  }
-  
-  return coordinates;
-}
-
-/**
- * Utility function to calculate distance between two points
- */
-export function calculateDistance(
-  point1: [number, number],
-  point2: [number, number]
-): number {
-  const [lat1, lon1] = point1;
-  const [lat2, lon2] = point2;
-  
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c; // Distance in km
+  return { lat: avgLat, lng: avgLng };
 } 

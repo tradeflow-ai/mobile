@@ -80,21 +80,23 @@ This document provides a comprehensive overview of the technical architecture, c
     -   Disabling RLS for "convenience" during development. This is a critical security risk.
     -   Exposing service role (`service_role`) keys on the client-side. Only the anonymous (`anon`) key should ever be present in the frontend app.
 
-### Proprietary Routing Engine: VROOM + OSRM
--   **Description:** The self-hosted engine that provides our core competitive advantage in route optimization.
--   **Deployment:** Docker containerized for flexible deployment across different infrastructure providers.
--   **Production:** Self-hosted on memory-optimized infrastructure with sufficient RAM for OSRM's in-memory map data requirements.
--   **Development:** Local Docker environment with docker-compose for easy setup and testing.
+### AI Agent Route Optimization
+-   **Description:** Lightweight, intelligent route optimization through AI spatial reasoning using GPT-4o without external dependencies.
+-   **Architecture:** Pure Edge Function implementation leveraging AI agent reasoning for Vehicle Routing Problem (VRP) solving.
+-   **Deployment:** Zero infrastructure requirements - fully Edge Function native with no external dependencies.
 -   **Best Practices:**
-    -   The engine must be run on systems with adequate RAM to handle OSRM's in-memory map data requirements (minimum 16GB for North America).
-    -   The server exposes a simple, stateless HTTP API for our application to consume.
-    -   Use multi-stage Docker builds to optimize image size and security.
--   **Limitations:**
-    -   OSRM's performance comes from pre-computation, making it ill-suited for incorporating real-time traffic data. Our routing is based on historical averages. This is a known and accepted trade-off.
+    -   Use coordinate-based spatial analysis for distance and proximity calculations.
+    -   Leverage GPT-4o's spatial reasoning capabilities for route optimization decisions.
+    -   Format geographic data clearly for agent consumption (latitude/longitude pairs with clear context).
+    -   Design prompts with spatial reasoning guidelines and output format specifications.
+-   **Advantages:**
+    -   Zero external dependencies and infrastructure overhead.
+    -   Predictable performance for 3-8 job optimization scenarios typical for tradesperson use cases.
+    -   Native integration with agent reasoning capabilities.
+    -   Eliminates containerization complexity and resource requirements.
 -   **Common Pitfalls:**
-    -   Under-provisioning server RAM, which will cause the OSRM process to fail.
-    -   Not having a clear process for periodically updating the underlying OpenStreetMap data.
-    -   Forgetting to set up OSRM data preprocessing before deployment.
+    -   Providing insufficient spatial context to the agent for optimization decisions.
+    -   Expecting routing precision beyond agent spatial reasoning capabilities.
 
 ---
 
@@ -126,20 +128,20 @@ This document provides a comprehensive overview of the technical architecture, c
 
 ## DevOps & Deployment
 
-### Routing Engine Deployment: Docker Containerization
--   **Description:** The VROOM/OSRM engine is containerized with Docker for flexible deployment across different infrastructure providers.
+### AI Agent Deployment: Supabase Edge Functions
+-   **Description:** AI agent route optimization is deployed as serverless Edge Functions with zero external infrastructure dependencies.
 -   **Best Practices:**
-    -   Use multi-stage Docker builds to create lean production images with compiled VROOM binary.
-    -   Manage all secrets (API keys, etc.) via environment variables, never hardcoded in the `Dockerfile`.
-    -   Implement proper health checks for both VROOM and OSRM services.
-    -   Use Docker networks to facilitate secure communication between services.
+    -   Manage all secrets (OpenAI API keys, etc.) via Supabase Environment Variables, never hardcoded.
+    -   Implement proper error handling for agent reasoning failures.
+    -   Use Deno-compatible imports for all LangGraph and AI dependencies.
+    -   Test Edge Functions locally before deployment using `supabase functions serve`.
 -   **Conventions:**
-    -   The project includes a `docker-compose.yml` file to facilitate easy local development and testing of the routing engine.
-    -   OSRM data setup is automated through scripts in the `docker/osrm/` directory.
+    -   Agent implementations are mirrored between local development (`agent/`) and Edge Function (`supabase/functions/plan-day/`).
+    -   Coordinate formatting tools provide spatial data to agents in standardized format.
 -   **Scalability Considerations:**
-    -   Memory requirements scale with geographic coverage - North America requires minimum 16GB RAM.
-    -   For larger deployments, consider hosting preprocessed OSRM data files externally.
-    -   Container orchestration (Kubernetes) can be implemented for high-availability deployments.
+    -   Edge Functions scale automatically with usage without infrastructure management.
+    -   Agent performance is predictable for typical tradesperson job counts (3-8 jobs).
+    -   No memory or geographic coverage limitations.
 
 ### Application Deployment: Expo Application Services (EAS)
 -   **Description:** EAS is used for building and deploying the React Native application.
