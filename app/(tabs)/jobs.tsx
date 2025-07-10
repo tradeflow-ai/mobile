@@ -6,7 +6,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { SearchBar, EmptyState } from '@/components/ui';
+import { SearchBar, EmptyState, TabSelector, TabOption } from '@/components/ui';
 import { useJobs, useTodaysJobs, JobLocation } from '@/hooks/useJobs';
 import { formatDate } from '@/utils/dateUtils';
 
@@ -17,15 +17,21 @@ export default function JobsScreen() {
 
   // State for search and filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [showTodayOnly, setShowTodayOnly] = useState(true);
+  const [selectedJobFilter, setSelectedJobFilter] = useState('today');
 
   // Data fetching
   const { data: allJobs = [], isLoading: isLoadingAll } = useJobs();
   const { data: todaysJobs = [], isLoading: isLoadingToday } = useTodaysJobs();
 
   // Determine which jobs to show
-  const jobs = showTodayOnly ? todaysJobs : allJobs;
-  const isLoading = showTodayOnly ? isLoadingToday : isLoadingAll;
+  const jobs = selectedJobFilter === 'today' ? todaysJobs : allJobs;
+  const isLoading = selectedJobFilter === 'today' ? isLoadingToday : isLoadingAll;
+
+  // Job options for TabSelector
+  const jobOptions: TabOption[] = [
+    { key: 'today', label: 'Today', count: todaysJobs.length },
+    { key: 'all', label: 'All', count: allJobs.length },
+  ];
 
   // Filter jobs based on search query
   const filteredJobs = jobs.filter(job => 
@@ -41,6 +47,10 @@ export default function JobsScreen() {
 
   const handleCreateJob = () => {
     router.push('/create-job');
+  };
+
+  const handleJobFilterChange = (key: string) => {
+    setSelectedJobFilter(key);
   };
 
   const getStatusColor = (status: JobLocation['status']) => {
@@ -140,7 +150,7 @@ export default function JobsScreen() {
   const renderEmptyState = () => (
     <EmptyState
       icon="briefcase"
-      title={searchQuery ? 'No jobs found' : showTodayOnly ? 'No jobs today' : 'No jobs'}
+      title={searchQuery ? 'No jobs found' : selectedJobFilter === 'today' ? 'No jobs today' : 'No jobs'}
       description={searchQuery ? 'Try adjusting your search terms' : 'Create your first job to get started'}
       createButtonText={searchQuery ? undefined : 'Create Job'}
       handleOnCreatePress={handleCreateJob}
@@ -168,38 +178,12 @@ export default function JobsScreen() {
           />
 
           {/* Today/All Toggle */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                showTodayOnly && styles.toggleButtonActive,
-                { backgroundColor: showTodayOnly ? colors.primary : colors.card, borderColor: colors.border }
-              ]}
-              onPress={() => setShowTodayOnly(true)}
-            >
-              <Text style={[
-                styles.toggleButtonText,
-                { color: showTodayOnly ? colors.background : colors.text }
-              ]}>
-                Today ({todaysJobs.length})
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                !showTodayOnly && styles.toggleButtonActive,
-                { backgroundColor: !showTodayOnly ? colors.primary : colors.card, borderColor: colors.border }
-              ]}
-              onPress={() => setShowTodayOnly(false)}
-            >
-              <Text style={[
-                styles.toggleButtonText,
-                { color: !showTodayOnly ? colors.background : colors.text }
-              ]}>
-                All ({allJobs.length})
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TabSelector
+            options={jobOptions}
+            selectedKey={selectedJobFilter}
+            onSelectionChange={handleJobFilterChange}
+            containerStyle={styles.toggleContainer}
+          />
 
           {/* Jobs List */}
           <FlatList
@@ -233,28 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.m,
   },
   toggleContainer: {
-    flexDirection: 'row',
     marginBottom: spacing.m,
-    backgroundColor: 'transparent',
-    borderRadius: radius.s,
-    gap: spacing.xs,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: spacing.s,
-    paddingHorizontal: spacing.m,
-    borderRadius: radius.s,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...touchTargets.styles.minimum,
-  },
-  toggleButtonActive: {
-    // Styles applied when button is active
-  },
-  toggleButtonText: {
-    ...typography.body,
-    fontWeight: '600',
   },
   jobsList: {
     flexGrow: 1,

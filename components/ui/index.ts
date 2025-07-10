@@ -8,6 +8,8 @@ export { SearchBar } from './SearchBar';
 export { StatusBadge } from './StatusBadge';
 export { StepIndicator } from './StepIndicator';
 export { TimeInput } from './TimeInput';
+export { TabSelector } from './TabSelector';
+export type { TabSelectorProps, TabOption } from './TabSelector';
 export { Label } from './Label';
 export { ErrorMessage } from './ErrorMessage';
 export { EmptyState } from './EmptyState';
