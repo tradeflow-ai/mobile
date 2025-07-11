@@ -92,7 +92,7 @@ Independent contractors lose 30-40% of their potential revenue to non-billable a
 ## 🏗️ Technical Architecture
 
 ### **AI & Machine Learning**
-- **LangGraph Orchestration:** Multi-agent AI system with specialized roles
+- **2-Step Edge Function Orchestration:** Multi-agent AI system with specialized roles
 - **OpenAI GPT-4o Integration:** Advanced natural language processing
 - **Real-Time Learning:** Continuous adaptation to user patterns
 - **Feedback Processing:** Advanced analytics for system improvement

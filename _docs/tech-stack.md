@@ -102,16 +102,19 @@ This document provides a comprehensive overview of the technical architecture, c
 
 ## AI & Agentic Layer
 
-### Orchestration Framework: LangGraph
--   **Description:** The core framework used to build and orchestrate our multi-agent system.
--   **Best Practices:**
-    -   Model the workflow as a formal state machine with clear nodes and edges.
-    -   Nodes should be small and single-purpose (e.g., one node for an agent, one for a tool).
-    -   The `State` object that is passed between nodes should be explicitly defined with a validation library like Pydantic.
--   **Conventions:**
-    -   The definition for our core `(Dispatch -> Route -> Inventory)` graph will reside in a dedicated `agent/graph.ts` directory.
--   **Limitations:**
-    -   As a newer framework, it has fewer established patterns and examples than core LangChain. Development requires careful adherence to its core principles.
+### Orchestration Framework: 2-Step Edge Functions
+
+The AI workflow is orchestrated using two specialized Supabase Edge Functions instead of a complex state machine framework:
+
+1. **Dispatcher Function**: Handles job prioritization and route optimization using GPT-4o
+2. **Inventory Function**: Manages parts analysis and hardware store job creation
+
+**Advantages:**
+- **Simplified Architecture**: No complex state management or graph orchestration
+- **Better Error Isolation**: Each function handles specific concerns independently
+- **User Control**: Built-in confirmation step between dispatcher and inventory analysis
+- **Faster Execution**: Specialized functions optimized for specific tasks
+- **Easier Debugging**: Clear separation of concerns and error boundaries
 
 ### Language Model: OpenAI GPT-4o
 -   **Description:** The LLM that powers the reasoning capabilities of our AI agents.
@@ -133,10 +136,11 @@ This document provides a comprehensive overview of the technical architecture, c
 -   **Best Practices:**
     -   Manage all secrets (OpenAI API keys, etc.) via Supabase Environment Variables, never hardcoded.
     -   Implement proper error handling for agent reasoning failures.
-    -   Use Deno-compatible imports for all LangGraph and AI dependencies.
-    -   Test Edge Functions locally before deployment using `supabase functions serve`.
+    -   Use Deno-compatible imports for all OpenAI and Supabase dependencies.
+    -   Agent implementations are deployed as separate edge functions (`supabase/functions/dispatcher/` and `supabase/functions/inventory/`).
+    -   Each function uses GPT-4o for intelligent reasoning within its specialized domain
+    -   Functions coordinate through database state rather than complex workflow orchestration
 -   **Conventions:**
-    -   Agent implementations are mirrored between local development (`agent/`) and Edge Function (`supabase/functions/plan-day/`).
     -   Coordinate formatting tools provide spatial data to agents in standardized format.
 -   **Scalability Considerations:**
     -   Edge Functions scale automatically with usage without infrastructure management.
