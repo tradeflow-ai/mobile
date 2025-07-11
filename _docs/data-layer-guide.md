@@ -29,9 +29,7 @@ hooks/
 ├── useProfile.ts       # Profile data hooks
 ├── useInventory.ts     # Inventory management hooks
 ├── useJobs.ts          # Job location hooks
-├── useClients.ts       # Client management hooks
-├── useBom.ts           # Bill of Materials hooks
-└── useRoutes.ts        # Route optimization hooks
+
 ```
 
 ### Key Patterns
@@ -179,122 +177,7 @@ await createJob.mutateAsync({
 - Client relationship management
 - Date-based filtering
 
-### Client Management Hooks (`hooks/useClients.ts`)
 
-#### Client Operations
-```typescript
-// Get all clients
-const { data: clients, isLoading } = useClients();
-
-// Filtered clients
-const { data: activeClients } = useActiveClients();
-const { data: searchResults } = useSearchClients('company name');
-
-// CRUD operations
-const createClient = useCreateClient();
-const updateClient = useUpdateClient();
-const deleteClient = useDeleteClient();
-
-// Client analytics
-const { data: clientStats } = useClientStats();
-const { data: clientJobs } = useJobsByClient('client-id');
-
-// Usage examples
-await createClient.mutateAsync({
-  name: 'John Smith',
-  company_name: 'Building Corp',
-  email: 'john@buildingcorp.com',
-  phone: '555-123-4567',
-  business_type: 'Commercial'
-});
-```
-
-**Key Features:**
-- Complete client profiles with contact information
-- Business type categorization
-- Client-job relationship tracking
-- Search and filtering capabilities
-- Client analytics and statistics
-
-### Bill of Materials Hooks (`hooks/useBom.ts`)
-
-#### Job Types and Parts Management
-```typescript
-// Job Types
-const { data: jobTypes } = useJobTypes();
-const { data: activeJobTypes } = useActiveJobTypes();
-const createJobType = useCreateJobType();
-
-// Part Templates
-const { data: partTemplates } = usePartTemplates();
-const { data: commonParts } = useCommonPartTemplates();
-const createPartTemplate = useCreatePartTemplate();
-
-// Bill of Materials
-const { data: jobTypeParts } = useJobTypeParts('job-type-id');
-const { data: requiredParts } = useRequiredJobTypeParts('job-type-id');
-const { data: estimatedCost } = useJobTypePartsCost('job-type-id');
-
-// Usage examples
-await createJobType.mutateAsync({
-  name: 'HVAC Maintenance',
-  category: 'hvac',
-  estimated_duration: 120,
-  labor_rate: 85.00,
-  instructions: 'Check all units, replace filters...'
-});
-
-await createPartTemplate.mutateAsync({
-  name: 'HVAC Filter 16x20',
-  category: 'HVAC',
-  estimated_cost: 8.99,
-  is_common: true
-});
-```
-
-**Key Features:**
-- Job type definitions with labor rates
-- Part template catalog
-- Bill of Materials associations
-- Cost estimation
-- Common parts tracking
-
-### Route Optimization Hooks (`hooks/useRoutes.ts`)
-
-#### Route Management
-```typescript
-// Get routes
-const { data: routes } = useRoutes();
-const { data: activeRoute } = useActiveRoute();
-const { data: todaysRoutes } = useTodaysRoutes();
-
-// Route operations
-const createRoute = useCreateRoute();
-const startRoute = useStartRoute();
-const completeRoute = useCompleteRoute();
-const optimizeRoute = useOptimizeRoute();
-
-// Usage examples
-await createRoute.mutateAsync({
-  name: 'Daily Route - Feb 15',
-  job_location_ids: ['job1', 'job2', 'job3'],
-  planned_date: '2024-02-15'
-});
-
-// Route optimization using AI spatial reasoning
-const coordinateService = CoordinateService.getInstance();
-const distance = coordinateService.calculateDistance(
-  { latitude: 37.7749, longitude: -122.4194 },
-  { latitude: 37.7849, longitude: -122.4094 }
-);
-```
-
-**Key Features:**
-- Route planning and optimization
-- Coordinate utilities for AI spatial reasoning
-- Route status tracking
-- Geographic optimization
-- Route statistics and analytics
 
 ## Services Reference
 
@@ -345,18 +228,14 @@ const optimizedRoute = await routingService.optimizeRoute({
 - **clients** - Client relationship management
 - **routes** - Route planning and optimization
 
-### Bill of Materials Tables
-- **job_types** - Job type definitions
-- **part_templates** - Parts catalog
-- **job_type_parts** - Bill of Materials associations
+
 
 ### Relationships
 - `profiles.user_id` → `auth.users.id`
 - `job_locations.client_id` → `clients.id`
 - `job_locations.user_id` → `auth.users.id`
 - `inventory_items.user_id` → `auth.users.id`
-- `job_type_parts.job_type_id` → `job_types.id`
-- `job_type_parts.part_template_id` → `part_templates.id`
+
 
 ## Best Practices
 
@@ -520,7 +399,6 @@ A: TanStack Query provides built-in offline support:
 A: Yes! Hooks are designed to be composable:
 ```typescript
 const { data: jobs } = useJobs();
-const { data: clients } = useClients();
 const { data: inventory } = useInventory();
 ```
 

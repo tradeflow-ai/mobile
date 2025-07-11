@@ -138,83 +138,6 @@ Intelligent daily planning system.
 
 ---
 
-#### 8. **`onboarding_preferences`** - User Onboarding
-Guided user setup and preferences.
-
-**Key Fields:**
-- `id` (UUID, PK) - Unique identifier
-- `user_id` (UUID, FK) - User reference
-- `current_step` (TEXT) - Current onboarding step
-- `is_completed` (BOOLEAN) - Completion status
-- `completion_score` (INTEGER) - Progress score
-- `work_schedule` (JSONB) - Work preferences
-- `time_buffers` (JSONB) - Time buffer settings
-- `suppliers` (JSONB) - Preferred suppliers
-- `created_at`, `updated_at` - Timestamps
-
----
-
-#### 9. **`onboarding_configurations`** - Admin Onboarding Setup
-Administrative onboarding configuration.
-
-**Key Fields:**
-- `id` (UUID, PK) - Unique identifier
-- `config_name` (TEXT) - Configuration name
-- `config_version` (TEXT) - Version identifier
-- `is_active` (BOOLEAN) - Active status
-- `step_definitions` (JSONB) - Step configurations
-- `flow_configuration` (JSONB) - Flow settings
-- `feature_flags` (JSONB) - Feature toggles
-- `created_at`, `updated_at` - Timestamps
-
----
-
-### **Map Integration System**
-
-#### 10. **`supported_map_apps`** - Map Application Registry
-Registry of supported mapping applications.
-
-**Key Fields:**
-- `id` (UUID, PK) - Unique identifier
-- `app_name` (TEXT) - Internal app name
-- `app_display_name` (TEXT) - User-friendly name
-- `ios_supported`, `android_supported`, `web_supported` (BOOLEAN) - Platform support
-- `ios_bundle_id`, `android_package_name` (TEXT) - App identifiers
-- `supports_directions`, `supports_search`, `supports_coordinates` (BOOLEAN) - Feature support
-- `popularity_score` (INTEGER) - Popularity ranking
-- `is_active` (BOOLEAN) - Active status
-
----
-
-#### 11. **`map_app_deep_links`** - Deep Link Configurations
-Platform-specific deep link configurations.
-
-**Key Fields:**
-- `id` (UUID, PK) - Unique identifier
-- `map_app_id` (UUID, FK) - App reference
-- `platform` (TEXT) - ios/android/web
-- `link_type` (TEXT) - directions/search/coordinate
-- `url_template` (TEXT) - URL template with placeholders
-- `is_active` (BOOLEAN) - Active status
-
----
-
-#### 12. **`user_map_preferences`** - User Map Preferences
-User-specific map application preferences.
-
-**Key Fields:**
-- `id` (UUID, PK) - Unique identifier
-- `user_id` (UUID, FK) - User reference
-- `preferred_map_app_id` (UUID, FK) - Primary app choice
-- `ios_preferred_app_id`, `android_preferred_app_id`, `web_preferred_app_id` (UUID, FK) - Platform-specific preferences
-- `auto_open_directions` (BOOLEAN) - Auto-open setting
-- `prompt_before_opening` (BOOLEAN) - Confirmation prompt
-- `remember_choice` (BOOLEAN) - Remember user choice
-- `prefer_navigation_for_long_routes` (BOOLEAN) - Navigation preference
-- `allow_performance_tracking` (BOOLEAN) - Performance tracking consent
-- `last_used_app_id` (UUID, FK) - Last used app
-- `total_usage_count` (INTEGER) - Usage counter
-
 ---
 
 ## 🔗 **Relationships & Constraints**
@@ -224,7 +147,7 @@ User-specific map application preferences.
 - **Job-Client Relationship**: `job_locations.client_id` → `clients.id`
 - **Inventory Tracking**: `inventory_movements.inventory_item_id` → `inventory_items.id`
 - **Route Integration**: Routes connect to jobs through waypoints
-- **Map Integration**: User preferences link to supported apps and deep links
+
 
 ### **Data Integrity**
 - **Cascade Deletes**: User deletion removes all associated data
@@ -240,16 +163,16 @@ User-specific map application preferences.
 - **Inventory Optimization**: Track usage patterns and stock levels
 - **Route Efficiency**: Analyze route performance and optimization
 - **Job Success Metrics**: Track completion rates and timelines
-- **User Engagement**: Monitor onboarding completion and feature adoption
+
 
 ### **AI-Powered Features**
 - **Daily Planning**: Intelligent job scheduling and route optimization
 - **Inventory Predictions**: Stock level forecasting
 - **Route Suggestions**: AI-optimized route planning
-- **Onboarding Guidance**: Personalized setup assistance
+
 
 ### **Integration Capabilities**
-- **Map Integration**: Multi-platform mapping application support
+
 - **Real-time Updates**: Live inventory and job status updates
 - **Cross-platform Sync**: Seamless experience across devices
 - **Offline Support**: Local data caching and sync
@@ -269,8 +192,6 @@ Database migrations are organized by feature:
 1. `001-initial-schema.sql` - Core business tables
 2. `002-profile-signup-fix.sql` - Profile improvements  
 3. `003-daily-plans-table.sql` - Daily planning system
-4. `004-onboarding-configuration.sql` - Onboarding system
-5. `007-map-preferences.sql` - Map integration system
 
 ### **Performance Optimizations**
 - **Strategic Indexing**: Optimized for common query patterns

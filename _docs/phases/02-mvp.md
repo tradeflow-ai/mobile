@@ -25,7 +25,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 ### Feature 2: Data Fetching & Management (Trevor)
 
-**Architectural Rule:** TanStack Query will be the single source of truth for all **asynchronous server state** (e.g., jobs, inventory, clients). Jotai will be used exclusively for **synchronous, client-side state** (e.g., UI theme, modal visibility, or managing the state of complex, multi-step forms before submission).
+**Architectural Rule:** TanStack Query will be the single source of truth for all **asynchronous server state** (e.g., jobs, inventory). Jotai will be used exclusively for **synchronous, client-side state** (e.g., UI theme, modal visibility, or managing the state of complex, multi-step forms before submission).
 
 1.  **Integrate TanStack Query:** Add the library and wrap the root of the app in a `QueryClientProvider`.
 2.  **Create Data Hooks:** Build custom hooks for fetching data from Supabase, abstracting away the query keys and logic (e.g., `useJobs()`, `useInventory()`).
@@ -65,12 +65,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
     *   Improve coordinate processing guidance
     *   Refine route efficiency algorithms in prompt form
 
-2.  **Validate Agent Decision Quality:** Test agent reasoning outputs:
-    *   Dispatch prioritization logic validation
-    *   Route optimization spatial accuracy
-    *   Inventory analysis completeness
-
-3.  **Implement Agent Performance Monitoring:** Track agent execution metrics:
+2.  **Implement Agent Performance Monitoring:** Track agent execution metrics:
     *   Response time optimization
     *   Decision quality scoring
     *   Error rate monitoring
@@ -98,11 +93,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 3.  **Implement Re-planning Logic:** Connect the trigger to the LangGraph agent, allowing it to re-run the dispatch and routing sequence with the updated job list while preserving the state of completed jobs.
 4.  **Integrate with Map View:** Ensure the map view dynamically updates to reflect the new, re-optimized route.
 
-### Feature 8: Client Management (Trevor)
 
-1.  **Client CRUD Operations:** Build full client management with TanStack Query integration.
-2.  **Client-Job Association:** Connect clients to jobs with proper relationship management.
-3.  **Client Contact Management:** Store and manage client contact preferences and history.
 
 ### Feature 9: In-Field Execution UI (Josh)
 
@@ -110,11 +101,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 2.  **Navigation Integration:** Connect with device navigation apps for turn-by-turn directions.
 3.  **Inventory Usage Tracking:** Track parts used during job completion.
 
-### Feature 10: BoM Management (Trevor)
 
-1.  **Job Type Templates:** Create reusable job type definitions with standard parts lists.
-2.  **BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.
-3.  **Update Seed Script:** Ensure the database seed script populates this data structure with sensible defaults that the user can later edit.
 
 ---
 
@@ -125,5 +112,6 @@ This is the most complex phase where the swimlanes become critical. The work is 
 | Package & Features | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
 | **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Agent Prompt Optimization | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the LangGraph agents to implementing AI-powered spatial reasoning and architecting the real-time communication layer. |
-| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Coordinate Service Integration <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the coordinate service client and all TanStack Query hooks needed for the frontend to manage jobs, clients, and bills of materials. |
-| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. | 
+| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Coordinate Service Integration | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the coordinate service client and all TanStack Query hooks needed for the frontend to manage jobs. |
+| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. |
+| **Data Management & Dynamic UI** <br/> • F6: CRUD UIs <br/> • F7: Dynamic Replanning | Frontend & UI/UX | **Jack** | This package focuses on all the "management" and "reactive" parts of the UI. Jack will own the screens for manually managing jobs and inventory, as well as the UI triggers and modals required for the dynamic re-planning flow, ensuring a robust data management experience. | 

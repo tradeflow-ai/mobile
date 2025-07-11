@@ -133,7 +133,7 @@ This document provides a comprehensive overview of the technical architecture, c
     -   Manage all secrets (OpenAI API keys, etc.) via Supabase Environment Variables, never hardcoded.
     -   Implement proper error handling for agent reasoning failures.
     -   Use Deno-compatible imports for all LangGraph and AI dependencies.
-    -   Test Edge Functions locally before deployment using `supabase functions serve`.
+    -   Develop Edge Functions locally before deployment using `supabase functions serve`.
 -   **Conventions:**
     -   Agent implementations are mirrored between local development (`agent/`) and Edge Function (`supabase/functions/plan-day/`).
     -   Coordinate formatting tools provide spatial data to agents in standardized format.
@@ -153,7 +153,6 @@ This document provides a comprehensive overview of the technical architecture, c
 ### Version Control
 - **Git & GitHub:** Used for all source code management, following the feature-branch workflow defined in `team-collaboration.md`.
 
-### Testing
-- **E2E Testing (Deferred):** The implementation of an end-to-end testing framework (such as Detox or Maestro) is currently deferred to allow for rapid initial development. This will be revisited in the "POLISH" phase of the project.
+
 
 This tech stack provides a robust foundation for a scalable, maintainable job and route management application with comprehensive mapping capabilities and room for future growth and feature additions. 

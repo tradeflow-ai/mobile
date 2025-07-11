@@ -46,7 +46,7 @@ To elevate the MVP into a polished, delightful, and production-ready application
 ### Feature 5: AI-Powered Job Creation (Jeremiah)
 
 1.  **Build NLP Service:** Create a new service that takes a natural language string from the user.
-2.  **Implement LLM-based Parsing:** Use an LLM (e.g., GPT-4o) within the service to parse the string and extract structured data (e.g., address, client name, parts required, requested time).
+2.  **Implement LLM-based Parsing:** Use an LLM (e.g., GPT-4o) within the service to parse the string and extract structured data (e.g., address, customer name, parts required, requested time).
 3.  **Integrate into Job Creation UI:** Update the "Add New Job" screen. Allow the user to type their request in a single text field.
 4.  **Auto-populate and Verify:** When the user is done typing, call the NLP service and use the structured output to auto-populate the form fields. The user can then verify and correct the data before saving, keeping them in the loop.
 

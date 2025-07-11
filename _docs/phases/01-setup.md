@@ -23,10 +23,10 @@ To establish the project's technical foundation. This phase focuses on creating 
 ### Feature 2: Backend & Database Setup (Trevor)
 
 1.  **Create Supabase Project:** Set up a new project in the Supabase dashboard.
-2.  **Define Database Schema:** Write and execute SQL scripts to create the initial tables. This must include the relational schema (e.g., `job_type_parts` join tables) required to establish a **"Bill of Materials"** for different job types.
+2.  **Define Database Schema:** Write and execute SQL scripts to create the initial tables for core job and inventory management.
 3.  **Enable Row Level Security (RLS):** Define and enable RLS policies for all tables to ensure data is only accessible by the correct user.
 4.  **Implement Auth Service:** Create the initial `services/auth.ts` file to handle user sign-up, sign-in, and session management.
-5.  **Seed Initial Data:** Create a seed script to populate the database with a rich and varied set of sample data, including multiple job types (`Demand`, `Maintenance`), priorities, clients, and a comprehensive Bill of Materials, to support the development and testing of the agentic crew.
+5.  **Seed Initial Data:** Create a seed script to populate the database with a rich and varied set of sample data, including multiple job types (`Demand`, `Maintenance`) and priorities, to support the development of the agentic crew.
 
 ### Feature 3: Design System Implementation (Josh)
 
@@ -52,6 +52,6 @@ This phase is about building the bedrock of the application. The goal is to work
 | Task / Feature | Swimlane | Owner | Rationale & Collaboration |
 | :--- | :--- | :--- | :--- |
 | **Feature 1: Project & Repo Init** | Platform | **Jeremiah** | This is a foundational task that everyone else's work depends on. Jeremiah will establish the repository, directory structure, all configuration files (`package.json`, `tsconfig.json`), and the core open source documentation. |
-| **Feature 2: Backend & DB Setup** | Backend & Data | **Trevor** | This is a self-contained unit of backend work. Trevor will own the entire Supabase setup, including writing the detailed schema (with BoM), creating rich seed data, and implementing the initial authentication service. His work is isolated to the backend. |
+| **Feature 2: Backend & DB Setup** | Backend & Data | **Trevor** | This is a self-contained unit of backend work. Trevor will own the entire Supabase setup, including writing the detailed schema, creating rich seed data, and implementing the initial authentication service. His work is isolated to the backend. |
 | **Feature 3: Design System Impl.** | Frontend & UI/UX | **Josh** | Josh will own the visual foundation of the app. He will translate the theme rules into the `Colors.ts` constant and build all the primitive UI components (Button, Card, etc.) in the `/components/ui` directory, working in isolation. |
 | **Feature 4: Core App Shell & Nav** | Frontend & UI/UX | **Jack** | Jack will own the application's skeleton and navigation. He will build the root layouts and tab navigators in the `/app` directory, using placeholder components until Josh's UI primitives are ready, ensuring no overlap. | 

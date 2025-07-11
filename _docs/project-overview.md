@@ -117,7 +117,7 @@ Our development will follow the `MVP -> CORE -> POLISH` structure outlined in th
 3.  **POLISH: Integration & Documentation**
     *   Refine the UI/UX into a polished, intuitive experience.
     *   Integrate third-party hardware store APIs for real-time inventory lookups.
-    *   Conduct end-to-end testing of the full application and agentic workflow.
+
     *   Finalize all user and developer documentation (`README.md`, `CONTRIBUTING.md`).
 
 ## 💡 Success Tips

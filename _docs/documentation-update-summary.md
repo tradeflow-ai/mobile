@@ -16,7 +16,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 4. `routes` - Route planning
 5. `inventory_movements` - Inventory audit trail
 
-### Actually Implemented Tables (8 tables)
+### Actually Implemented Tables (6 tables)
 **Current Supabase Database:**
 
 #### Core Business (5 tables) ✅
@@ -26,16 +26,8 @@ This document summarizes the major updates made to the TradeFlow database docume
 4. `routes` - Route planning
 5. `inventory_movements` - Inventory audit trail
 
-#### Extended Features (3 tables) 🆕
-6. `clients` - Client management
-7. `daily_plans` - AI-powered daily planning
-8. `onboarding_preferences` - User onboarding system
-9. `onboarding_configurations` - Admin onboarding config
-
-#### Map Integration (3 tables) 🆕
-10. `supported_map_apps` - Map application registry
-11. `map_app_deep_links` - Deep link configurations  
-12. `user_map_preferences` - User map preferences
+#### Extended Features (1 table) 🆕
+6. `daily_plans` - AI-powered daily planning
 
 ## 🔄 What We Updated
 
@@ -43,7 +35,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 **File**: `_docs/complete-database-schema.md`
 
 **Major Updates:**
-- **Complete rewrite** - From 5 tables to 12 tables
+- **Complete rewrite** - From 5 tables to 6 tables
 - **Detailed field descriptions** - Every field documented with purpose
 - **Business context** - Each table's role in the business workflow
 - **Relationship mapping** - Clear FK relationships and data flow
@@ -66,7 +58,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 **File**: `_docs/schema-analysis-report.md`
 
 **Updates:**
-- Updated table count from 5 to 8 core tables
+- Updated table count from 5 to 6 core tables
 - Added comprehensive table descriptions
 - Documented actual field names and types
 - Added relationship analysis
@@ -75,17 +67,14 @@ This document summarizes the major updates made to the TradeFlow database docume
 ## 📊 **Key Findings**
 
 ### **Documentation Gaps Addressed**
-1. **Missing Tables**: 7 tables were completely undocumented
+1. **Missing Tables**: 1 table was completely undocumented
 2. **Field Mismatches**: Many documented fields didn't match actual schema
 3. **Relationship Mapping**: No clear documentation of table relationships
 4. **Business Context**: Missing explanation of how tables support business workflows
 5. **Technical Details**: No information about RLS, indexes, or performance considerations
 
 ### **Business Impact**
-- **User Onboarding**: Complete onboarding system with progress tracking
 - **AI Integration**: Daily planning system with AI agent workflow
-- **Map Integration**: Multi-platform mapping with user preferences
-- **Client Management**: Full CRM capabilities for customer relationships
 - **Advanced Planning**: Intelligent route optimization and resource allocation
 
 ### **Technical Improvements**
@@ -101,7 +90,6 @@ This document summarizes the major updates made to the TradeFlow database docume
 1. ✅ Update all service layer code to match actual schema
 2. ✅ Verify all React hooks use correct field names
 3. ✅ Update TypeScript interfaces to match database
-4. ✅ Test all CRUD operations with updated documentation
 
 ### **Future Enhancements**
 - **Bill of Materials**: Planned expansion for inventory management
