@@ -32,6 +32,7 @@ export interface JobLocation {
   required_items?: string[]; // inventory item IDs
   notes?: string;
   completion_notes?: string;
+  use_ai_scheduling?: boolean; // Whether AI should select optimal scheduling times
   // Customer fields
   customer_name?: string;
   customer_phone?: string;
@@ -74,6 +75,11 @@ export interface UpdateJobData {
   required_items?: string[];
   notes?: string;
   completion_notes?: string;
+  use_ai_scheduling?: boolean; // Whether AI should select optimal scheduling times
+  // Customer fields
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
 }
 
 // ==================== QUERY HOOKS ====================
