@@ -25,7 +25,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 ### Feature 2: Data Fetching & Management (Trevor)
 
-**Architectural Rule:** TanStack Query will be the single source of truth for all **asynchronous server state** (e.g., jobs, inventory, clients). Jotai will be used exclusively for **synchronous, client-side state** (e.g., UI theme, modal visibility, or managing the state of complex, multi-step forms before submission).
+**Architectural Rule:** TanStack Query will be the single source of truth for all **asynchronous server state** (e.g., jobs, inventory). Jotai will be used exclusively for **synchronous, client-side state** (e.g., UI theme, modal visibility, or managing the state of complex, multi-step forms before submission).
 
 1.  **Integrate TanStack Query:** Add the library and wrap the root of the app in a `QueryClientProvider`.
 2.  **Create Data Hooks:** Build custom hooks for fetching data from Supabase, abstracting away the query keys and logic (e.g., `useJobs()`, `useInventory()`).
@@ -63,12 +63,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
     *   Improve coordinate processing guidance
     *   Refine route efficiency algorithms in prompt form
 
-2.  **Validate Agent Decision Quality:** Test agent reasoning outputs:
-    *   Dispatch prioritization logic validation
-    *   Route optimization spatial accuracy
-    *   Inventory analysis completeness
-
-3.  **Implement Agent Performance Monitoring:** Track agent execution metrics:
+2.  **Implement Agent Performance Monitoring:** Track agent execution metrics:
     *   Response time optimization
     *   Decision quality scoring
     *   Error rate monitoring
@@ -96,23 +91,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 3.  **Implement Re-planning Logic:** Connect the trigger to the edge functions, allowing them to re-run the dispatch and inventory sequence with the updated job list while preserving the state of completed jobs.
 4.  **Integrate with Map View:** Ensure the map view dynamically updates to reflect the new, re-optimized route.
 
-### Feature 8: Client Management (Trevor)
 
-1.  **Client CRUD Operations:** Build full client management with TanStack Query integration.
-2.  **Client-Job Association:** Connect clients to jobs with proper relationship management.
-3.  **Client Contact Management:** Store and manage client contact preferences and history.
-
-### Feature 9: In-Field Execution UI (Josh)
-
-1.  **Job Progress Tracking:** Real-time job status updates and completion tracking.
-2.  **Navigation Integration:** Connect with device navigation apps for turn-by-turn directions.
-3.  **Inventory Usage Tracking:** Track parts used during job completion.
-
-### Feature 10: BoM Management (Trevor)
-
-1.  **Job Type Templates:** Create reusable job type definitions with standard parts lists.
-2.  **BoM Association:** Within the Job Types UI, allow users to associate specific inventory items and their required quantities, creating a reusable Bill of Materials for each job type.
-3.  **Update Seed Script:** Ensure the database seed script populates this data structure with sensible defaults that the user can later edit.
 
 ---
 

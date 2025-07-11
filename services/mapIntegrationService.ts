@@ -1,7 +1,7 @@
 import { Platform, Linking, Alert } from 'react-native';
 import { supabase } from './supabase';
 import { openNativeMaps, openDirectionsToJob } from '@/utils/mapUtils';
-import { JobLocation } from '@/store/atoms';
+import { JobLocation } from '@/hooks/useJobs';
 
 // =============================================
 // TYPE DEFINITIONS
@@ -50,22 +50,6 @@ export interface UserMapPreference {
   created_at: string;
   updated_at: string;
   map_app?: MapApp;
-}
-
-export interface MapIntegrationAnalytics {
-  id: string;
-  user_id: string;
-  map_app_id: string;
-  action_type: 'open_directions' | 'open_search' | 'open_coordinates' | 'app_detection';
-  success: boolean;
-  error_message?: string;
-  response_time_ms?: number;
-  job_location_id?: string;
-  coordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  created_at: string;
 }
 
 export interface MapIntegrationOptions {
@@ -432,81 +416,10 @@ export class MapIntegrationService {
         [{ text: 'OK' }]
       );
     } finally {
-      // Log analytics
-      if (userId && selectedApp) {
-        await this.logMapIntegrationAnalytics({
-          userId,
-          mapAppId: selectedApp.id,
-          actionType: options.jobLocation ? 'open_directions' : 'open_coordinates',
-          success,
-          errorMessage,
-          responseTimeMs: Date.now() - startTime,
-          jobLocationId: options.jobLocation?.id,
-          coordinates: options.coordinates,
-        });
-      }
+      // Cleanup or additional logging could go here
     }
 
     return success;
-  }
-
-  // =============================================
-  // ANALYTICS
-  // =============================================
-
-  private async logMapIntegrationAnalytics(analytics: {
-    userId: string;
-    mapAppId: string;
-    actionType: 'open_directions' | 'open_search' | 'open_coordinates' | 'app_detection';
-    success: boolean;
-    errorMessage?: string;
-    responseTimeMs?: number;
-    jobLocationId?: string;
-    coordinates?: { latitude: number; longitude: number };
-  }): Promise<void> {
-    try {
-      await supabase
-        .from('map_integration_analytics')
-        .insert({
-          user_id: analytics.userId,
-          map_app_id: analytics.mapAppId,
-          action_type: analytics.actionType,
-          success: analytics.success,
-          error_message: analytics.errorMessage,
-          response_time_ms: analytics.responseTimeMs,
-          job_location_id: analytics.jobLocationId,
-          coordinates: analytics.coordinates,
-          created_at: new Date().toISOString(),
-        });
-
-      console.log(`Logged map integration analytics: ${analytics.actionType} - ${analytics.success ? 'SUCCESS' : 'FAILED'}`);
-    } catch (error) {
-      console.error('Error logging map integration analytics:', error);
-    }
-  }
-
-  async getMapIntegrationAnalytics(
-    userId: string,
-    limit: number = 100
-  ): Promise<{ data: MapIntegrationAnalytics[]; error: any }> {
-    try {
-      const { data, error } = await supabase
-        .from('map_integration_analytics')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (error) {
-        console.error('Error fetching map integration analytics:', error);
-        return { data: [], error };
-      }
-
-      return { data: data || [], error: null };
-    } catch (error) {
-      console.error('Unexpected error fetching map integration analytics:', error);
-      return { data: [], error };
-    }
   }
 
   // =============================================
@@ -554,7 +467,7 @@ export async function openExternalDirections(
 ): Promise<boolean> {
   const service = MapIntegrationService.getInstance();
   return await service.openInExternalMap({
-    coordinates: jobLocation.coordinates,
+    coordinates: { latitude: jobLocation.latitude, longitude: jobLocation.longitude },
     label: jobLocation.title,
     jobLocation,
   }, userId);

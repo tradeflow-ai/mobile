@@ -81,7 +81,6 @@ Our technical architecture is designed to be robust, scalable, and powerful, ref
 
 - **Frontend:** The mobile application will be built with **React Native (Expo)** for cross-platform compatibility. The UI will leverage specialized libraries to visualize the complex data our agents produce:
     - **`react-native-maps`** to display the optimized routes.
-    - **`react-native-big-calendar`** for intuitive drag-and-drop schedule management.
 
 - **Human-in-the-Loop Interaction Model:** The user verification steps are designed for speed and clarity:
     - **Dispatch Verification:** The user can approve the prioritized job list or modify it via a simple **drag-and-drop** interface.
@@ -120,7 +119,7 @@ Our development will follow the `MVP -> CORE -> POLISH` structure outlined in th
 3.  **POLISH: Integration & Documentation**
     *   Refine the UI/UX into a polished, intuitive experience.
     *   Integrate third-party hardware store APIs for real-time inventory lookups.
-    *   Conduct end-to-end testing of the full application and agentic workflow.
+
     *   Finalize all user and developer documentation (`README.md`, `CONTRIBUTING.md`).
 
 ## 💡 Success Tips

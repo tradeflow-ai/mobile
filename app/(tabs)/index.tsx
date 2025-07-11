@@ -146,7 +146,7 @@ export default function HomeScreen() {
            <View style={styles.statsContainer}>
              <Card style={styles.statCard}>
                <View style={styles.statIconContainer}>
-                 <FontAwesome name="briefcase" size={20} color={colors.primary} />
+                 <FontAwesome name="briefcase" size={16} color={colors.primary} />
                </View>
                <Text style={[styles.statNumber, { color: colors.text }]}>
                  {dailyPlan?.job_ids?.length || 0}
@@ -158,7 +158,7 @@ export default function HomeScreen() {
              
              <Card style={styles.statCard}>
                <View style={styles.statIconContainer}>
-                 <FontAwesome name="clock-o" size={20} color={colors.success} />
+                 <FontAwesome name="clock-o" size={16} color={colors.success} />
                </View>
                <Text style={[styles.statNumber, { color: colors.text }]}>
                  {dailyPlan?.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : '0h'}
@@ -201,21 +201,15 @@ export default function HomeScreen() {
 
            {/* Today's Calendar */}
            <View style={styles.scheduleSection}>
-             <TouchableOpacity 
-               style={styles.scheduleHeader}
-               onPress={() => navigate('/calendar')}
-               activeOpacity={0.7}
-             >
-               <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-                 Today's Calendar
-               </Text>
-               <View style={styles.scheduleHeaderRight}>
-                 <Text style={[styles.scheduleCount, { color: colors.placeholder }]}>
-                   {dailyPlan?.job_ids?.length || 0} jobs
-                 </Text>
-                 <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
-               </View>
-             </TouchableOpacity>
+                        <TouchableOpacity 
+             style={styles.scheduleHeader}
+             onPress={() => navigate('/calendar')}
+             activeOpacity={0.7}
+           >
+             <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+               Today's Calendar
+             </Text>
+           </TouchableOpacity>
              
              <Card style={styles.scheduleCard}>
                {dailyPlan?.job_ids?.length ? (
@@ -272,10 +266,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.quickActionContent}>
                 <Text style={[styles.quickActionTitle, { color: colors.text }]}>
-                  Add New Job
-                </Text>
-                <Text style={[styles.quickActionSubtitle, { color: colors.placeholder }]}>
-                  Create a new work order
+                  New Job
                 </Text>
               </View>
             </TouchableOpacity>
@@ -300,25 +291,11 @@ export default function HomeScreen() {
                 <Text style={[styles.quickActionTitle, { color: colors.text }]}>
                   Inventory
                 </Text>
-                <Text style={[styles.quickActionSubtitle, { color: colors.placeholder }]}>
-                  Manage your supplies
-                </Text>
               </View>
             </TouchableOpacity>
           </View>
 
-          {/* Recent Activity */}
-          <Card style={styles.recentCard}>
-            <Text style={[styles.recentTitle, { color: colors.text }]}>
-              Recent Activity
-            </Text>
-            <View style={styles.recentItem}>
-              <FontAwesome name="circle" size={8} color={colors.placeholder} />
-              <Text style={[styles.recentText, { color: colors.placeholder }]}>
-                No recent activity
-              </Text>
-            </View>
-          </Card>
+
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -354,16 +331,16 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: 'center',
-    ...spacing.helpers.padding('m'),
+    ...spacing.helpers.padding('s'),
   },
   statIconContainer: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
     borderRadius: radius.full,
     backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.s,
+    marginBottom: spacing.xs,
   },
   statNumber: {
     ...typography.h2,
@@ -395,16 +372,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.m,
   },
-  scheduleHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.s,
-  },
   scheduleTitle: {
     ...typography.h3,
-  },
-  scheduleCount: {
-    ...typography.caption,
   },
   scheduleCard: {
     ...spacing.helpers.padding('m'),
@@ -451,34 +420,6 @@ const styles = StyleSheet.create({
   },
   quickActionTitle: {
     ...typography.h4,
-    marginBottom: spacing.xs,
-  },
-  quickActionSubtitle: {
-    ...typography.caption,
-  },
-  recentCard: {
-    ...spacing.helpers.padding('m'),
-  },
-  recentTitle: {
-    ...typography.h3,
-    marginBottom: spacing.m,
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.s,
-  },
-  recentContent: {
-    flex: 1,
-    marginLeft: spacing.s,
-  },
-  recentText: {
-    ...typography.body,
-    marginBottom: spacing.xs,
-    marginLeft: spacing.s,
-  },
-  recentTime: {
-    ...typography.caption,
   },
   scheduleWithJobs: {
     alignItems: 'center',

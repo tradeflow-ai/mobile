@@ -57,7 +57,6 @@ This document provides a comprehensive overview of the technical architecture, c
 - **React Native StyleSheet:** The core API for styling components. We will use `StyleSheet.create` for optimized and co-located styles, without relying on an external styling library.
 
 ### UI & Visualization
--   **`react-native-maps` & `react-native-big-calendar`:** These libraries are critical for visualizing our agent's output.
 -   **Best Practices:**
     -   Memoize complex components like maps to prevent unnecessary re-renders.
     -   For maps, avoid rendering too many markers at once. At scale, we must implement clustering.
@@ -158,7 +157,6 @@ The AI workflow is orchestrated using two specialized Supabase Edge Functions in
 ### Version Control
 - **Git & GitHub:** Used for all source code management, following the feature-branch workflow defined in `team-collaboration.md`.
 
-### Testing
-- **E2E Testing (Deferred):** The implementation of an end-to-end testing framework (such as Detox or Maestro) is currently deferred to allow for rapid initial development. This will be revisited in the "POLISH" phase of the project.
+
 
 This tech stack provides a robust foundation for a scalable, maintainable job and route management application with comprehensive mapping capabilities and room for future growth and feature additions. 
