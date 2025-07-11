@@ -139,6 +139,18 @@ export const useDailyPlan = (
       setError(null);
       setDailyPlan(null); // 🔄 Clear existing plan state
 
+      // 🔧 FIX: Clean up any existing daily plan for today first
+      console.log('🧹 Checking for existing daily plan to clean up...');
+      const { data: existingPlan } = await DailyPlanService.getCurrentDailyPlan(user.id, planDate);
+      
+      if (existingPlan) {
+        console.log('🗑️ Found existing plan, cancelling it first:', existingPlan.id);
+        await DailyPlanService.cancelDailyPlan(existingPlan.id);
+        console.log('✅ Existing plan cancelled, creating fresh plan');
+      } else {
+        console.log('🆕 No existing plan found, proceeding with fresh creation');
+      }
+
       // Create daily plan record
       const preferences = {}; // TODO: Get user preferences
       const { data: plan, error: createError } = await DailyPlanService.createDailyPlan({
@@ -153,8 +165,10 @@ export const useDailyPlan = (
       }
 
       setDailyPlan(plan);
+      console.log('🆕 Fresh daily plan created:', plan.id);
 
       // Step 1: Call dispatcher edge function
+      console.log('🎯 Starting dispatcher edge function...');
       const dispatchResult = await AgentService.dispatchJobs(user.id, jobIds, planDate);
       
       if (!dispatchResult.success) {
