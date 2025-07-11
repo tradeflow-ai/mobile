@@ -13,5 +13,7 @@ export type { TabSelectorProps, TabOption } from './TabSelector';
 export { Label } from './Label';
 export { ErrorMessage } from './ErrorMessage';
 export { EmptyState } from './EmptyState';
+export { OfflineStatusBar } from './OfflineStatusBar';
+export { OfflineStatusIndicator } from './OfflineStatusIndicator';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 
