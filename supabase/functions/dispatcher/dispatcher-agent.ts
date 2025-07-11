@@ -5,8 +5,7 @@
  * Uses the UNIFIED_DISPATCHER_PROMPT for consistent reasoning.
  */
 
-import { ChatOpenAI } from "https://esm.sh/@langchain/openai@0.5.18";
-import { HumanMessage, SystemMessage } from "https://esm.sh/@langchain/core@0.3.62/messages";
+import { OpenAIClient, createMessages } from '../_shared/openai-client.ts';
 import { UNIFIED_DISPATCHER_PROMPT } from './dispatcher-prompt.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -62,19 +61,10 @@ function createSupabaseClient() {
 }
 
 export class DispatcherAgent {
-  private llm: ChatOpenAI;
+  private openai: OpenAIClient;
 
   constructor() {
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
-
-    this.llm = new ChatOpenAI({
-      modelName: "gpt-4o",
-      temperature: 0.1,
-      openAIApiKey: openaiApiKey,
-    });
+    this.openai = new OpenAIClient();
   }
 
   async execute(context: AgentContext): Promise<DispatchOutput> {
@@ -155,29 +145,32 @@ export class DispatcherAgent {
         job_duration_buffer_minutes: preferences.job_duration_buffer_minutes || 15
       };
 
-      const messages = [
-        new SystemMessage(UNIFIED_DISPATCHER_PROMPT),
-        new HumanMessage(`
-          Please analyze and optimize the following ${jobs.length} jobs for ${planDate}:
+      // Create user prompt
+      const userPrompt = `
+        Please analyze and optimize the following ${jobs.length} jobs for ${planDate}:
 
-          JOBS TO PRIORITIZE:
-          ${JSON.stringify(jobData, null, 2)}
+        JOBS TO PRIORITIZE:
+        ${JSON.stringify(jobData, null, 2)}
 
-          USER CONSTRAINTS:
-          ${JSON.stringify(constraintData, null, 2)}
+        USER CONSTRAINTS:
+        ${JSON.stringify(constraintData, null, 2)}
 
-          Please return a complete dispatch plan with:
-          1. Jobs prioritized by business rules (Emergency → Inspection → Service)
-          2. Geographic optimization within each priority tier
-          3. Complete scheduling with time estimates
-          4. Clear reasoning for your decisions
+        Please return a complete dispatch plan with:
+        1. Jobs prioritized by business rules (Emergency → Inspection → Service)
+        2. Geographic optimization within each priority tier
+        3. Complete scheduling with time estimates
+        4. Clear reasoning for your decisions
 
-          Return the response as a valid JSON object matching the DispatchOutput interface.
-        `)
-      ];
+        Return the response as a valid JSON object matching the DispatchOutput interface.
+      `;
 
-      const response = await this.llm.invoke(messages);
-      const aiResponse = response.content as string;
+      // Call OpenAI API directly
+      const messages = createMessages(UNIFIED_DISPATCHER_PROMPT, userPrompt);
+      const aiResponse = await this.openai.chatCompletion(messages, {
+        model: 'gpt-4o',
+        temperature: 0.1,
+        maxTokens: 4000
+      });
 
       // Parse AI response and create structured output
       const parsedResponse = this.parseAIResponse(aiResponse, jobs, preferences);
