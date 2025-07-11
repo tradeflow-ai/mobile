@@ -5,7 +5,7 @@
  * confirm or modify the job prioritization before proceeding to inventory.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +30,15 @@ export default function DispatcherConfirmationScreen() {
     confirmDispatcherOutput,
     proceedToInventory,
   } = useTodaysPlan();
+
+  useEffect(() => {
+    if (!dailyPlan) return;
+
+    const status = dailyPlan.status;
+    if (status === 'ready_for_execution' || status === 'hardware_store_added') {
+      router.push('/plan-your-day/inventory-results');
+    }
+  }, [dailyPlan, router]);
 
   const handleConfirmAndProceed = async () => {
     if (!dailyPlan) return;
@@ -136,7 +145,9 @@ export default function DispatcherConfirmationScreen() {
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { color: colors.text }]}>Route Efficiency</Text>
                   <Text style={[styles.summaryValue, { color: colors.success }]}>
-                    {Math.round(optimizationSummary.route_efficiency * 100)}%
+                    {optimizationSummary.route_efficiency != null
+                      ? `${Math.round(optimizationSummary.route_efficiency * 100)}%`
+                      : 'N/A'}
                   </Text>
                 </View>
               </View>
