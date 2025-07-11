@@ -5,7 +5,8 @@
  * Uses the INVENTORY_PROMPT for consistent reasoning.
  */
 
-import { OpenAIClient, createMessages } from '../_shared/openai-client.ts';
+import { ChatOpenAI } from "https://esm.sh/@langchain/openai@0.5.18";
+import { HumanMessage, SystemMessage } from "https://esm.sh/@langchain/core@0.3.62/messages";
 import { INVENTORY_PROMPT } from './inventory-prompt.ts';
 import { mockSupplierAPI } from './mock-supplier.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -78,10 +79,19 @@ function createSupabaseClient() {
 }
 
 export class InventoryAgent {
-  private openai: OpenAIClient;
+  private llm: ChatOpenAI;
 
   constructor() {
-    this.openai = new OpenAIClient();
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is required');
+    }
+
+    this.llm = new ChatOpenAI({
+      modelName: "gpt-4o",
+      temperature: 0.1,
+      openAIApiKey: openaiApiKey,
+    });
   }
 
   async execute(context: InventoryAgentContext): Promise<InventoryOutput> {
@@ -190,45 +200,38 @@ export class InventoryAgent {
         delivery_preference: preferences.delivery_preference || 'pickup'
       };
 
-      // Create user prompt
-      const userPrompt = `
-        Please analyze the inventory needs for these prioritized jobs:
-
-        JOBS TO ANALYZE:
-        ${JSON.stringify(jobData, null, 2)}
-
-        CURRENT INVENTORY:
-        ${JSON.stringify(inventoryData, null, 2)}
-
-        PRIORITIZED SCHEDULE:
-        ${JSON.stringify(prioritizedJobs, null, 2)}
-
-        USER PREFERENCES:
-        ${JSON.stringify(supplierPreferences, null, 2)}
-
-        Please provide a comprehensive inventory analysis including:
-        1. Parts needed for each job
-        2. Current stock assessment
-        3. Shopping list for missing items
-        4. Supplier recommendations
-        5. Whether a hardware store job is needed
-
-        Return the response as a valid JSON object matching the InventoryOutput interface.
-      `;
-
-      // Call OpenAI API directly
-      const messages = createMessages(
-        INVENTORY_PROMPT.replace(/\{([^}]+)\}/g, (match, key) => {
+      const messages = [
+        new SystemMessage(INVENTORY_PROMPT.replace(/\{([^}]+)\}/g, (match, key) => {
           return supplierPreferences[key as keyof typeof supplierPreferences] || match;
-        }),
-        userPrompt
-      );
-      
-      const aiResponse = await this.openai.chatCompletion(messages, {
-        model: 'gpt-4o',
-        temperature: 0.1,
-        maxTokens: 4000
-      });
+        })),
+        new HumanMessage(`
+          Please analyze the inventory needs for these prioritized jobs:
+
+          JOBS TO ANALYZE:
+          ${JSON.stringify(jobData, null, 2)}
+
+          CURRENT INVENTORY:
+          ${JSON.stringify(inventoryData, null, 2)}
+
+          PRIORITIZED SCHEDULE:
+          ${JSON.stringify(prioritizedJobs, null, 2)}
+
+          USER PREFERENCES:
+          ${JSON.stringify(supplierPreferences, null, 2)}
+
+          Please provide a comprehensive inventory analysis including:
+          1. Parts needed for each job
+          2. Current stock assessment
+          3. Shopping list for missing items
+          4. Supplier recommendations
+          5. Whether a hardware store job is needed
+
+          Return the response as a valid JSON object matching the InventoryOutput interface.
+        `)
+      ];
+
+      const response = await this.llm.invoke(messages);
+      const aiResponse = response.content as string;
 
       // Parse AI response and create structured output
       const parsedResponse = this.parseAIResponse(aiResponse, jobs, inventory, preferences);

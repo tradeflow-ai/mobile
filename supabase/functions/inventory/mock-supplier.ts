@@ -5,25 +5,22 @@
  * for real-time stock checking and pricing.
  */
 
-import { tool } from "https://esm.sh/@langchain/core@0.3.62/tools";
-import { z } from "https://esm.sh/zod@3.25.76";
-
 /**
- * Input schema for supplier API requests
+ * Input interface for supplier API requests
  */
-const SupplierAPIInputSchema = z.object({
-  supplier: z.string(),
-  items: z.array(z.object({
-    name: z.string(),
-    category: z.string().optional(),
-    quantity: z.number().optional()
-  })),
-  location: z.object({
-    latitude: z.number(),
-    longitude: z.number(),
-    radius_miles: z.number().optional()
-  }).optional()
-});
+interface SupplierAPIInput {
+  supplier: string;
+  items: Array<{
+    name: string;
+    category?: string;
+    quantity?: number;
+  }>;
+  location?: {
+    latitude: number;
+    longitude: number;
+    radius_miles?: number;
+  };
+}
 
 /**
  * Mock supplier data for realistic responses
@@ -100,12 +97,13 @@ const MOCK_INVENTORY = {
 };
 
 /**
- * Mock Supplier API Tool
+ * Mock Supplier API Function
  * Simulates real-time stock checking and pricing from hardware stores
  */
-export const mockSupplierAPI = tool(
-  async ({ supplier, items, location }) => {
+export const mockSupplierAPI = {
+  async invoke(input: SupplierAPIInput) {
     try {
+      const { supplier, items, location } = input;
       console.log(`🏪 Mock Supplier API: Checking ${supplier} for ${items.length} items`);
       
       // Simulate API processing delay
@@ -177,7 +175,7 @@ export const mockSupplierAPI = tool(
       console.error('❌ Mock Supplier API Error:', error);
       
       return {
-        supplier,
+        supplier: input.supplier,
         request_id: `error_${Date.now()}`,
         timestamp: new Date().toISOString(),
         success: false,
@@ -187,13 +185,8 @@ export const mockSupplierAPI = tool(
         message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
-  },
-  {
-    name: "mock_supplier_api",
-    description: "Mock supplier API for checking hardware store inventory and pricing",
-    schema: SupplierAPIInputSchema,
   }
-);
+};
 
 /**
  * Helper function to find the closest matching item key
