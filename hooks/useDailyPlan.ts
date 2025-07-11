@@ -186,6 +186,9 @@ export const useDailyPlan = (
 
       console.log('🎯 Dispatcher completed successfully');
       console.log('✅ Daily plan updated:', updatedPlan?.id, 'Status:', updatedPlan?.status);
+      
+      // 🔧 CRITICAL FIX: Update local React state immediately
+      setDailyPlan(updatedPlan);
     } catch (err) {
       console.error('Error starting planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to start planning');
@@ -429,11 +432,10 @@ export const useDailyPlan = (
       }
     };
 
-    // Set up subscription after initial load
-    const timer = setTimeout(setupSubscription, 1000);
+    // Set up subscription immediately - no delay
+    setupSubscription();
 
     return () => {
-      clearTimeout(timer);
       if (subscription) {
         subscription.unsubscribe();
         console.log('Daily plan subscription cleaned up');
