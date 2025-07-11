@@ -229,7 +229,7 @@ export const useJobsByClient = (clientId: string) => {
 // ==================== MUTATION HOOKS ====================
 
 /**
- * Create a new job
+ * Create a new job with enhanced optimistic updates
  * Jack needs this for adding new jobs in CRUD UI
  */
 export const useCreateJob = () => {
@@ -237,33 +237,69 @@ export const useCreateJob = () => {
   const [user] = useAtom(userAtom);
 
   return useMutation({
-    mutationFn: async (jobData: CreateJobData): Promise<JobLocation> => {
+    mutationFn: async ({ 
+      jobData, 
+      operationId 
+    }: { 
+      jobData: CreateJobData; 
+      operationId?: string 
+    }): Promise<JobLocation> => {
       if (!user?.id) {
         throw new Error('No authenticated user');
       }
 
-      const { data, error } = await supabase
-        .from('job_locations')
-        .insert({
-          ...jobData,
-          user_id: user.id,
-          status: 'pending',
-        })
-        .select()
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('job_locations')
+          .insert({
+            ...jobData,
+            user_id: user.id,
+            status: 'pending',
+          })
+          .select()
+          .single();
 
-      if (error) {
+        if (error) {
+          throw error;
+        }
+
+        // Mark optimistic operation as successful
+        if (operationId) {
+          const { offlineStatusService } = await import('@/services/offlineStatusService');
+          offlineStatusService.handleSyncSuccess(operationId);
+        }
+
+        return data;
+      } catch (error) {
+        // Mark optimistic operation as failed
+        if (operationId) {
+          const { offlineStatusService } = await import('@/services/offlineStatusService');
+          offlineStatusService.handleSyncFailure(error, operationId);
+        }
         throw error;
       }
-
-      return data;
     },
-    onSuccess: (newJob) => {
-      // Invalidate and refetch jobs list
-      invalidateQueries.allJobs();
+    onSuccess: (newJob, { operationId }) => {
+      // Replace the temporary optimistic job with the real one
+      if (operationId) {
+        // Find and replace temporary job in cache
+        queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+          if (!old) return [newJob];
+          return old.map(job => 
+            job.id?.startsWith('temp_') ? newJob : job
+          );
+        });
+      } else {
+        // Invalidate and refetch jobs list (fallback for non-optimistic updates)
+        invalidateQueries.allJobs();
+      }
       
-      // Add the new job to the cache
+      // Add the real job to the cache
       queryClient.setQueryData(queryKeys.job(newJob.id), newJob);
+    },
+    onError: (error, { operationId }) => {
+      console.error('Job creation failed:', error);
+      // Optimistic rollback is handled automatically in the mutation function
     },
   });
 };

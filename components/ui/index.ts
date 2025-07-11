@@ -15,5 +15,6 @@ export { ErrorMessage } from './ErrorMessage';
 export { EmptyState } from './EmptyState';
 export { OfflineStatusBar } from './OfflineStatusBar';
 export { OfflineStatusIndicator } from './OfflineStatusIndicator';
+export { OptimisticStatusBar } from './OptimisticStatusBar';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 

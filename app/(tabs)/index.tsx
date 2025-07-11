@@ -15,7 +15,7 @@ import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, OptimisticStatusBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
@@ -94,21 +94,6 @@ export default function HomeScreen() {
    */
   const handlePlanYourDay = () => {
     navigate('/plan-your-day');
-  };
-
-  // Add test function for offline testing
-  const testOfflineOperation = async () => {
-    try {
-      await createItem.mutateAsync({
-        name: `Test Item ${Date.now()}`,
-        category: 'test',
-        quantity: Math.floor(Math.random() * 100),
-        unit: 'pcs',
-      });
-      Alert.alert('Success', 'Test item created successfully!');
-    } catch (error) {
-      Alert.alert('Queued', 'Operation queued for offline sync');
-    }
   };
 
   const quickActions = [
@@ -314,41 +299,17 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Test Offline Button - Temporary for testing */}
-          <TouchableOpacity 
-            style={[
-              styles.testButton, 
-              { 
-                backgroundColor: colors.warning,
-                ...shadows.subtle(colorScheme)
-              }
-            ]} 
-            onPress={testOfflineOperation}
-          >
-            <FontAwesome name="wifi" size={16} color={colors.background} />
-            <Text style={[styles.testButtonText, { color: colors.background }]}>
-              Test Offline Operation
+          {/* Info about status feedback */}
+          <View style={styles.infoSection}>
+            <Text style={[styles.infoText, { color: colors.placeholder }]}>
+              💡 Status updates appear at the bottom during operations
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[
-              styles.testButton, 
-              { 
-                backgroundColor: colors.error,
-                ...shadows.subtle(colorScheme)
-              }
-            ]} 
-            onPress={() => navigate('/offline-debug')}
-          >
-            <FontAwesome name="bug" size={16} color={colors.background} />
-            <Text style={[styles.testButtonText, { color: colors.background }]}>
-              Debug Offline Status
-            </Text>
-          </TouchableOpacity>
-
+          </View>
 
         </ScrollView>
+        
+        {/* Optimistic Status Bar */}
+        <OptimisticStatusBar position="bottom" />
       </View>
     </SafeAreaView>
   );
@@ -484,17 +445,13 @@ const styles = StyleSheet.create({
   scheduleDetails: {
     ...typography.caption,
   },
-  testButton: {
-    flexDirection: 'row',
+  infoSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.m,
-    ...spacing.helpers.padding('s'),
-    marginTop: spacing.m,
-    gap: spacing.xs,
+    marginTop: spacing.l,
   },
-  testButtonText: {
+  infoText: {
     ...typography.caption,
-    fontWeight: '600',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

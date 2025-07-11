@@ -50,8 +50,6 @@ export const OfflineStatusIndicator: React.FC<OfflineStatusIndicatorProps> = ({
     queuedOperationsCount,
     syncInProgress,
     isManualOfflineMode,
-    enableManualOfflineMode,
-    disableManualOfflineMode,
     getStatusColor,
     getStatusIcon,
     getStatusText,
@@ -86,15 +84,6 @@ export const OfflineStatusIndicator: React.FC<OfflineStatusIndicatorProps> = ({
   const statusColor = isManualOfflineMode ? '#9B59B6' : getStatusColor(); // Purple for manual mode
   const statusIcon = isManualOfflineMode ? 'hand-stop-o' : getStatusIcon();
   const statusText = isManualOfflineMode ? 'Manual Offline' : getStatusText();
-
-  // Handle toggle for manual offline mode
-  const handleToggle = () => {
-    if (isManualOfflineMode) {
-      disableManualOfflineMode();
-    } else {
-      enableManualOfflineMode();
-    }
-  };
 
   const renderIndicator = () => (
     <View style={styles.container}>
@@ -141,13 +130,19 @@ export const OfflineStatusIndicator: React.FC<OfflineStatusIndicatorProps> = ({
     </View>
   );
 
-  // Always make it pressable for manual offline mode toggle
-  const pressHandler = onPress || handleToggle;
+  // Only make it pressable if onPress is provided (read-only status indicator)
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} style={style}>
+        {renderIndicator()}
+      </TouchableOpacity>
+    );
+  }
   
   return (
-    <TouchableOpacity onPress={pressHandler} style={style}>
+    <View style={style}>
       {renderIndicator()}
-    </TouchableOpacity>
+    </View>
   );
 };
 

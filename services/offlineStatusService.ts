@@ -37,6 +37,7 @@ export interface OfflineStatus {
   syncInProgress: boolean;
   retryAttempts: number;
   estimatedSyncTime?: number; // seconds
+  manualOfflineMode: boolean;
 }
 
 export interface OfflineStatusListener {
@@ -78,6 +79,7 @@ export class OfflineStatusService {
       lastSync: null,
       syncInProgress: false,
       retryAttempts: 0,
+      manualOfflineMode: false,
     };
 
     this.initialize();
@@ -115,6 +117,8 @@ export class OfflineStatusService {
 
   private handleNetworkStateChange(state: NetInfoState) {
     const wasOnline = this.currentStatus.connection.isOnline;
+    const wasConnected = this.currentStatus.connection.isConnected;
+    const wasQuality = this.currentStatus.connection.connectionQuality;
     
     // Update connection status - simple approach
     this.currentStatus.connection = {
@@ -128,6 +132,23 @@ export class OfflineStatusService {
       },
     };
 
+    // Only log if there's a meaningful change
+    const hasSignificantChange = (
+      wasOnline !== this.currentStatus.connection.isOnline ||
+      wasConnected !== this.currentStatus.connection.isConnected ||
+      wasQuality !== this.currentStatus.connection.connectionQuality
+    );
+
+    if (hasSignificantChange) {
+      console.log('OfflineStatusService: Network state changed', {
+        type: state.type,
+        connected: state.isConnected,
+        online: state.isInternetReachable,
+        actualOnline: this.currentStatus.connection.isOnline,
+        quality: this.currentStatus.connection.connectionQuality,
+      });
+    }
+
     // If we just came back online, trigger sync
     if (!wasOnline && this.currentStatus.connection.isOnline) {
       this.handleReconnection();
@@ -138,14 +159,6 @@ export class OfflineStatusService {
 
     // Notify listeners
     this.notifyListeners();
-
-    console.log('OfflineStatusService: Network state changed', {
-      type: state.type,
-      connected: state.isConnected,
-      online: state.isInternetReachable,
-      actualOnline: this.currentStatus.connection.isOnline,
-      quality: this.currentStatus.connection.connectionQuality,
-    });
   }
 
   private calculateConnectionQuality(state: NetInfoState): ConnectionStatus['connectionQuality'] {
@@ -433,6 +446,7 @@ export class OfflineStatusService {
   enableManualOfflineMode(): void {
     console.log('OfflineStatusService: Manual offline mode enabled');
     this.manualOfflineMode = true;
+    this.currentStatus.manualOfflineMode = true;
     this.updateStatus();
     this.notifyListeners();
   }
@@ -443,6 +457,7 @@ export class OfflineStatusService {
   disableManualOfflineMode(): void {
     console.log('OfflineStatusService: Manual offline mode disabled');
     this.manualOfflineMode = false;
+    this.currentStatus.manualOfflineMode = false;
     this.updateStatus();
     this.notifyListeners();
   }
@@ -457,7 +472,13 @@ export class OfflineStatusService {
   /**
    * Handle sync failure to detect offline state
    */
-  handleSyncFailure(error: any): void {
+  handleSyncFailure(error: any, operationId?: string): void {
+    // Mark optimistic operation as failed if provided
+    if (operationId) {
+      const { enhancedOptimisticUpdates } = require('./queryClient');
+      enhancedOptimisticUpdates.markError(operationId, error);
+    }
+
     // Only update offline state if not in manual mode and error indicates network issue
     if (!this.manualOfflineMode && this.isNetworkError(error)) {
       console.log('OfflineStatusService: Detected offline state through sync failure');
@@ -470,7 +491,13 @@ export class OfflineStatusService {
   /**
    * Handle sync success to detect online state
    */
-  handleSyncSuccess(): void {
+  handleSyncSuccess(operationId?: string): void {
+    // Mark optimistic operation as successful if provided
+    if (operationId) {
+      const { enhancedOptimisticUpdates } = require('./queryClient');
+      enhancedOptimisticUpdates.markSuccess(operationId);
+    }
+
     // Only update online state if not in manual mode and we thought we were offline
     if (!this.manualOfflineMode && !this.currentStatus.connection.isOnline) {
       console.log('OfflineStatusService: Detected online state through sync success');
@@ -507,8 +534,21 @@ export class OfflineStatusService {
     if (this.manualOfflineMode) {
       this.currentStatus.connection.isOnline = false;
       this.currentStatus.connection.connectionQuality = 'offline';
+    } else {
+      // When disabling manual mode, restore to actual network state
+      // Check if we're actually connected to restore proper online status
+      if (this.currentStatus.connection.isConnected) {
+        this.currentStatus.connection.isOnline = true;
+        // Restore a reasonable connection quality based on connection type
+        if (this.currentStatus.connection.connectionType === 'wifi') {
+          this.currentStatus.connection.connectionQuality = 'good';
+        } else if (this.currentStatus.connection.connectionType === 'cellular') {
+          this.currentStatus.connection.connectionQuality = 'fair';
+        } else {
+          this.currentStatus.connection.connectionQuality = 'good';
+        }
+      }
     }
-    // Otherwise use actual network state (this.currentStatus.connection already set by NetInfo)
   }
 
   /**

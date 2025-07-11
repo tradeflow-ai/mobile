@@ -99,7 +99,7 @@ export const useOfflineStatus = (): UseOfflineStatusReturn => {
     offlineStatusService.disableManualOfflineMode();
   }, []);
 
-  const isManualOfflineMode = offlineStatusService.isManualOfflineMode();
+  const isManualOfflineMode = status.manualOfflineMode;
 
   // Status utilities
   const getStatusColor = useCallback((): string => {
