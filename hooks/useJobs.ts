@@ -396,15 +396,16 @@ export const useJobsCount = () => {
 };
 
 /**
- * Get today's jobs
- * Useful for daily planning
+ * Get jobs for a specific date range
+ * Useful for calendar views that show multiple days
  */
-export const useTodaysJobs = () => {
+export const useJobsForDateRange = (startDate: Date, endDate: Date) => {
   const [user] = useAtom(userAtom);
-  const today = new Date().toISOString().split('T')[0];
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
 
   return useQuery({
-    queryKey: ['jobs', 'today', today],
+    queryKey: ['jobs', 'date-range', startDateStr, endDateStr],
     queryFn: async (): Promise<JobLocation[]> => {
       if (!user?.id) {
         throw new Error('No authenticated user');
@@ -414,8 +415,8 @@ export const useTodaysJobs = () => {
         .from('job_locations')
         .select('*')
         .eq('user_id', user.id)
-        .gte('scheduled_start', `${today}T00:00:00`)
-        .lt('scheduled_start', `${today}T23:59:59`)
+        .gte('scheduled_start', `${startDateStr}T00:00:00`)
+        .lt('scheduled_start', `${endDateStr}T23:59:59`)
         .order('scheduled_start', { ascending: true });
 
       if (error) {
@@ -424,9 +425,21 @@ export const useTodaysJobs = () => {
 
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!startDate && !!endDate,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+};
+
+/**
+ * Get today's jobs
+ * Useful for daily planning
+ */
+export const useTodaysJobs = () => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return useJobsForDateRange(today, tomorrow);
 };
 
 /**

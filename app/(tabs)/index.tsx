@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -25,7 +26,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  const { dailyPlan, isLoading: planLoading } = useTodaysPlan();
+  const { dailyPlan, isLoading: planLoading, refreshPlan } = useTodaysPlan();
 
 
   const [isDayStarted, setIsDayStarted] = useState(false);
@@ -93,12 +94,22 @@ export default function HomeScreen() {
   ];
 
   const handleAddNewJob = () => {
-    Alert.alert('Add New Job', 'This will open the add job modal');
+    navigate('/create-job');
   };
 
   const handleInventoryPress = () => {
     navigate('/inventory');
   };
+
+  // Force refresh daily plan when screen comes into focus
+  // This ensures the UI is always up-to-date after resets or other changes
+  useFocusEffect(
+    React.useCallback(() => {
+      if (refreshPlan) {
+        refreshPlan();
+      }
+    }, [refreshPlan])
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -115,9 +126,6 @@ export default function HomeScreen() {
           <View style={styles.greetingSection}>
             <Text style={[styles.greetingTitle, { color: colors.text }]}>
               {getTimeBasedGreeting()}, {firstName}
-            </Text>
-            <Text style={[styles.greetingSubtitle, { color: colors.placeholder }]}>
-              Ready to start your day?
             </Text>
           </View>
 
@@ -149,17 +157,11 @@ export default function HomeScreen() {
            </View>
 
            {/* Start My Day Button */}
-           {!isDayStarted ? (
+           {!isDayStarted && dailyPlan?.status !== 'approved' ? (
              <Button
                variant="primary"
                onPress={handleStartDay}
-               title={
-                 planLoading
-                   ? 'Loading...'
-                   : dailyPlan?.status === 'approved'
-                   ? '▶ Start My Day'
-                   : 'Plan & Start My Day'
-               }
+               title={planLoading ? 'Loading...' : 'Plan & Start My Day'}
                style={styles.startDayButton}
                disabled={planLoading}
              />
@@ -285,9 +287,6 @@ const styles = StyleSheet.create({
   greetingTitle: {
     ...typography.h2,
     marginBottom: spacing.xs,
-  },
-  greetingSubtitle: {
-    ...typography.body,
   },
   statsContainer: {
     flexDirection: 'row',

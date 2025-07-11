@@ -7,17 +7,13 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { useAtom } from 'jotai';
+
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
-import { Card, Button } from '@/components/ui';
-import { formatDate } from '@/utils/dateUtils';
-import { useTodaysJobs, JobLocation } from '@/hooks/useJobs';
-import { mockJobDataAtom } from '@/store/atoms';
+import { useJobsForDateRange, JobLocation } from '@/hooks/useJobs';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -60,11 +56,51 @@ export const Calendar: React.FC<CalendarProps> = ({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
-  // Get jobs for the current day(s)
-  const { data: todaysJobs = [] } = useTodaysJobs();
+  // Calculate date range based on current view
+  const getDateRange = () => {
+    const today = new Date();
+    let startDate: Date;
+    let endDate: Date;
+    
+    switch (view) {
+      case 'day':
+        startDate = new Date(selectedDate);
+        endDate = new Date(selectedDate);
+        endDate.setDate(endDate.getDate() + 1);
+        break;
+      case 'week':
+        startDate = new Date(selectedDate);
+        startDate.setDate(selectedDate.getDate() - selectedDate.getDay());
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 7);
+        break;
+      case 'month':
+        startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        // Get first day of next month
+        endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
+        // Go back to last day of current month plus buffer for calendar grid
+        startDate.setDate(startDate.getDate() - startDate.getDay()); // Start from Sunday
+        endDate.setDate(endDate.getDate() + (6 - endDate.getDay()) + 1); // End on Saturday
+        break;
+      case 'agenda':
+        // Show jobs for next 30 days
+        startDate = new Date(today);
+        endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + 30);
+        break;
+      default:
+        startDate = new Date(selectedDate);
+        endDate = new Date(selectedDate);
+        endDate.setDate(endDate.getDate() + 1);
+    }
+    
+    return { startDate, endDate };
+  };
 
-  // Mock job data atom for persistence
-  const [mockJobs, setMockJobs] = useAtom(mockJobDataAtom);
+  const { startDate, endDate } = getDateRange();
+  
+  // Get jobs for the calculated date range
+  const { data: allJobs = [] } = useJobsForDateRange(startDate, endDate);
 
   // Constants for timeline layout
   const HOUR_HEIGHT = 60;
@@ -73,93 +109,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   const END_HOUR = 23; // 11 PM
   const TOTAL_HOURS = END_HOUR - START_HOUR + 1; // 24 hours
 
-  // Generate mock job data only once
-  const generateMockJobs = () => {
-    const jobs: JobLocation[] = [];
-    
-    // Generate jobs for a date range around the selected date
-    const today = new Date();
-    const baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    // Add jobs for multiple days to ensure consistent data across views
-    for (let dayOffset = -15; dayOffset <= 30; dayOffset++) {
-      const jobDate = new Date(baseDate);
-      jobDate.setDate(baseDate.getDate() + dayOffset);
-      
-      // Add 0-4 jobs per day with some variation
-      const jobsPerDay = Math.floor(Math.random() * 5);
-      
-      for (let jobIndex = 0; jobIndex < jobsPerDay; jobIndex++) {
-        const startHour = 6 + Math.floor(Math.random() * 12); // 6 AM to 6 PM
-        const startMinutes = [0, 15, 30, 45][Math.floor(Math.random() * 4)]; // 15-minute intervals
-        const duration = [30, 60, 90, 120, 180, 240, 300, 480][Math.floor(Math.random() * 8)]; // 30min-8hours
-        
-        const jobTitles = [
-          'Kitchen Faucet Repair',
-          'Bathroom Renovation', 
-          'HVAC Maintenance',
-          'Electrical Upgrade',
-          'Plumbing Inspection',
-          'Water Heater Install',
-          'Garage Door Service',
-          'Complete Remodel',
-          'Roof Repair',
-          'Deck Construction',
-          'Kitchen Renovation',
-          'Basement Finishing',
-          'Solar Installation'
-        ];
-        
-        const customers = [
-          'John Smith',
-          'Sarah Johnson',
-          'Mike Davis',
-          'Lisa Wilson',
-          'Robert Brown',
-          'Emily Garcia',
-          'David Martinez',
-          'Jennifer Lee',
-          'Michael Wilson',
-          'Jessica Anderson'
-        ];
-        
-        const priorities = ['high', 'medium', 'low'] as const;
-        const jobTypes = ['service', 'inspection', 'emergency'] as const;
-        
-        const startTime = new Date(jobDate.getFullYear(), jobDate.getMonth(), jobDate.getDate(), startHour, startMinutes);
-        const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
-        
-        jobs.push({
-          id: `mock-${dayOffset}-${jobIndex}`,
-          user_id: 'user-1',
-          title: jobTitles[Math.floor(Math.random() * jobTitles.length)],
-          description: `Detailed description for ${jobTitles[Math.floor(Math.random() * jobTitles.length)]}`,
-          address: `${123 + Math.abs(dayOffset) + jobIndex} Main St, Anytown, USA`,
-          latitude: 40.7128 + (Math.random() - 0.5) * 0.1,
-          longitude: -74.0060 + (Math.random() - 0.5) * 0.1,
-          job_type: jobTypes[Math.floor(Math.random() * jobTypes.length)],
-          status: 'pending',
-          priority: priorities[Math.floor(Math.random() * priorities.length)],
-          scheduled_start: startTime.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          estimated_duration: duration,
-          customer_name: customers[Math.floor(Math.random() * customers.length)],
-          customer_phone: `555-0${Math.floor(Math.random() * 900) + 100}`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      }
-    }
-    
-    return jobs;
-  };
 
-  // Initialize mock jobs if empty
-  useEffect(() => {
-    if (mockJobs.length === 0) {
-      setMockJobs(generateMockJobs());
-    }
-  }, [mockJobs.length, setMockJobs]);
 
   // Refs for week view synchronized scrolling
   const headerScrollRef = useRef<ScrollView>(null);
@@ -173,7 +123,7 @@ export const Calendar: React.FC<CalendarProps> = ({
   const isScrollingSynced = useRef(false);
   const lastScrollX = useRef(0);
 
-  const allJobs = [...todaysJobs, ...mockJobs];
+
 
   // Generate week days for week view
   const generateWeekDays = (date: Date): DayData[] => {
@@ -221,7 +171,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         });
       }, 100);
     }
-  }, [selectedDate, view, allJobs.length]);
+  }, [selectedDate, view, allJobs]);
 
   useEffect(() => {
     if (view === 'week') {
@@ -235,7 +185,7 @@ export const Calendar: React.FC<CalendarProps> = ({
         });
       }, 100);
     }
-  }, [selectedDate, view, allJobs.length]);
+  }, [selectedDate, view, allJobs]);
 
 
 
@@ -320,12 +270,19 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   // Calculate single event position (helper function)
   const calculateSingleEventPosition = (job: JobLocation, dayWidth: number): EventPosition => {
-    if (!job.scheduled_start || !job.scheduled_end) {
+    if (!job.scheduled_start) {
       return { job, top: 0, height: 40, left: 0, width: dayWidth - 20 };
     }
 
     const startTime = new Date(job.scheduled_start);
-    const endTime = new Date(job.scheduled_end);
+    let endTime: Date;
+    
+    // If no scheduled_end, calculate it from start time + estimated duration
+    if (job.scheduled_end) {
+      endTime = new Date(job.scheduled_end);
+    } else {
+      endTime = new Date(startTime.getTime() + (job.estimated_duration || 60) * 60 * 1000);
+    }
     
     // Calculate position relative to timeline
     const startHourFloat = startTime.getHours() + startTime.getMinutes() / 60;

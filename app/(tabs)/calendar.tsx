@@ -37,7 +37,7 @@ export default function CalendarScreen() {
   };
 
   const handleJobPress = (job: JobLocation) => {
-    navigate('/job-details');
+    navigate(`/job-details?id=${job.id}`);
   };
 
   const handleTimeSlotPress = (date: Date, hour: number) => {

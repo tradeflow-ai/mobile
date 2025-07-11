@@ -15,6 +15,7 @@ import { typography, spacing, shadows } from '@/constants/Theme';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { Button } from '@/components/ui';
 import { FontAwesome } from '@expo/vector-icons';
+import { LoadingStepUI } from '@/components/LoadingStepUI';
 
 export default function DispatcherConfirmationScreen() {
   const router = useRouter();
@@ -70,13 +71,17 @@ export default function DispatcherConfirmationScreen() {
 
   if (isLoading || !dailyPlan) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: colors.text }]}>
-            Loading dispatcher results...
-          </Text>
-        </View>
-      </SafeAreaView>
+      <LoadingStepUI
+        title="Optimizing Schedule"
+        subtitle="AI is prioritizing your jobs and optimizing your route for maximum efficiency"
+        step="dispatcher"
+        steps={[
+          { label: "Analyzing job priorities", completed: false, current: true },
+          { label: "Optimizing travel routes", completed: false, current: false },
+          { label: "Checking time constraints", completed: false, current: false },
+          { label: "Finalizing schedule", completed: false, current: false },
+        ]}
+      />
     );
   }
 
