@@ -57,7 +57,6 @@ This document provides a comprehensive overview of the technical architecture, c
 - **React Native StyleSheet:** The core API for styling components. We will use `StyleSheet.create` for optimized and co-located styles, without relying on an external styling library.
 
 ### UI & Visualization
--   **`react-native-maps` & `react-native-big-calendar`:** These libraries are critical for visualizing our agent's output.
 -   **Best Practices:**
     -   Memoize complex components like maps to prevent unnecessary re-renders.
     -   For maps, avoid rendering too many markers at once. At scale, we must implement clustering.

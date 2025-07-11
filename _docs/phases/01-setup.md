@@ -16,7 +16,7 @@ To establish the project's technical foundation. This phase focuses on creating 
 1.  ✅ **Initialize Expo App:** Create a new React Native project using `npx create-expo-app`.
 2.  ✅ **Set up Git Repository:** Initialize a Git repository and create the `main` branch.
 3.  ✅ **Establish Directory Structure:** Create the complete folder structure as defined in `_docs/project-rules.md` (`/components`, `/hooks`, `/services`, etc.).
-4.  ✅ **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, `supabase-js`, and `react-native-big-calendar`.
+4.  ✅ **Install Core Dependencies:** Add essential libraries like `expo-router`, `jotai`, `react-native-maps`, and `supabase-js`.
 5.  ✅ **Configure TypeScript:** Set up `tsconfig.json` with strict typing rules and path aliases (`@/*`).
 6.  ✅ **Create Open Source Documentation:** Create initial versions of `README.md`, `CONTRIBUTING.md`, and issue templates for bug reports and feature requests.
 

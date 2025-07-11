@@ -62,8 +62,7 @@ To elevate the MVP into a polished, delightful, and production-ready application
 
 ### Feature 7: Advanced Schedule Management Interface (Jack)
 
-1.  **Upgrade to Calendar UI:** Replace the list-based schedule view with a full, interactive calendar interface using `react-native-big-calendar`.
-2.  **Enable Advanced Views:** Implement weekly and monthly planning views to provide users with a broader look at their schedule.
+1.  **Enable Advanced Views:** Implement weekly and monthly planning views to provide users with a broader look at their schedule.
 
 ### Feature 8: Agent Self-Improvement via In-Context Learning (Jeremiah + Trevor)
 
