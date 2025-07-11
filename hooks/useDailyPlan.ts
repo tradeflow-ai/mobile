@@ -2,10 +2,9 @@
  * Daily Plan Hook - Real-time subscription to AI agent workflow
  * 
  * This hook manages the daily planning workflow state, providing real-time updates
- * as the LangGraph agents complete their tasks. It handles the three-step process:
- * 1. Dispatch Strategist - Job prioritization
- * 2. Route Optimizer - Travel route optimization  
- * 3. Inventory Specialist - Parts preparation and shopping lists
+ * as the Edge Functions complete their tasks. It handles the two-step process:
+ * 1. Dispatcher - Job prioritization and route optimization
+ * 2. Inventory - Parts preparation and hardware store jobs
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -35,7 +34,7 @@ interface UseDailyPlanReturn {
   error: string | null;
   
   // Agent status
-  currentStep: 'dispatch' | 'route' | 'inventory' | 'complete' | null;
+  currentStep: 'dispatcher' | 'confirmation' | 'inventory' | 'complete' | null;
   isProcessing: boolean;
   
   // Actions
@@ -46,9 +45,13 @@ interface UseDailyPlanReturn {
   approvePlan: () => Promise<void>;
   
   // Step-specific actions
-  confirmDispatch: (modifications?: UserModifications) => Promise<void>;
-  confirmRoute: (modifications?: UserModifications) => Promise<void>;
+  confirmDispatcherOutput: (modifications?: UserModifications) => Promise<void>;
+  proceedToInventory: () => Promise<void>;
   confirmInventory: (modifications?: UserModifications) => Promise<void>;
+  
+  // New workflow support
+  isAwaitingConfirmation: boolean;
+  hasHardwareStoreJob: boolean;
   
   // Utility
   canRetry: boolean;
@@ -77,9 +80,12 @@ export const useDailyPlan = (
   // Derived state
   const currentStep = dailyPlan?.current_step || null;
   const isProcessing = dailyPlan?.status === 'pending' || 
-                       dailyPlan?.current_step === 'dispatch' ||
-                       dailyPlan?.current_step === 'route' ||
+                       dailyPlan?.current_step === 'dispatcher' ||
                        dailyPlan?.current_step === 'inventory';
+  const isAwaitingConfirmation = dailyPlan?.status === 'dispatcher_complete' ||
+                                dailyPlan?.status === 'awaiting_confirmation';
+  const hasHardwareStoreJob = dailyPlan?.status === 'hardware_store_added' ||
+                             dailyPlan?.inventory_output?.hardware_store_job != null;
   const canRetry = dailyPlan?.status === 'error' && 
                    (dailyPlan?.error_state?.retry_suggested || false) &&
                    (dailyPlan?.retry_count || 0) < 3;
@@ -119,7 +125,7 @@ export const useDailyPlan = (
   }, [user?.id, planDate, options.autoStart, options.initialJobIds]);
 
   /**
-   * Start the daily planning workflow
+   * Start the daily planning workflow - Step 1: Dispatcher
    */
   const startPlanning = useCallback(async (jobIds: string[]) => {
     if (!user?.id) {
@@ -131,15 +137,32 @@ export const useDailyPlan = (
       setIsLoading(true);
       setError(null);
 
-      // Use AgentService to start the workflow
-      const result = await AgentService.planDay(user.id, jobIds, planDate);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to start planning');
+      // Create daily plan record
+      const preferences = {}; // TODO: Get user preferences
+      const { data: plan, error: createError } = await DailyPlanService.createDailyPlan({
+        user_id: user.id,
+        planned_date: planDate,
+        job_ids: jobIds,
+        preferences_snapshot: preferences
+      });
+
+      if (createError || !plan) {
+        throw new Error(createError?.message || 'Failed to create daily plan');
       }
 
-      // The real-time subscription will update the state as the workflow progresses
-      console.log('Daily planning started:', result.planId);
+      setDailyPlan(plan);
+
+      // Step 1: Call dispatcher edge function
+      const dispatchResult = await AgentService.dispatchJobs(user.id, jobIds, planDate);
+      
+      if (!dispatchResult.success) {
+        throw new Error(dispatchResult.error || 'Failed to dispatch jobs');
+      }
+
+      // Update plan with dispatcher output
+      await DailyPlanService.completeDispatcherStep(plan.id, dispatchResult.dispatch_output);
+
+      console.log('🎯 Dispatcher completed successfully');
     } catch (err) {
       console.error('Error starting planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to start planning');
@@ -158,14 +181,32 @@ export const useDailyPlan = (
       setIsLoading(true);
       setError(null);
 
-      // Use AgentService to retry the workflow
-      const result = await AgentService.planDay(user!.id, dailyPlan.job_ids, planDate);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to retry planning');
-      }
+      // Retry from the failed step
+      if (dailyPlan.error_state?.failed_step === 'dispatcher') {
+        // Retry dispatcher step
+        const dispatchResult = await AgentService.dispatchJobs(user!.id, dailyPlan.job_ids, planDate);
+        
+        if (!dispatchResult.success) {
+          throw new Error(dispatchResult.error || 'Failed to retry dispatcher');
+        }
 
-      console.log('Daily planning retried:', result.planId);
+        await DailyPlanService.completeDispatcherStep(dailyPlan.id, dispatchResult.dispatch_output);
+        console.log('🎯 Dispatcher retried successfully');
+      } else if (dailyPlan.error_state?.failed_step === 'inventory') {
+        // Retry inventory step
+        const inventoryResult = await AgentService.analyzeInventory(
+          user!.id, 
+          dailyPlan.job_ids, 
+          dailyPlan.dispatcher_output
+        );
+        
+        if (!inventoryResult.success) {
+          throw new Error(inventoryResult.error || 'Failed to retry inventory');
+        }
+
+        await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+        console.log('📦 Inventory retried successfully');
+      }
     } catch (err) {
       console.error('Error retrying planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to retry planning');
@@ -241,10 +282,10 @@ export const useDailyPlan = (
   }, [dailyPlan]);
 
   /**
-   * Confirm dispatch step and proceed to route
+   * Confirm dispatcher output and mark as ready for inventory
    */
-  const confirmDispatch = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'dispatch_complete') return;
+  const confirmDispatcherOutput = useCallback(async (modifications?: UserModifications) => {
+    if (!dailyPlan || dailyPlan.status !== 'dispatcher_complete') return;
 
     try {
       setError(null);
@@ -254,42 +295,57 @@ export const useDailyPlan = (
         await saveUserModifications(modifications);
       }
 
-      // Continue to route step by triggering the agent
-      // The agent will automatically proceed to the next step
-      console.log('Dispatch confirmed, proceeding to route optimization');
+      // Mark as awaiting inventory analysis
+      await DailyPlanService.markAwaitingInventoryAnalysis(dailyPlan.id);
+      console.log('✅ Dispatcher output confirmed, ready for inventory analysis');
     } catch (err) {
-      console.error('Error confirming dispatch:', err);
-      setError(err instanceof Error ? err.message : 'Failed to confirm dispatch');
+      console.error('Error confirming dispatcher output:', err);
+      setError(err instanceof Error ? err.message : 'Failed to confirm dispatcher output');
     }
   }, [dailyPlan, saveUserModifications]);
 
   /**
-   * Confirm route step and proceed to inventory
+   * Proceed to inventory analysis step
    */
-  const confirmRoute = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'route_complete') return;
+  const proceedToInventory = useCallback(async () => {
+    if (!dailyPlan || !dailyPlan.dispatcher_output) return;
 
     try {
+      setIsLoading(true);
       setError(null);
+
+      // Step 2: Call inventory edge function
+      const inventoryResult = await AgentService.analyzeInventory(
+        user!.id, 
+        dailyPlan.job_ids, 
+        dailyPlan.dispatcher_output
+      );
       
-      // Save modifications if provided
-      if (modifications) {
-        await saveUserModifications(modifications);
+      if (!inventoryResult.success) {
+        throw new Error(inventoryResult.error || 'Failed to analyze inventory');
       }
 
-      // Continue to inventory step
-      console.log('Route confirmed, proceeding to inventory check');
+      // Update plan with inventory output
+      await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+
+      console.log('📦 Inventory analysis completed successfully');
+      
+      if (inventoryResult.hardware_store_job) {
+        console.log('🛒 Hardware store job created');
+      }
     } catch (err) {
-      console.error('Error confirming route:', err);
-      setError(err instanceof Error ? err.message : 'Failed to confirm route');
+      console.error('Error proceeding to inventory:', err);
+      setError(err instanceof Error ? err.message : 'Failed to proceed to inventory');
+    } finally {
+      setIsLoading(false);
     }
-  }, [dailyPlan, saveUserModifications]);
+  }, [dailyPlan, user]);
 
   /**
    * Confirm inventory step and complete planning
    */
   const confirmInventory = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'inventory_complete') return;
+    if (!dailyPlan || (dailyPlan.status !== 'ready_for_execution' && dailyPlan.status !== 'hardware_store_added')) return;
 
     try {
       setError(null);
@@ -301,12 +357,16 @@ export const useDailyPlan = (
 
       // Complete the planning process
       await approvePlan();
-      console.log('Inventory confirmed, planning complete');
+      console.log('✅ Inventory confirmed, planning complete');
+      
+      if (hasHardwareStoreJob) {
+        console.log('🛒 Hardware store job included in final plan');
+      }
     } catch (err) {
       console.error('Error confirming inventory:', err);
       setError(err instanceof Error ? err.message : 'Failed to confirm inventory');
     }
-  }, [dailyPlan, saveUserModifications, approvePlan]);
+  }, [dailyPlan, saveUserModifications, approvePlan, hasHardwareStoreJob]);
 
   /**
    * Set up real-time subscription to daily plan changes
@@ -382,9 +442,13 @@ export const useDailyPlan = (
     approvePlan,
     
     // Step-specific actions
-    confirmDispatch,
-    confirmRoute,
+    confirmDispatcherOutput,
+    proceedToInventory,
     confirmInventory,
+    
+    // New workflow support
+    isAwaitingConfirmation,
+    hasHardwareStoreJob,
     
     // Utility
     canRetry,

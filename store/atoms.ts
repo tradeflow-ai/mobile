@@ -132,4 +132,22 @@ export const profileStateAtom = atom<ProfileState>((get) => {
 // Mock job data atom for calendar persistence
 export const mockJobDataAtom = atom<JobLocation[]>([]);
 
+// Daily Plan Workflow atoms for global state
+export interface DailyPlanWorkflowState {
+  isPlanning: boolean;
+  currentStep: 'dispatcher' | 'confirmation' | 'inventory' | 'complete' | null;
+  hasHardwareStoreJob: boolean;
+  planId: string | null;
+}
+
+export const dailyPlanWorkflowAtom = atom<DailyPlanWorkflowState>({
+  isPlanning: false,
+  currentStep: null,
+  hasHardwareStoreJob: false,
+  planId: null,
+});
+
+// Hardware store job state for cross-component access
+export const hardwareStoreJobAtom = atom<any | null>(null);
+
 
