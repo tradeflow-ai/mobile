@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@langchain/openai": "https://esm.sh/@langchain/openai@0.5.18", 
+    "@langchain/core": "https://esm.sh/@langchain/core@0.3.62",
+    "zod": "https://esm.sh/zod@3.25.76"
+  }
+} 
