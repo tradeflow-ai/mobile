@@ -64,14 +64,12 @@ To elevate the MVP into a polished, delightful, and production-ready application
 
 1.  **Enable Advanced Views:** Implement weekly and monthly planning views to provide users with a broader look at their schedule.
 
-### Feature 8: Agent Self-Improvement via In-Context Learning (Jeremiah + Trevor)
+### Feature 8: Agent Self-Improvement via In-Context Learning (Jeremiah)
 
-**Trevor - Feedback Logging:**
-1.  **Log User Feedback:** Systematically capture every user approval (positive example) and modification (corrective example) of the AI-generated plans.
-
-**Jeremiah - Agent Learning Logic:**
-2.  **Create Example Injection Service:** Build a service that retrieves the most relevant positive and corrective examples from the feedback log.
-3.  **Enhance Agent Prompts:** Update the core agent prompts to include a section for these dynamic, in-context examples, allowing the LLM to infer user preferences rather than being given hardcoded rules.
+**Agent Learning Logic:**
+1.  **Create Example Injection Service:** Build a service that analyzes user modifications to AI-generated plans and creates examples for prompt enhancement.
+2.  **Enhance Agent Prompts:** Update the core agent prompts to include dynamic, preference-based examples that allow the LLM to infer user preferences rather than being given hardcoded rules.
+3.  **Pattern Recognition:** Implement logic to detect user preference patterns from plan modifications and integrate them into agent decision-making.
 
 ---
 
@@ -83,4 +81,4 @@ With a functional MVP in place, this phase is about refinement and adding layers
 | **F1: UI/UX Refinement & Polish** | Frontend & UI/UX | **Josh** | This is a pure frontend task focused on making the application *feel* great. Josh will conduct an app-wide pass to implement all micro-interactions, skeleton loaders, and haptic feedback, touching many components but in a superficial way that avoids deep logic conflicts. |
 | **F2, F4, F6, F7: Frontend App & Architecture** <br/> • Settings/Autonomy Sliders <br/> • Performance & Optimization <br/> • Offline-First Sync (Client-side) <br/> • Calendar Schedule View | Frontend & UI/UX | **Jack** | This package covers all major client-side architecture and feature upgrades. Jack owns the app's performance, offline capabilities, and the most complex new UIs, solidifying his role as the Frontend Application Lead. |
 | **F3, F5, F8: Advanced AI Services** <br/> • 3rd-Party API Integration <br/> • AI-Powered Job Creation <br/> • Agent Self-Improvement (Logic) | AI & Backend | **Jeremiah** | This package focuses on enhancing the app's intelligence. Jeremiah will own the creation of new AI-powered services and the implementation of the adaptive learning logic for the core agents. |
-| **F6 & F8: Backend Architecture & Data Integrity** <br/> • Offline-First Sync (Backend & Conflicts) <br/> • Agent Self-Improvement (Feedback Logging) | Platform & Backend | **Trevor** | This package contains deep, architectural work critical for a production app. Trevor owns the backend data synchronization logic and the foundational data capture required for agent learning, supporting the other leads. | 
+| **F6: Backend Architecture & Data Integrity** <br/> • Offline-First Sync (Backend & Conflicts) | Platform & Backend | **Trevor** | This package contains deep, architectural work critical for a production app. Trevor owns the backend data synchronization logic and conflict resolution strategies. | 

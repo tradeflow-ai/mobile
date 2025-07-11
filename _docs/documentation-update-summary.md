@@ -16,7 +16,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 4. `routes` - Route planning
 5. `inventory_movements` - Inventory audit trail
 
-### Actually Implemented Tables (17 tables)
+### Actually Implemented Tables (10 tables)
 **Current Supabase Database:**
 
 #### Core Business (5 tables) ✅
@@ -29,20 +29,11 @@ This document summarizes the major updates made to the TradeFlow database docume
 #### AI & Planning System (1 table) 🆕
 6. `daily_plans` - AI-powered daily planning workflow
 
-#### Comprehensive Feedback & Analytics (7 tables) 🆕
-7. `user_feedback_events` - Core feedback events
-8. `agent_decision_contexts` - AI decision context
-9. `feedback_patterns` - Automated pattern detection
-10. `feedback_learning_examples` - AI training data
-11. `feedback_session_analytics` - Session analytics
-12. `feedback_event_correlations` - Event relationships
-13. `feedback_retention_policies` - Data lifecycle management
-
 #### Map Integration System (4 tables) 🆕
-14. `supported_map_apps` - Map application registry
-15. `map_app_deep_links` - Deep link configuration
-16. `user_map_preferences` - User map preferences
-17. `map_integration_analytics` - Map usage analytics
+7. `supported_map_apps` - Map application registry
+8. `map_app_deep_links` - Deep link configuration
+9. `user_map_preferences` - User map preferences
+10. `map_integration_analytics` - Map usage analytics
 
 ## 📊 Documentation Gaps Addressed
 
@@ -54,17 +45,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 - **Agents:** Dispatch Strategist, Route Optimizer, Inventory Specialist
 - **Status:** Fully implemented but completely undocumented
 
-#### 2. **Comprehensive Feedback & Analytics System** 📈
-- **Tables:** 7 tables for complete feedback tracking
-- **Purpose:** AI learning, user analytics, pattern detection
-- **Capabilities:** 
-  - Real-time feedback collection
-  - AI decision context preservation
-  - Automated pattern detection
-  - GDPR-compliant data retention
-- **Status:** Production-ready system, not documented
-
-#### 3. **Map Integration System** 🗺️
+#### 2. **Map Integration System** 🗺️
 - **Tables:** 4 tables for multi-platform map support
 - **Purpose:** Smart map app integration with deep linking
 - **Features:**
@@ -77,7 +58,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 
 ### 1. Created Comprehensive Schema Documentation
 **File:** `_docs/complete-database-schema.md`
-- Complete overview of all 17 tables
+- Complete overview of all 10 tables
 - Detailed field descriptions and relationships
 - Business logic and integration points
 - Security and compliance information
@@ -86,7 +67,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 ### 2. Updated Legacy Documentation
 **File:** `_docs/schema-analysis-report.md`
 - Added deprecation notice pointing to new documentation
-- Updated completion status (60% → 85%)
+- Updated completion status (60% → 80%)
 - Marked resolved issues as completed
 - Maintained Bill of Materials gap analysis
 
@@ -101,7 +82,6 @@ This document summarizes the major updates made to the TradeFlow database docume
 ### ✅ Fully Implemented & Documented
 - **Core Business Operations** (100%)
 - **AI Agent Integration** (100%) 
-- **Feedback & Analytics System** (100%)
 - **Map Integration** (100%)
 - **User Authentication & Profiles** (100%)
 
@@ -114,14 +94,13 @@ This document summarizes the major updates made to the TradeFlow database docume
 
 ## 📈 Migration History
 
-### Completed Migrations (7 total)
+### Completed Migrations (6 total)
 1. `001-initial-schema.sql` - Core business tables
 2. `002-profile-signup-fix.sql` - Profile enhancements
 3. `003-daily-plans-table.sql` - AI planning system 🆕
 4. `004-onboarding-configuration.sql` - Onboarding system 🆕
 5. `005-onboarding-analytics-functions.sql` - Onboarding analytics 🆕
-6. `006-feedback-logging.sql` - Comprehensive feedback system 🆕
-7. `007-map-preferences.sql` - Map integration system 🆕
+6. `007-map-preferences.sql` - Map integration system 🆕
 
 ### Planned Migrations
 - `008-job-types.sql` - Job type definitions (Bill of Materials)
@@ -143,13 +122,12 @@ This document summarizes the major updates made to the TradeFlow database docume
 ## 💡 Key Insights
 
 ### Documentation Debt Impact
-- **340% more tables** than documented (17 vs 5)
+- **200% more tables** than documented (10 vs 5)
 - **Major systems** completely undocumented
 - **Production features** invisible to development team
 
 ### System Maturity
-- **85% schema completeness** (vs 60% previously thought)
-- **Enterprise-grade** feedback and analytics
+- **80% schema completeness** (vs 60% previously thought)
 - **Production-ready** AI integration
 - **Comprehensive** map platform support
 

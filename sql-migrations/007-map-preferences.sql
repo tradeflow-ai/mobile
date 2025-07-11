@@ -4,7 +4,7 @@
 -- Description: User preferences for external map app integration and analytics
 -- Author: Backend Architecture Team
 -- Date: 2024-12-20
--- Dependencies: 006-feedback-logging.sql
+-- Dependencies: 005-onboarding-analytics-functions.sql
 
 -- =============================================
 -- SUPPORTED MAP APPS REFERENCE TABLE
