@@ -248,6 +248,39 @@ export const useCreateJob = () => {
         throw new Error('No authenticated user');
       }
 
+      // Check if we're offline or should batch this operation
+      const { offlineStatusService } = await import('@/services/offlineStatusService');
+      const { batchOperationsService } = await import('@/services/batchOperationsService');
+      
+      if (!offlineStatusService.isOnline()) {
+        // Queue operation for batch processing when back online
+        const batchOperationId = batchOperationsService.queueOperation(
+          'create',
+          'job',
+          {
+            ...jobData,
+            user_id: user.id,
+            status: 'pending',
+          },
+          undefined,
+          'critical' // Job operations are critical
+        );
+        
+        console.log(`Job creation queued for batch processing: ${batchOperationId}`);
+        
+        // Create a temporary response for optimistic updates
+        const tempJob: JobLocation = {
+          id: `temp_${Date.now()}`,
+          ...jobData,
+          user_id: user.id,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        return tempJob;
+      }
+
       try {
         const { data, error } = await supabase
           .from('job_locations')
@@ -265,15 +298,28 @@ export const useCreateJob = () => {
 
         // Mark optimistic operation as successful
         if (operationId) {
-          const { offlineStatusService } = await import('@/services/offlineStatusService');
           offlineStatusService.handleSyncSuccess(operationId);
         }
 
         return data;
       } catch (error) {
+        // If online but operation failed, queue for batch retry
+        const batchOperationId = batchOperationsService.queueOperation(
+          'create',
+          'job',
+          {
+            ...jobData,
+            user_id: user.id,
+            status: 'pending',
+          },
+          undefined,
+          'critical'
+        );
+        
+        console.log(`Job creation failed, queued for batch retry: ${batchOperationId}`);
+        
         // Mark optimistic operation as failed
         if (operationId) {
-          const { offlineStatusService } = await import('@/services/offlineStatusService');
           offlineStatusService.handleSyncFailure(error, operationId);
         }
         throw error;

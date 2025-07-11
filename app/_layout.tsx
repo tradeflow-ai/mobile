@@ -16,6 +16,7 @@ import { DeepLinkHandler } from '@/components/DeepLinkHandler';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 import { offlineStatusService } from '@/services/offlineStatusService';
+import { batchOperationsService } from '@/services/batchOperationsService';
 
 import { queryClient } from '@/services/queryClient';
 
@@ -51,6 +52,8 @@ export default function RootLayout() {
       // Initialize ProfileManager to start syncing profile data with auth state
       ProfileManager.getInstance();
       // Initialize OfflineStatusService to start monitoring network status
+      // Service is already initialized on import
+      // Initialize BatchOperationsService to start processing queued operations
       // Service is already initialized on import
     }
   }, [loaded]);
