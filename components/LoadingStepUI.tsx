@@ -110,8 +110,8 @@ export const LoadingStepUI: React.FC<LoadingStepUIProps> = ({
           />
           
           <Text style={[styles.explanationText, { color: colors.text }]}>
-            Our AI agents are analyzing your jobs, optimizing routes, and checking inventory 
-            to create the perfect daily plan for you.
+            Our AI agents are analyzing your jobs with intelligent scheduling optimization 
+            and checking inventory to create the perfect daily plan for you.
           </Text>
         </View>
       </Card>

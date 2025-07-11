@@ -20,7 +20,7 @@ export interface JobLocation {
   address: string;
   latitude: number;
   longitude: number;
-  job_type: 'service' | 'inspection' | 'emergency';
+  job_type: 'delivery' | 'pickup' | 'service' | 'inspection' | 'maintenance' | 'emergency' | 'hardware_store';
   business_category?: 'Demand' | 'Maintenance';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';

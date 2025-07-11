@@ -2,12 +2,11 @@
  * TradeFlow Mobile App - Plan Your Day Workflow Orchestrator
  * 
  * This is the main entry point for the AI-powered daily planning workflow.
- * It manages the three-step process and routes users through each stage:
- * 1. Schedule Review (Dispatch Strategist)
- * 2. Map View (Route Optimizer)
- * 3. Inventory Checklist (Inventory Specialist)
+ * It manages the new 2-step process and routes users through each stage:
+ * 1. Dispatcher - Job prioritization and route optimization
+ * 2. Inventory - Parts analysis and hardware store job creation
  * 
- * Features real-time agent status updates and seamless progression.
+ * Features real-time agent status updates and user confirmation between steps.
  */
 
 import React, { useEffect } from 'react';
@@ -42,36 +41,34 @@ export default function PlanYourDayIndex() {
     retryPlanning,
     canRetry,
     isConnected,
+    isAwaitingConfirmation,
+    hasHardwareStoreJob,
+    resetPlan, // 🔄 Add resetPlan functionality
   } = useTodaysPlan();
 
   /**
-   * Handle automatic navigation based on daily plan status
+   * Handle automatic navigation based on daily plan status - New 2-step workflow
    */
   useEffect(() => {
     if (!dailyPlan || isProcessing) return;
 
     // Navigate to appropriate step based on current status
     switch (dailyPlan.status) {
-      case 'dispatch_complete':
-        if (currentStep === 'route') {
-          router.push('./calendar-review');
-        }
+      case 'dispatcher_complete':
+      case 'awaiting_confirmation':
+        // Show dispatcher results for user confirmation
+        router.push('/plan-your-day/dispatcher-confirmation');
         break;
-      case 'route_complete':
-        if (currentStep === 'inventory') {
-          router.push('./map-view');
-        }
-        break;
-      case 'inventory_complete':
-        if (currentStep === 'complete') {
-          router.push('./inventory-checklist');
-        }
+      case 'ready_for_execution':
+      case 'hardware_store_added':
+        // Show inventory results and final plan
+        router.push('/plan-your-day/inventory-results');
         break;
       case 'approved':
         // Planning complete - show success and navigate to execution
         Alert.alert(
           'Planning Complete!',
-          'Your daily plan is ready. Time to start your day!',
+          `Your daily plan is ready${hasHardwareStoreJob ? ' with hardware store stop' : ''}. Time to start your day!`,
           [
             { text: 'Back to Home', onPress: () => router.push('/(tabs)') },
             { text: 'Start Working', onPress: () => router.push('/(tabs)') },
@@ -79,7 +76,7 @@ export default function PlanYourDayIndex() {
         );
         break;
     }
-  }, [dailyPlan?.status, currentStep, isProcessing, router]);
+  }, [dailyPlan?.status, currentStep, isProcessing, router, hasHardwareStoreJob]);
 
   /**
    * Handle starting the planning workflow
@@ -140,8 +137,13 @@ export default function PlanYourDayIndex() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <ErrorStepUI 
           error={error}
-          onRetry={canRetry ? handleRetry : undefined}
-          retryText={canRetry ? 'Retry Planning' : undefined}
+          onRetry={() => {
+            resetPlan(); // Clear state first
+            // The component will re-render and show the start planning UI
+          }}
+          retryText="Start Over"
+          onSecondaryAction={() => router.back()}
+          secondaryActionText="Go Back"
         />
       </SafeAreaView>
     );
@@ -162,8 +164,7 @@ export default function PlanYourDayIndex() {
   // Agent is processing - show loading with current step
   if (isProcessing) {
     const stepMessages = {
-      dispatch: 'Analyzing and prioritizing your jobs...',
-      route: 'Optimizing your travel route...',
+      dispatcher: 'Analyzing, prioritizing, and optimizing your schedule...',
       inventory: 'Checking parts and creating shopping list...',
     };
 

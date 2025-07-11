@@ -1,8 +1,8 @@
 /**
- * Preferences Service - User Preference Integration for AI Agents
+ * Preferences Service - User Preference Integration for Edge Functions
  * 
  * This service extracts user preferences from the profile and formats them
- * for injection into LangGraph agent prompts.
+ * for injection into edge function prompts.
  */
 
 import { supabase } from './supabase';
@@ -223,7 +223,7 @@ export class PreferencesService {
   }
 
   /**
-   * Format preferences for dispatcher agent prompt
+   * Format preferences for dispatcher function prompt
    */
   static formatDispatcherPreferences(preferences: UserPreferences): Record<string, any> {
     return {
@@ -245,7 +245,7 @@ export class PreferencesService {
   }
 
   /**
-   * Format preferences for router agent prompt
+   * Format preferences for router function prompt
    */
   static formatRouterPreferences(preferences: UserPreferences): Record<string, any> {
     return {
@@ -277,7 +277,7 @@ export class PreferencesService {
   }
 
   /**
-   * Format preferences for inventory agent prompt
+   * Format preferences for inventory function prompt
    */
   static formatInventoryPreferences(preferences: UserPreferences): Record<string, any> {
     return {
@@ -316,7 +316,7 @@ export class PreferencesService {
   }
 
   /**
-   * Format preferences for all agents
+   * Format preferences for all functions
    */
   static formatAllAgentPreferences(preferences: UserPreferences): {
     dispatcher: Record<string, any>;
@@ -331,7 +331,7 @@ export class PreferencesService {
   }
 
   /**
-   * Inject preferences into agent prompts
+   * Inject preferences into function prompts
    */
   static injectPreferencesIntoPrompt(prompt: string, preferences: Record<string, any>): string {
     let injectedPrompt = prompt;
@@ -346,7 +346,7 @@ export class PreferencesService {
   }
 
   /**
-   * Get formatted prompt for dispatcher agent
+   * Get formatted prompt for dispatcher function
    */
   static async getDispatcherPrompt(userId: string, basePrompt: string): Promise<{ data: string | null; error: any }> {
     try {
@@ -364,7 +364,7 @@ export class PreferencesService {
   }
 
   /**
-   * Get formatted prompt for router agent
+   * Get formatted prompt for router function
    */
   static async getRouterPrompt(userId: string, basePrompt: string): Promise<{ data: string | null; error: any }> {
     try {
@@ -382,7 +382,7 @@ export class PreferencesService {
   }
 
   /**
-   * Get formatted prompt for inventory agent
+   * Get formatted prompt for inventory function
    */
   static async getInventoryPrompt(userId: string, basePrompt: string): Promise<{ data: string | null; error: any }> {
     try {

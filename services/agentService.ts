@@ -1,39 +1,50 @@
 /**
- * Agent Service - Supabase Edge Functions Client
+ * Agent Service - New 2-Function Edge Architecture
  * 
- * This service handles communication with the LangGraph workflow running
- * in Supabase Edge Functions. The agents execute server-side to avoid
- * React Native compatibility issues with LangGraph.
+ * This service handles communication with separate dispatcher and inventory
+ * edge functions. Replaces the old unified plan-day function.
  */
 
 import { supabase } from './supabase';
 
-export interface PlanDayRequest {
+// Dispatcher types
+export interface DispatchJobsRequest {
   userId: string;
   jobIds: string[];
   planDate: string;
 }
 
-export interface PlanDayResponse {
+export interface DispatchJobsResponse {
   success: boolean;
-  planId?: string;
-  status?: string;
-  currentStep?: string;
+  dispatch_output?: any;
+  error?: string;
+}
+
+// Inventory types
+export interface AnalyzeInventoryRequest {
+  userId: string;
+  jobIds: string[];
+  dispatchOutput: any;
+}
+
+export interface AnalyzeInventoryResponse {
+  success: boolean;
+  inventory_output?: any;
+  hardware_store_job?: any;
   error?: string;
 }
 
 export class AgentService {
   /**
-   * Trigger the daily planning workflow
-   * This will start the LangGraph agent crew in Supabase Edge Functions
+   * Step 1: Dispatch jobs using the dispatcher edge function
+   * Prioritizes and routes jobs (Emergency → Inspection → Service)
    */
-  static async planDay(userId: string, jobIds: string[], planDate: string): Promise<PlanDayResponse> {
+  static async dispatchJobs(userId: string, jobIds: string[], planDate: string): Promise<DispatchJobsResponse> {
     try {
-      console.log('🚀 Calling Supabase Edge Function to plan day...');
+      console.log('🎯 Calling Dispatcher Edge Function...');
       console.log('📊 Request data:', { userId, jobIds, planDate });
       
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('plan-day', {
+      const { data, error } = await supabase.functions.invoke('dispatcher', {
         body: {
           userId,
           jobIds,
@@ -42,24 +53,52 @@ export class AgentService {
       });
       
       if (error) {
-        console.error('❌ Edge Function error:', error);
-        throw new Error(error.message || 'Edge Function execution failed');
+        console.error('❌ Dispatcher Edge Function error:', error);
+        throw new Error(error.message || 'Dispatcher execution failed');
       }
       
-      console.log('✅ Edge Function response:', data);
+      console.log('✅ Dispatcher response:', data);
       return data;
     } catch (error) {
-      console.error('❌ Agent service error:', error);
-      console.error('Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error('❌ Dispatcher service error:', error);
       
-      // Return error response in consistent format
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown dispatcher error'
+      };
+    }
+  }
+
+  /**
+   * Step 2: Analyze inventory using the inventory edge function
+   * Creates shopping list and hardware store job if needed
+   */
+  static async analyzeInventory(userId: string, jobIds: string[], dispatchOutput: any): Promise<AnalyzeInventoryResponse> {
+    try {
+      console.log('📦 Calling Inventory Edge Function...');
+      console.log('📊 Request data:', { userId, jobIds: jobIds.length, dispatchJobs: dispatchOutput.prioritized_jobs?.length });
+      
+      const { data, error } = await supabase.functions.invoke('inventory', {
+        body: {
+          userId,
+          jobIds,
+          dispatchOutput
+        }
+      });
+      
+      if (error) {
+        console.error('❌ Inventory Edge Function error:', error);
+        throw new Error(error.message || 'Inventory analysis failed');
+      }
+      
+      console.log('✅ Inventory response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Inventory service error:', error);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown inventory error'
       };
     }
   }

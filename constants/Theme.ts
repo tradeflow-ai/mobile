@@ -97,6 +97,18 @@ export const typography = {
     lineHeight: scale.font(24),
   } as TextStyle,
   
+  body1: {
+    fontSize: scale.font(16),
+    fontWeight: 'normal' as const,
+    lineHeight: scale.font(24),
+  } as TextStyle,
+  
+  body2: {
+    fontSize: scale.font(14),
+    fontWeight: 'normal' as const,
+    lineHeight: scale.font(20),
+  } as TextStyle,
+  
   bodyBold: {
     fontSize: scale.font(16),
     fontWeight: 'bold' as const,
@@ -122,6 +134,8 @@ export const typography = {
     h3: scale.font(20),
     h4: scale.font(16),
     body: scale.font(16),
+    body1: scale.font(16),
+    body2: scale.font(14),
     caption: scale.font(14),
     button: scale.font(16),
   },
@@ -166,11 +180,23 @@ export const spacing = {
     paddingVertical: (size: SpacingKey) => ({
       paddingVertical: spacingValues[size],
     }),
+    paddingTop: (size: SpacingKey) => ({
+      paddingTop: spacingValues[size],
+    }),
+    paddingBottom: (size: SpacingKey) => ({
+      paddingBottom: spacingValues[size],
+    }),
     marginHorizontal: (size: SpacingKey) => ({
       marginHorizontal: spacingValues[size],
     }),
     marginVertical: (size: SpacingKey) => ({
       marginVertical: spacingValues[size],
+    }),
+    marginTop: (size: SpacingKey) => ({
+      marginTop: spacingValues[size],
+    }),
+    marginBottom: (size: SpacingKey) => ({
+      marginBottom: spacingValues[size],
     }),
     padding: (size: SpacingKey) => ({
       padding: spacingValues[size],

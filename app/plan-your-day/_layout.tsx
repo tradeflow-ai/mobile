@@ -1,12 +1,11 @@
 /**
  * TradeFlow Mobile App - Plan Your Day Layout
  * 
- * This layout manages the three-step AI-powered daily planning workflow:
- * 1. Calendar Review (Dispatch Strategist output)
- * 2. Map View (Route Optimizer output) 
- * 3. Inventory Checklist (Inventory Specialist output)
+ * This layout manages the new 2-step AI-powered daily planning workflow:
+ * 1. Dispatcher Confirmation (Job prioritization and route optimization)
+ * 2. Inventory Results (Parts analysis and hardware store job creation)
  * 
- * Features real-time agent status tracking and step-by-step progression.
+ * Features real-time agent status tracking and user confirmation between steps.
  */
 
 import React from 'react';
@@ -71,9 +70,10 @@ export default function PlanYourDayLayout() {
         />
         
         <Stack.Screen 
-          name="calendar-review"
+          name="dispatcher-confirmation"
           options={({ navigation }) => ({
-            title: 'Review Calendar',
+            presentation: 'modal',
+            title: 'Confirm Schedule',
             headerBackTitle: '',
             headerLeft: () => (
               <TouchableOpacity 
@@ -95,33 +95,10 @@ export default function PlanYourDayLayout() {
         />
         
         <Stack.Screen 
-          name="map-view"
+          name="inventory-results"
           options={({ navigation }) => ({
-            title: 'Review Route',
-            headerBackTitle: '',
-            headerLeft: () => (
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                style={{
-                  ...touchTargets.styles.minimum,
-                  ...spacing.helpers.paddingHorizontal('s'),
-                  justifyContent: 'center',
-                }}
-              >
-                <FontAwesome 
-                  name="arrow-left" 
-                  size={20} 
-                  color={colors.primary} 
-                />
-              </TouchableOpacity>
-            ),
-          })}
-        />
-        
-        <Stack.Screen 
-          name="inventory-checklist"
-          options={({ navigation }) => ({
-            title: 'Check Inventory',
+            presentation: 'modal',
+            title: 'Final Plan',
             headerBackTitle: '',
             headerLeft: () => (
               <TouchableOpacity 

@@ -5,7 +5,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 ##  deliverables
 - A functional user authentication and onboarding flow.
-- A live, three-step "Plan Your Day" feature powered by a LangGraph agent crew.
+- A live, two-step "Plan Your Day" feature powered by specialized edge functions.
 - AI-powered spatial reasoning for route optimization using coordinate analysis.
 - A map view that visualizes the AI-generated route.
 
@@ -34,29 +34,27 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 ### Feature 3: AI Agent Crew & Spatial Reasoning (Jeremiah)
 
-**Objective:** Build the complete AI-powered daily planning workflow using LangGraph agents with spatial reasoning for route optimization.
+**Objective:** Build the complete AI-powered daily planning workflow using specialized edge functions with spatial reasoning for route optimization.
 
-1.  **Implement LangGraph State Machine:** Build the core workflow orchestration using LangGraph with three specialized agents:
-    *   **Dispatch Strategist:** Job prioritization and scheduling
-    *   **Route Optimizer:** AI-powered spatial reasoning for route optimization
-    *   **Inventory Specialist:** Parts analysis and shopping list generation
+1.  **Implement 2-Step Edge Function Architecture:** Build the core workflow orchestration using two specialized edge functions:
+    *   **Dispatcher Function:** Job prioritization and scheduling with spatial reasoning
+    *   **Inventory Function:** Parts analysis and shopping list generation with hardware store job creation
 
-2.  **Build AI Agent Prompt System:** Create comprehensive prompt templates for each agent:
-    *   Dispatch reasoning prompts with business logic
-    *   Spatial reasoning prompts for route optimization using coordinate analysis
-    *   Inventory analysis prompts with parts knowledge
+2.  **Build AI Agent Prompt System:** Create comprehensive prompt templates for each function:
+    *   Dispatcher reasoning prompts with business logic and spatial optimization
+    *   Inventory analysis prompts with parts knowledge and supplier integration
 
-3.  **Implement Coordinate-Based Route Optimization:** Replace external routing engines with AI spatial reasoning:
+3.  **Implement Coordinate-Based Route Optimization:** Use AI spatial reasoning for route optimization:
     *   Simple coordinate formatting tools for agent input
     *   GPT-4o spatial reasoning for optimal route determination
     *   Zero external dependencies - pure AI-powered optimization
 
-4.  **Build Agent-Database Integration:** Connect agents to Supabase for state persistence:
-    *   Real-time workflow state tracking
+4.  **Build Agent-Database Integration:** Connect functions to Supabase for state persistence:
+    *   Real-time workflow state tracking through daily_plans table
     *   Agent output storage and retrieval
-    *   Human-in-the-loop verification support
+    *   Human-in-the-loop verification support between steps
 
-5.  **Deploy Agents as Supabase Edge Functions:** Deploy the LangGraph workflow to Supabase Edge Functions for serverless execution.
+5.  **Deploy Functions as Supabase Edge Functions:** Deploy the 2-step workflow to Supabase Edge Functions for serverless execution.
 
 ### Feature 4: Agent Prompt Optimization (Continued)
 
@@ -73,11 +71,11 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 ### Feature 5: The "Plan Your Day" UI (Josh)
 
 1.  **Build Schedule Review UI:** Create the screen where the user is presented with the AI-generated job list. Implement drag-and-drop functionality using a **list-based component (e.g., `react-native-draggable-flatlist`)** for the user to reorder the list.
-2.  **Handle User Approval:** When the user hits "Confirm Schedule," send the (potentially reordered) list back to the LangGraph agent to proceed to the next step.
-3.  **Build Map View UI:** Create the screen to display the optimized route from the `Route Optimizer`. Use `react-native-maps` to draw the polyline and place markers for each job.
-4.  **Build Inventory Checklist UI:** Create the final screen in the flow, which displays the parts manifest from the `Inventory & Prep Specialist` as a simple checklist.
-5.  **Connect the Full Flow:** Tie all the UI steps together, driven by the state of the LangGraph agent via the Supabase real-time subscription.
-6.  **Implement Error Handling UI:** Design and build a generic error state component for the AI planning flow. The UI must catch errors from the agent execution and display this state, providing a clear message and a "Retry" option for the user.
+2.  **Handle User Approval:** When the user hits "Confirm Schedule," trigger the inventory analysis step to proceed to the next phase.
+3.  **Build Map View UI:** Create the screen to display the optimized route from the `Dispatcher Function`. Use `react-native-maps` to draw the polyline and place markers for each job.
+4.  **Build Inventory Checklist UI:** Create the final screen in the flow, which displays the parts manifest from the `Inventory Function` as a simple checklist.
+5.  **Connect the Full Flow:** Tie all the UI steps together, driven by the state of the edge functions via the Supabase real-time subscription.
+6.  **Implement Error Handling UI:** Design and build a generic error state component for the AI planning flow. The UI must catch errors from the function execution and display this state, providing a clear message and a "Retry" option for the user.
 
 ### Feature 6: Full Data Management (Jack)
 
@@ -90,7 +88,7 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 1.  **Develop Change Detection Trigger:** Implement a listener that detects when a job in an active daily plan is created, updated (e.g., rescheduled), or cancelled.
 2.  **Build Re-planning UI Flow:** Create the UI prompts to ask the user if they want to re-plan their day when a change is detected.
-3.  **Implement Re-planning Logic:** Connect the trigger to the LangGraph agent, allowing it to re-run the dispatch and routing sequence with the updated job list while preserving the state of completed jobs.
+3.  **Implement Re-planning Logic:** Connect the trigger to the edge functions, allowing them to re-run the dispatch and inventory sequence with the updated job list while preserving the state of completed jobs.
 4.  **Integrate with Map View:** Ensure the map view dynamically updates to reflect the new, re-optimized route.
 
 
@@ -103,7 +101,6 @@ This is the most complex phase where the swimlanes become critical. The work is 
 
 | Package & Features | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
-| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Agent Prompt Optimization | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the LangGraph agents to implementing AI-powered spatial reasoning and architecting the real-time communication layer. |
-| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Coordinate Service Integration | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the coordinate service client and all TanStack Query hooks needed for the frontend to manage jobs. |
-| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. |
-| **Data Management & Dynamic UI** <br/> • F6: CRUD UIs <br/> • F7: Dynamic Replanning | Frontend & UI/UX | **Jack** | This package focuses on all the "management" and "reactive" parts of the UI. Jack will own the screens for manually managing jobs and inventory, as well as the UI triggers and modals required for the dynamic re-planning flow, ensuring a robust data management experience. | 
+| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Agent Prompt Optimization | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the edge function agents to implementing AI-powered spatial reasoning and architecting the real-time communication layer. |
+| **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Coordinate Service Integration <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the coordinate service client and all TanStack Query hooks needed for the frontend to manage jobs, clients, and bills of materials. |
+| **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. | 

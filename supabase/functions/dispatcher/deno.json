@@ -1,6 +1,5 @@
 {
   "imports": {
-    "@langchain/langgraph": "https://esm.sh/@langchain/langgraph@0.3.7",
     "@langchain/openai": "https://esm.sh/@langchain/openai@0.5.18",
     "@langchain/core": "https://esm.sh/@langchain/core@0.3.62"
   },
