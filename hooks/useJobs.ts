@@ -55,6 +55,11 @@ export interface CreateJobData {
   estimated_duration?: number;
   required_items?: string[];
   notes?: string;
+  use_ai_scheduling?: boolean;
+  // Customer fields
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
 }
 
 export interface UpdateJobData {
