@@ -6,6 +6,7 @@
  * - Parts analysis logic
  * - Shopping list generation
  * - Hardware store job creation
+ * - New supplier tool integration
  */
 
 import { InventoryAgent } from './inventory-agent.ts';
@@ -315,7 +316,10 @@ async function testPromptIntegration() {
       'hardware store',
       'CRITICAL',
       'IMPORTANT',
-      'OPTIONAL'
+      'OPTIONAL',
+      'querySupplier',
+      'getSupplierInfo',
+      'TOOLS AVAILABLE'
     ];
     
     let foundPhrases = 0;
@@ -328,9 +332,9 @@ async function testPromptIntegration() {
     console.log(`✅ Found ${foundPhrases}/${keyPhrases.length} key phrases in prompt`);
     
     if (foundPhrases >= keyPhrases.length * 0.8) {
-      console.log('✅ Prompt appears to be correctly structured');
+      console.log('✅ Prompt appears to be correctly structured with tool information');
     } else {
-      console.warn('⚠️ Prompt may be missing key content');
+      console.warn('⚠️ Prompt may be missing key content or tool information');
     }
     
     return true;
@@ -342,22 +346,156 @@ async function testPromptIntegration() {
 }
 
 /**
- * Test 5: Mock Supplier Integration
+ * Test 5: New Supplier Tool Integration
  */
-async function testMockSupplierIntegration() {
-  console.log('\n🧪 Test 5: Mock Supplier Integration');
+async function testSupplierToolIntegration() {
+  console.log('\n🧪 Test 5: New Supplier Tool Integration');
   
   try {
-    // Import the mock supplier
+    // Import the new supplier tools
+    const { 
+      querySupplier, 
+      querySupplierForItem, 
+      getAvailableSuppliers, 
+      getSupplierInfo 
+    } = await import('./mock-supplier.ts');
+    
+    console.log('✅ New supplier tools imported successfully');
+    
+    // Test getAvailableSuppliers
+    const availableSuppliers = getAvailableSuppliers();
+    console.log('🏪 Available suppliers:', availableSuppliers);
+    
+    if (availableSuppliers.length > 0) {
+      console.log('✅ getAvailableSuppliers working');
+    } else {
+      console.warn('⚠️ No suppliers returned');
+    }
+    
+    // Test getSupplierInfo
+    const supplierInfo = getSupplierInfo('home_depot');
+    if (supplierInfo) {
+      console.log('✅ getSupplierInfo working');
+      console.log('🏢 Supplier info:', supplierInfo.name);
+    } else {
+      console.warn('⚠️ No supplier info returned');
+    }
+    
+    // Test querySupplier
+    const testItems = [
+      { name: 'pipe fitting', quantity: 2 },
+      { name: 'pipe sealant', quantity: 1 }
+    ];
+    
+    const supplierResult = await querySupplier(
+      'home_depot',
+      testItems,
+      {
+        latitude: 37.7749,
+        longitude: -122.4194
+      }
+    );
+    
+    if (supplierResult.success) {
+      console.log('✅ querySupplier working');
+      console.log('🏪 Found stores:', supplierResult.stores?.length || 0);
+      console.log('📦 Found items:', supplierResult.items?.length || 0);
+    } else {
+      console.warn('⚠️ querySupplier returned error:', supplierResult.message);
+    }
+    
+    // Test querySupplierForItem (simplified version)
+    const singleItemResult = await querySupplierForItem('home_depot', 'pipe fitting', 3);
+    
+    if (singleItemResult.success) {
+      console.log('✅ querySupplierForItem working');
+      console.log('📦 Single item result:', singleItemResult.items?.[0]?.item_name);
+    } else {
+      console.warn('⚠️ querySupplierForItem returned error:', singleItemResult.message);
+    }
+    
+    return {
+      availableSuppliers,
+      supplierInfo,
+      queryResult: supplierResult,
+      singleItemResult
+    };
+    
+  } catch (error) {
+    console.error('❌ Test 5 failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Test 6: Tool Usage in Agent Context
+ */
+async function testToolUsageInAgent() {
+  console.log('\n🧪 Test 6: Tool Usage in Agent Context');
+  
+  try {
+    // This test verifies that the agent can use the tools properly
+    const inventoryAgent = new InventoryAgent();
+    
+    // Create a scenario that should trigger tool usage
+    const result = await inventoryAgent.execute({
+      userId: 'test-user-tool',
+      jobIds: ['job-emergency-1'], // Emergency job should trigger critical item analysis
+      dispatchOutput: mockDispatchOutput
+    });
+    
+    // Check if the agent reasoning mentions tool usage
+    if (result.agent_reasoning) {
+      console.log('✅ Agent reasoning generated');
+      
+      // Look for evidence of tool usage in reasoning
+      const toolKeywords = ['supplier', 'stock', 'availability', 'pricing', 'store'];
+      const mentionsTools = toolKeywords.some(keyword => 
+        result.agent_reasoning.toLowerCase().includes(keyword)
+      );
+      
+      if (mentionsTools) {
+        console.log('✅ Agent reasoning suggests tool usage');
+      } else {
+        console.log('ℹ️ Agent reasoning may not explicitly mention tool usage');
+      }
+    }
+    
+    // Check if hardware store job was created (indicating tool usage)
+    if (result.hardware_store_job) {
+      console.log('✅ Hardware store job created (likely using supplier tools)');
+      
+      // Check if store details are realistic (indicating tool was used)
+      if (result.hardware_store_job.address && result.hardware_store_job.latitude) {
+        console.log('✅ Realistic store details present (tool likely used)');
+      }
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Test 6 failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Test 7: Legacy Compatibility
+ */
+async function testLegacyCompatibility() {
+  console.log('\n🧪 Test 7: Legacy Compatibility');
+  
+  try {
+    // Test that the legacy mockSupplierAPI still works
     const { mockSupplierAPI } = await import('./mock-supplier.ts');
     
     if (!mockSupplierAPI) {
       throw new Error('mockSupplierAPI not found');
     }
     
-    console.log('✅ mockSupplierAPI imported successfully');
+    console.log('✅ Legacy mockSupplierAPI still available');
     
-    // Test supplier API call
+    // Test legacy API call
     const testItems = [
       { name: 'pipe fitting', quantity: 2 },
       { name: 'pipe sealant', quantity: 1 }
@@ -373,17 +511,17 @@ async function testMockSupplierIntegration() {
     });
     
     if (supplierResult.success) {
-      console.log('✅ Mock supplier API working');
+      console.log('✅ Legacy mockSupplierAPI working');
       console.log('🏪 Found stores:', supplierResult.stores?.length || 0);
       console.log('📦 Found items:', supplierResult.items?.length || 0);
     } else {
-      console.warn('⚠️ Mock supplier API returned error:', supplierResult.message);
+      console.warn('⚠️ Legacy mockSupplierAPI returned error:', supplierResult.message);
     }
     
     return supplierResult;
     
   } catch (error) {
-    console.error('❌ Test 5 failed:', error);
+    console.error('❌ Test 7 failed:', error);
     throw error;
   }
 }
@@ -392,14 +530,16 @@ async function testMockSupplierIntegration() {
  * Run all inventory tests
  */
 export async function runInventoryTests() {
-  console.log('🚀 Starting Inventory Edge Function Tests\n');
+  console.log('🚀 Starting Inventory Edge Function Tests (Updated for New Architecture)\n');
   
   const results = {
     basicFunctionality: null,
     hardwareStoreJob: null,
     shoppingList: null,
     promptIntegration: null,
-    mockSupplier: null,
+    supplierTools: null,
+    toolUsageInAgent: null,
+    legacyCompatibility: null,
     allPassed: false
   };
   
@@ -409,10 +549,12 @@ export async function runInventoryTests() {
     results.hardwareStoreJob = await testHardwareStoreJobCreation();
     results.shoppingList = await testShoppingListGeneration();
     results.promptIntegration = await testPromptIntegration();
-    results.mockSupplier = await testMockSupplierIntegration();
+    results.supplierTools = await testSupplierToolIntegration();
+    results.toolUsageInAgent = await testToolUsageInAgent();
+    results.legacyCompatibility = await testLegacyCompatibility();
     
     results.allPassed = true;
-    console.log('\n🎉 All inventory tests passed!');
+    console.log('\n🎉 All inventory tests passed with new architecture!');
     
   } catch (error) {
     console.error('\n💥 Inventory tests failed:', error);

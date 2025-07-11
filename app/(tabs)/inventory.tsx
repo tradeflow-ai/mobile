@@ -94,7 +94,7 @@ export default function InventoryScreen() {
     if (selectedTab === 'required') {
       return (
         <EmptyState
-          icon="calendar"
+          icon="list"
           title="No required items"
           description="Start your day to see items you need for today's jobs"
         />

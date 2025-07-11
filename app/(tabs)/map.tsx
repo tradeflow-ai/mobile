@@ -2,11 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Platform, Modal, Animated, Dimensions, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
-import { useAtom } from 'jotai';
+import { useAtom, useAtomValue } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { 
   currentLocationAtom, 
+  activeJobAtom,
 } from '@/store/atoms';
 import { useJobs, JobLocation } from '@/hooks/useJobs';
 import { LocationService } from '@/services/location';
@@ -14,6 +15,8 @@ import {
   openDirectionsToJob, 
   getJobMarkerColor,
 } from '@/utils/mapUtils';
+import { ActiveJobCard } from '@/components/ActiveJobCard';
+import { spacing } from '@/constants/Theme';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODAL_HEIGHT = SCREEN_HEIGHT * 0.6;
@@ -35,6 +38,7 @@ export default function MapScreen() {
   // State management
   const { data: jobLocations = [] } = useJobs();
   const [currentLocation, setCurrentLocation] = useAtom(currentLocationAtom);
+  const activeJob = useAtomValue(activeJobAtom);
   const [selectedJobLocation, setSelectedJobLocation] = useState<JobLocation | null>(null);
   
   // Local state
@@ -105,14 +109,14 @@ export default function MapScreen() {
     
     // Center map on selected location
     setMapRegion({
-      latitude: jobLocation.coordinates.latitude,
-      longitude: jobLocation.coordinates.longitude,
+      latitude: jobLocation.latitude,
+      longitude: jobLocation.longitude,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     });
     
-    // Open modal if not already open
-    if (!isJobModalVisible) {
+    // Open modal if not already open and no job is active
+    if (!isJobModalVisible && !activeJob) {
       setIsJobModalVisible(true);
       Animated.timing(modalAnimation, {
         toValue: 1,
@@ -134,7 +138,7 @@ export default function MapScreen() {
         }
       }
     }, 400); // Wait for modal animation to complete
-  }, [setSelectedJobLocation, isJobModalVisible, modalAnimation, scrollViewRef, jobLocations]);
+  }, [setSelectedJobLocation, isJobModalVisible, modalAnimation, scrollViewRef, jobLocations, activeJob]);
 
 
 
@@ -191,7 +195,10 @@ export default function MapScreen() {
         {jobLocations.map((job, index) => (
           <Marker
             key={job.id}
-            coordinate={job.coordinates}
+            coordinate={{
+              latitude: job.latitude,
+              longitude: job.longitude,
+            }}
             title={job.title}
             description={job.description}
             onPress={() => handleJobMarkerPress(job)}
@@ -219,24 +226,28 @@ export default function MapScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* Bottom Job Toggle Button - Only show when modal is closed */}
+      {/* Bottom Controls: Show Active Job or Job List Toggle */}
       {!isJobModalVisible && (
         <SafeAreaView style={styles.bottomControls}>
-          <TouchableOpacity
-            style={[styles.jobToggleButton, { backgroundColor: colors.primary }]}
-            onPress={toggleJobModal}
-          >
-            <View style={styles.jobToggleContent}>
-              <Text style={[styles.jobCountText, { color: colors.background }]}>
-                {jobLocations.length} Jobs
-              </Text>
-              <FontAwesome 
-                name="chevron-up" 
-                size={12} 
-                color={colors.background} 
-              />
-            </View>
-          </TouchableOpacity>
+          {activeJob ? (
+            <ActiveJobCard job={activeJob} />
+          ) : (
+            <TouchableOpacity
+              style={[styles.jobToggleButton, { backgroundColor: colors.primary }]}
+              onPress={toggleJobModal}
+            >
+              <View style={styles.jobToggleContent}>
+                <Text style={[styles.jobCountText, { color: colors.background }]}>
+                  {jobLocations.length} Jobs
+                </Text>
+                <FontAwesome 
+                  name="chevron-up" 
+                  size={12} 
+                  color={colors.background} 
+                />
+              </View>
+            </TouchableOpacity>
+          )}
         </SafeAreaView>
       )}
 
@@ -311,8 +322,8 @@ export default function MapScreen() {
                       setSelectedJobLocation(job);
                       // Center map on selected location
                       setMapRegion({
-                        latitude: job.coordinates.latitude,
-                        longitude: job.coordinates.longitude,
+                        latitude: job.latitude,
+                        longitude: job.longitude,
                         latitudeDelta: 0.01,
                         longitudeDelta: 0.01,
                       });
@@ -323,16 +334,16 @@ export default function MapScreen() {
                         <Text style={styles.stopNumberText}>{index + 1}</Text>
                       </View>
                       <Text style={[styles.jobTitle, { color: colors.text }]}>{job.title}</Text>
-                      <Text style={[styles.jobType, { color: colors.placeholder }]}>{job.jobType}</Text>
+                      <Text style={[styles.jobType, { color: colors.placeholder }]}>{job.job_type}</Text>
                     </View>
                     <Text style={[styles.jobDescription, { color: colors.placeholder }]}>{job.description}</Text>
                     <Text style={[styles.jobAddress, { color: colors.placeholder }]}>{job.address}</Text>
                     <View style={styles.jobMeta}>
-                      <Text style={[styles.jobPriority, { color: getJobMarkerColor(job.jobType, job.priority) }]}>
+                      <Text style={[styles.jobPriority, { color: getJobMarkerColor(job.job_type, job.priority) }]}>
                         {job.priority.toUpperCase()} PRIORITY
                       </Text>
                       <Text style={[styles.jobDuration, { color: colors.placeholder }]}>
-                        {job.estimatedDuration}min
+                        {job.estimated_duration}min
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -397,9 +408,10 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1,
     pointerEvents: 'box-none',
+    marginHorizontal: spacing.m,
   },
   jobToggleButton: {
-    margin: 16,
+    marginVertical: spacing.m,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 24,
