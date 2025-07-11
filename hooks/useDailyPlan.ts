@@ -341,10 +341,13 @@ export const useDailyPlan = (
       setIsLoading(true);
       setError(null);
 
+      // ‼️ FIX: Use the prioritized job IDs from the dispatcher output
+      const prioritizedJobIds = dailyPlan.dispatcher_output.prioritized_jobs.map(j => j.job_id);
+
       // Step 2: Call inventory edge function
       const inventoryResult = await AgentService.analyzeInventory(
         user!.id, 
-        dailyPlan.job_ids, 
+        prioritizedJobIds, 
         dailyPlan.dispatcher_output
       );
       
@@ -353,9 +356,18 @@ export const useDailyPlan = (
       }
 
       // Update plan with inventory output
-      await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+      const { data: updatedPlan, error: updateError } = await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+
+      if (updateError) {
+        console.error('❌ Failed to update daily plan with inventory:', updateError);
+        throw new Error(`Failed to save inventory results: ${updateError.message || updateError}`);
+      }
 
       console.log('📦 Inventory analysis completed successfully');
+      console.log('✅ Daily plan updated:', updatedPlan?.id, 'Status:', updatedPlan?.status);
+      
+      // 🔧 CRITICAL FIX: Update local React state immediately
+      setDailyPlan(updatedPlan);
       
       if (inventoryResult.hardware_store_job) {
         console.log('🛒 Hardware store job created');
