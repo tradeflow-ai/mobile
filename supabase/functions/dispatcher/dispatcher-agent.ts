@@ -145,7 +145,7 @@ export class DispatcherAgent {
         job_duration_buffer_minutes: preferences.job_duration_buffer_minutes || 15
       };
 
-      // Create user prompt
+      // Create user prompt with explicit JSON formatting instructions
       const userPrompt = `
         Please analyze and optimize the following ${jobs.length} jobs for ${planDate}:
 
@@ -161,7 +161,16 @@ export class DispatcherAgent {
         3. Complete scheduling with time estimates
         4. Clear reasoning for your decisions
 
-        Return the response as a valid JSON object matching the DispatchOutput interface.
+        IMPORTANT: Return ONLY a valid JSON object matching the DispatchOutput interface. 
+        Do not include any markdown formatting, explanations, or additional text. 
+        Start your response with { and end with }.
+
+        The JSON must include these exact fields:
+        - prioritized_jobs (array)
+        - scheduling_constraints (object)
+        - recommendations (array)
+        - agent_reasoning (string)
+        - optimization_summary (object)
       `;
 
       // Call OpenAI API directly
@@ -187,23 +196,100 @@ export class DispatcherAgent {
   }
 
   /**
-   * Parse AI response into structured format
+   * Parse AI response into structured format with robust JSON extraction
    */
   private parseAIResponse(aiResponse: string, jobs: any[], preferences: any): Omit<DispatchOutput, 'execution_time_ms'> {
+    console.log('🤖 Raw AI Response Length:', aiResponse.length);
+    console.log('🤖 Raw AI Response Preview:', aiResponse.substring(0, 500) + '...');
+    
     try {
-      // Try to extract JSON from AI response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+      // Strategy 1: Try to find JSON within markdown code blocks
+      const markdownJsonMatch = aiResponse.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (markdownJsonMatch) {
+        console.log('📋 Found markdown JSON block, attempting to parse...');
+        const jsonStr = markdownJsonMatch[1].trim();
+        const parsed = JSON.parse(jsonStr);
         if (parsed.prioritized_jobs) {
+          console.log('✅ Successfully parsed markdown JSON');
           return parsed;
         }
       }
+
+      // Strategy 2: Try to find a complete JSON object (more precise regex)
+      const jsonObjectMatch = aiResponse.match(/\{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*\}/);
+      if (jsonObjectMatch) {
+        console.log('📋 Found JSON object, attempting to parse...');
+        const jsonStr = jsonObjectMatch[0].trim();
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.prioritized_jobs) {
+          console.log('✅ Successfully parsed JSON object');
+          return parsed;
+        }
+      }
+
+      // Strategy 3: Try to extract JSON between specific markers
+      const betweenBracesMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```|<json>([\s\S]*?)<\/json>|\{[\s\S]*?\}/);
+      if (betweenBracesMatch) {
+        console.log('📋 Found JSON with markers, attempting to parse...');
+        const jsonStr = (betweenBracesMatch[1] || betweenBracesMatch[2] || betweenBracesMatch[0]).trim();
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.prioritized_jobs) {
+          console.log('✅ Successfully parsed JSON with markers');
+          return parsed;
+        }
+      }
+
+      // Strategy 4: Last resort - try to find any JSON-like structure
+      const lines = aiResponse.split('\n');
+      let jsonStartIdx = -1;
+      let jsonEndIdx = -1;
+      let braceCount = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('{') && jsonStartIdx === -1) {
+          jsonStartIdx = i;
+          braceCount = 1;
+        } else if (jsonStartIdx !== -1) {
+          for (const char of line) {
+            if (char === '{') braceCount++;
+            if (char === '}') braceCount--;
+            if (braceCount === 0) {
+              jsonEndIdx = i;
+              break;
+            }
+          }
+          if (braceCount === 0) break;
+        }
+      }
+
+      if (jsonStartIdx !== -1 && jsonEndIdx !== -1) {
+        console.log('📋 Found JSON by line parsing, attempting to parse...');
+        const jsonLines = lines.slice(jsonStartIdx, jsonEndIdx + 1);
+        const jsonStr = jsonLines.join('\n').trim();
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.prioritized_jobs) {
+          console.log('✅ Successfully parsed JSON by line parsing');
+          return parsed;
+        }
+      }
+
+      console.warn('⚠️ All JSON parsing strategies failed, using fallback');
+      
     } catch (error) {
-      console.warn('Failed to parse AI response as JSON:', error);
+      console.error('❌ JSON parsing error:', error);
+      console.error('❌ Error details:', error.message);
+      if (error.message.includes('position')) {
+        const position = error.message.match(/position (\d+)/)?.[1];
+        if (position) {
+          const pos = parseInt(position);
+          console.error('❌ Error context:', aiResponse.substring(Math.max(0, pos - 50), pos + 50));
+        }
+      }
     }
 
     // Fallback: create structured response from jobs
+    console.log('🔄 Using fallback response generation');
     return this.createFallbackResponse(jobs, preferences, aiResponse);
   }
 

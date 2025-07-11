@@ -43,6 +43,7 @@ export default function PlanYourDayIndex() {
     isConnected,
     isAwaitingConfirmation,
     hasHardwareStoreJob,
+    resetPlan, // 🔄 Add resetPlan functionality
   } = useTodaysPlan();
 
   /**
@@ -136,8 +137,13 @@ export default function PlanYourDayIndex() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <ErrorStepUI 
           error={error}
-          onRetry={canRetry ? handleRetry : undefined}
-          retryText={canRetry ? 'Retry Planning' : undefined}
+          onRetry={() => {
+            resetPlan(); // Clear state first
+            // The component will re-render and show the start planning UI
+          }}
+          retryText="Start Over"
+          onSecondaryAction={() => router.back()}
+          secondaryActionText="Go Back"
         />
       </SafeAreaView>
     );

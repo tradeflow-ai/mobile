@@ -43,6 +43,7 @@ interface UseDailyPlanReturn {
   cancelPlanning: () => Promise<void>;
   saveUserModifications: (modifications: UserModifications) => Promise<void>;
   approvePlan: () => Promise<void>;
+  resetPlan: () => void;
   
   // Step-specific actions
   confirmDispatcherOutput: (modifications?: UserModifications) => Promise<void>;
@@ -136,6 +137,7 @@ export const useDailyPlan = (
     try {
       setIsLoading(true);
       setError(null);
+      setDailyPlan(null); // 🔄 Clear existing plan state
 
       // Create daily plan record
       const preferences = {}; // TODO: Get user preferences
@@ -166,8 +168,9 @@ export const useDailyPlan = (
     } catch (err) {
       console.error('Error starting planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to start planning');
+      setDailyPlan(null); // 🔄 Clear plan state on error
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // 🔄 Ensure it's always called
     }
   }, [user?.id, planDate]);
 
@@ -418,6 +421,17 @@ export const useDailyPlan = (
   }, [user?.id, planDate]);
 
   /**
+   * Reset the daily plan state completely
+   */
+  const resetPlan = useCallback(() => {
+    setDailyPlan(null);
+    setError(null);
+    setIsLoading(false);
+    setLastUpdated(null);
+    console.log('🔄 Daily plan state reset');
+  }, []);
+
+  /**
    * Initialize plan on mount and user change
    */
   useEffect(() => {
@@ -440,6 +454,7 @@ export const useDailyPlan = (
     cancelPlanning,
     saveUserModifications,
     approvePlan,
+    resetPlan, // 🔄 Add reset functionality
     
     // Step-specific actions
     confirmDispatcherOutput,
