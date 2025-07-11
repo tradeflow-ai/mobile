@@ -53,6 +53,7 @@ export class OfflineStatusService {
   private speedTestHistory: number[] = [];
   private lastSpeedTest: Date | null = null;
   private syncTimer: ReturnType<typeof setInterval> | null = null;
+  private manualOfflineMode: boolean = false;
 
   private constructor() {
     this.currentStatus = {
@@ -115,10 +116,10 @@ export class OfflineStatusService {
   private handleNetworkStateChange(state: NetInfoState) {
     const wasOnline = this.currentStatus.connection.isOnline;
     
-    // Update connection status
+    // Update connection status - simple approach
     this.currentStatus.connection = {
       isConnected: state.isConnected || false,
-      isOnline: state.isInternetReachable || false,
+      isOnline: (state.isInternetReachable === true && state.isConnected === true),
       connectionType: state.type,
       connectionQuality: this.calculateConnectionQuality(state),
       isExpensive: false, // We'll check this property if available
@@ -142,12 +143,14 @@ export class OfflineStatusService {
       type: state.type,
       connected: state.isConnected,
       online: state.isInternetReachable,
+      actualOnline: this.currentStatus.connection.isOnline,
       quality: this.currentStatus.connection.connectionQuality,
     });
   }
 
   private calculateConnectionQuality(state: NetInfoState): ConnectionStatus['connectionQuality'] {
-    if (!state.isConnected || !state.isInternetReachable) {
+    // If not connected or explicitly offline, return offline
+    if (!state.isConnected || state.isInternetReachable === false) {
       return 'offline';
     }
 
@@ -329,7 +332,8 @@ export class OfflineStatusService {
 
   private startStatusUpdates() {
     // Update status every 30 seconds
-    this.syncTimer = setInterval(() => {
+    this.syncTimer = setInterval(async () => {
+      // Update queued operations and notify listeners
       this.updateQueuedOperations();
       this.notifyListeners();
     }, 30000);
@@ -369,9 +373,13 @@ export class OfflineStatusService {
   }
 
   /**
-   * Check if device is online
+   * Check if device is online (considers manual offline mode)
    */
   isOnline(): boolean {
+    // If manual offline mode is enabled, always report offline
+    if (this.manualOfflineMode) {
+      return false;
+    }
     return this.currentStatus.connection.isOnline;
   }
 
@@ -417,6 +425,90 @@ export class OfflineStatusService {
       this.updateQueuedOperations();
       this.notifyListeners();
     }
+  }
+
+  /**
+   * Enable manual offline mode
+   */
+  enableManualOfflineMode(): void {
+    console.log('OfflineStatusService: Manual offline mode enabled');
+    this.manualOfflineMode = true;
+    this.updateStatus();
+    this.notifyListeners();
+  }
+
+  /**
+   * Disable manual offline mode
+   */
+  disableManualOfflineMode(): void {
+    console.log('OfflineStatusService: Manual offline mode disabled');
+    this.manualOfflineMode = false;
+    this.updateStatus();
+    this.notifyListeners();
+  }
+
+  /**
+   * Check if manual offline mode is enabled
+   */
+  isManualOfflineMode(): boolean {
+    return this.manualOfflineMode;
+  }
+
+  /**
+   * Handle sync failure to detect offline state
+   */
+  handleSyncFailure(error: any): void {
+    // Only update offline state if not in manual mode and error indicates network issue
+    if (!this.manualOfflineMode && this.isNetworkError(error)) {
+      console.log('OfflineStatusService: Detected offline state through sync failure');
+      this.currentStatus.connection.isOnline = false;
+      this.currentStatus.connection.connectionQuality = 'offline';
+      this.notifyListeners();
+    }
+  }
+
+  /**
+   * Handle sync success to detect online state
+   */
+  handleSyncSuccess(): void {
+    // Only update online state if not in manual mode and we thought we were offline
+    if (!this.manualOfflineMode && !this.currentStatus.connection.isOnline) {
+      console.log('OfflineStatusService: Detected online state through sync success');
+      this.currentStatus.connection.isOnline = true;
+      this.currentStatus.connection.connectionQuality = 'good';
+      this.notifyListeners();
+    }
+  }
+
+  /**
+   * Check if error indicates a network issue
+   */
+  private isNetworkError(error: any): boolean {
+    if (!error) return false;
+    
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code || '';
+    
+    return (
+      errorMessage.includes('network') ||
+      errorMessage.includes('offline') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('connection') ||
+      errorCode === 'NETWORK_ERROR' ||
+      errorCode === 'TIMEOUT'
+    );
+  }
+
+  /**
+   * Update current status (used internally)
+   */
+  private updateStatus(): void {
+    // Manual offline mode overrides network detection
+    if (this.manualOfflineMode) {
+      this.currentStatus.connection.isOnline = false;
+      this.currentStatus.connection.connectionQuality = 'offline';
+    }
+    // Otherwise use actual network state (this.currentStatus.connection already set by NetInfo)
   }
 
   /**

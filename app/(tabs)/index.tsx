@@ -20,6 +20,7 @@ import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
+import { useCreateInventoryItem } from '@/hooks/useInventory';
 
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
@@ -38,6 +39,9 @@ export default function HomeScreen() {
   const [isOnBreak, setIsOnBreak] = useState(false);
 
   const { navigate } = useAppNavigation();
+  
+  // Add for testing
+  const createItem = useCreateInventoryItem();
 
   // Get user's first name from ProfileManager
   const profileManager = ProfileManager.getInstance();
@@ -90,6 +94,21 @@ export default function HomeScreen() {
    */
   const handlePlanYourDay = () => {
     navigate('/plan-your-day');
+  };
+
+  // Add test function for offline testing
+  const testOfflineOperation = async () => {
+    try {
+      await createItem.mutateAsync({
+        name: `Test Item ${Date.now()}`,
+        category: 'test',
+        quantity: Math.floor(Math.random() * 100),
+        unit: 'pcs',
+      });
+      Alert.alert('Success', 'Test item created successfully!');
+    } catch (error) {
+      Alert.alert('Queued', 'Operation queued for offline sync');
+    }
   };
 
   const quickActions = [
@@ -295,6 +314,39 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Test Offline Button - Temporary for testing */}
+          <TouchableOpacity 
+            style={[
+              styles.testButton, 
+              { 
+                backgroundColor: colors.warning,
+                ...shadows.subtle(colorScheme)
+              }
+            ]} 
+            onPress={testOfflineOperation}
+          >
+            <FontAwesome name="wifi" size={16} color={colors.background} />
+            <Text style={[styles.testButtonText, { color: colors.background }]}>
+              Test Offline Operation
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[
+              styles.testButton, 
+              { 
+                backgroundColor: colors.error,
+                ...shadows.subtle(colorScheme)
+              }
+            ]} 
+            onPress={() => navigate('/offline-debug')}
+          >
+            <FontAwesome name="bug" size={16} color={colors.background} />
+            <Text style={[styles.testButtonText, { color: colors.background }]}>
+              Debug Offline Status
+            </Text>
+          </TouchableOpacity>
+
 
         </ScrollView>
       </View>
@@ -431,5 +483,18 @@ const styles = StyleSheet.create({
   },
   scheduleDetails: {
     ...typography.caption,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.m,
+    ...spacing.helpers.padding('s'),
+    marginTop: spacing.m,
+    gap: spacing.xs,
+  },
+  testButtonText: {
+    ...typography.caption,
+    fontWeight: '600',
   },
 });

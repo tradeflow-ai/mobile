@@ -310,6 +310,29 @@ function RootLayoutNav() {
           headerShown: false,
         }} 
       />
+      <Stack.Screen 
+        name="offline-debug" 
+        options={({ navigation }) => ({
+          title: 'Offline Debug',
+          headerBackTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()}
+              style={{
+                ...touchTargets.styles.minimum,
+                ...spacing.helpers.paddingHorizontal('s'),
+                justifyContent: 'center',
+              }}
+            >
+              <FontAwesome 
+                name="arrow-left" 
+                size={20} 
+                color={colors.primary} 
+              />
+            </TouchableOpacity>
+          ),
+        })}
+      />
     </Stack>
   );
 }

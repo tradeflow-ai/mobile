@@ -34,6 +34,11 @@ export interface UseOfflineStatusReturn {
   
   // Actions
   forceSync: () => Promise<void>;
+  enableManualOfflineMode: () => void;
+  disableManualOfflineMode: () => void;
+  
+  // Manual mode state
+  isManualOfflineMode: boolean;
   
   // Utilities
   getStatusColor: () => string;
@@ -85,6 +90,17 @@ export const useOfflineStatus = (): UseOfflineStatusReturn => {
     }
   }, []);
 
+  // Manual offline mode callbacks
+  const enableManualOfflineMode = useCallback(() => {
+    offlineStatusService.enableManualOfflineMode();
+  }, []);
+
+  const disableManualOfflineMode = useCallback(() => {
+    offlineStatusService.disableManualOfflineMode();
+  }, []);
+
+  const isManualOfflineMode = offlineStatusService.isManualOfflineMode();
+
   // Status utilities
   const getStatusColor = useCallback((): string => {
     if (!status.connection.isOnline) return '#FF6B6B'; // Red
@@ -131,6 +147,11 @@ export const useOfflineStatus = (): UseOfflineStatusReturn => {
     
     // Actions
     forceSync,
+    enableManualOfflineMode,
+    disableManualOfflineMode,
+    
+    // Manual mode state
+    isManualOfflineMode,
     
     // Utilities
     getStatusColor,
