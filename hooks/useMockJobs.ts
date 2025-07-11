@@ -5,6 +5,7 @@
  * the planning workflow and development.
  */
 
+import React from 'react';
 import { useAtom } from 'jotai';
 import { mockJobsAtom } from '@/store/atoms';
 import { MockAgentService } from '@/services/mockAgentService';
@@ -16,7 +17,28 @@ export interface UseMockJobsOptions {
 }
 
 export const useMockJobs = (options: UseMockJobsOptions = {}) => {
-  const [mockJobs] = useAtom(mockJobsAtom);
+  const [mockJobs, setMockJobs] = useAtom(mockJobsAtom);
+  
+  // Initialize mock jobs with times if they don't have them
+  React.useEffect(() => {
+    console.log('🔍 useMockJobs - Current jobs state:', mockJobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      scheduled_start: job.scheduled_start
+    })));
+    
+    if (mockJobs.length > 0 && !mockJobs[0].scheduled_start) {
+      console.log('🔄 Initializing mock jobs with times from useMockJobs hook...');
+      MockAgentService.initializeMockJobsWithTimes();
+      
+      // Force a refresh of the atom to get the updated values
+      setTimeout(() => {
+        console.log('🔄 Force refreshing jobs atom...');
+        const updatedJobs = MockAgentService.getMockJobs();
+        setMockJobs(updatedJobs as any);
+      }, 100);
+    }
+  }, [mockJobs, setMockJobs]);
   
   // Check if there's an approved daily plan to get prioritized job order
   const mockUser = { id: 'mock-user-123' };

@@ -149,7 +149,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7749,
     longitude: -122.4194,
     address: '123 Emergency St, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 90,
     customer_name: 'ABC Corporation',
     customer_phone: '(555) 123-4567',
@@ -170,7 +170,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7849,
     longitude: -122.4094,
     address: '456 Crisis Ave, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 120,
     customer_name: 'Johnson Family',
     customer_phone: '(555) 234-5678',
@@ -193,7 +193,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7649,
     longitude: -122.4294,
     address: '789 Maintenance Dr, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 60,
     customer_name: 'Tech Startup Inc',
     customer_phone: '(555) 345-6789',
@@ -214,7 +214,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7549,
     longitude: -122.4394,
     address: '321 Inspection Ln, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 45,
     customer_name: 'Wilson Property Management',
     customer_phone: '(555) 456-7890',
@@ -235,7 +235,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7449,
     longitude: -122.4494,
     address: '654 Service Rd, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 30,
     customer_name: 'Downtown Office Complex',
     customer_phone: '(555) 567-8901',
@@ -256,7 +256,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7649,
     longitude: -122.4194,
     address: '789 Industrial Blvd, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 60,
     customer_name: 'Industrial Park Management',
     customer_phone: '(555) 678-9012',
@@ -277,7 +277,7 @@ export const mockJobsAtom = atom([
     latitude: 37.7549,
     longitude: -122.4294,
     address: '321 Residential Ave, San Francisco, CA',
-    scheduled_start: new Date().toISOString(),
+    scheduled_start: undefined, // Will be calculated by agent service
     estimated_duration: 45,
     customer_name: 'Residential Complex',
     customer_phone: '(555) 789-0123',

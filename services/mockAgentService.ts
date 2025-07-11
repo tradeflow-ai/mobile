@@ -208,11 +208,11 @@ export class MockAgentService {
     const prioritizedJobs = plan.dispatch_output?.prioritized_jobs || [];
     console.log('🎯 Prioritized jobs to schedule:', prioritizedJobs);
     
-    // Create dynamic route with proper time scheduling
+    // Create dynamic route with proper sequential time scheduling
     const today = new Date();
     const startHour = 8; // Start at 8 AM
     let currentTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, 0, 0);
-    console.log('⏰ Starting schedule at:', currentTime.toISOString());
+    console.log('⏰ Starting schedule at 8:00 AM:', currentTime.toISOString());
     
     const waypoints = [];
     let totalDistance = 0;
@@ -223,32 +223,37 @@ export class MockAgentService {
     const currentJobs = store.get(mockJobsAtom) || mockJobsAtom.init;
     const updatedJobs = [...currentJobs];
 
-    // Generate waypoints for each job with proper time spacing
+    // Generate waypoints for each job with proper sequential time spacing
     for (let i = 0; i < prioritizedJobs.length; i++) {
       const prioritizedJob = prioritizedJobs[i];
       const jobIndex = updatedJobs.findIndex(j => j.id === prioritizedJob.job_id);
       const job = updatedJobs[jobIndex];
       
-      console.log(`📋 Processing job ${i + 1}/${prioritizedJobs.length}: ${prioritizedJob.job_id}`);
+      console.log(`\n📋 Processing job ${i + 1}/${prioritizedJobs.length}: ${prioritizedJob.job_id}`);
       console.log(`🔍 Found job at index ${jobIndex}:`, job ? job.title : 'NOT FOUND');
       
       if (job && jobIndex >= 0) {
-        const duration = job.estimated_duration || 60; // Default 1 hour
-        const travelTime = i === 0 ? 0 : 15 + Math.floor(Math.random() * 20); // 15-35 min travel between jobs
+        const duration = job.estimated_duration || 60; // Default 1 hour if not specified
+        const travelTime = i === 0 ? 0 : 15 + Math.floor(Math.random() * 20); // 15-35 min travel between jobs (no travel for first job)
         
-        // Add travel time before job
+        // Add travel time to get to this job location (except for first job)
         if (travelTime > 0) {
+          console.log(`🚗 Adding ${travelTime} minutes travel time to reach job`);
           currentTime = new Date(currentTime.getTime() + travelTime * 60 * 1000);
           totalTravelTime += travelTime;
         }
         
+        // Job arrival time is when we arrive at location
         const arrivalTime = new Date(currentTime);
+        
+        // Job departure time is arrival time + job duration
         const departureTime = new Date(currentTime.getTime() + duration * 60 * 1000);
         
-        console.log(`⏱️  Job ${job.title}:`);
-        console.log(`   - Arrival: ${arrivalTime.toISOString()}`);
-        console.log(`   - Departure: ${departureTime.toISOString()}`);
+        console.log(`⏱️  Job "${job.title}" scheduled:`);
+        console.log(`   - Arrival: ${arrivalTime.toLocaleTimeString()}`);
+        console.log(`   - Departure: ${departureTime.toLocaleTimeString()}`);
         console.log(`   - Duration: ${duration} minutes`);
+        console.log(`   - Current cumulative time: ${Math.round((currentTime.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, 0, 0).getTime()) / 60000)} minutes since start`);
         
         waypoints.push({
           job_id: job.id,
@@ -271,13 +276,16 @@ export class MockAgentService {
           scheduled_end: departureTime.toISOString()
         } as any;
         
-        // Move to next time slot
-        currentTime = departureTime;
+        // Move current time to the end of this job (departure time)
+        currentTime = new Date(departureTime.getTime());
         totalWorkTime += duration;
         
-        // Add some buffer time between jobs
-        const bufferTime = 5 + Math.floor(Math.random() * 10); // 5-15 min buffer
-        currentTime = new Date(currentTime.getTime() + bufferTime * 60 * 1000);
+        // Add buffer time between jobs (except after last job)
+        if (i < prioritizedJobs.length - 1) {
+          const bufferTime = 5 + Math.floor(Math.random() * 10); // 5-15 min buffer
+          console.log(`⏸️  Adding ${bufferTime} minutes buffer time after job`);
+          currentTime = new Date(currentTime.getTime() + bufferTime * 60 * 1000);
+        }
       } else {
         console.log(`❌ Job ${prioritizedJob.job_id} not found in jobs array`);
       }
@@ -287,12 +295,16 @@ export class MockAgentService {
     store.set(mockJobsAtom, updatedJobs);
 
     // Log the updated jobs for debugging
-    console.log('📅 Updated jobs with scheduled times:', updatedJobs.map(job => ({
-      id: job.id,
-      title: job.title,
-      scheduled_start: job.scheduled_start,
-      scheduled_end: (job as any).scheduled_end
-    })));
+    console.log('📅 Updated jobs with scheduled times:');
+    updatedJobs.forEach(job => {
+      if (job.scheduled_start) {
+        const startTime = new Date(job.scheduled_start);
+        const endTime = (job as any).scheduled_end ? new Date((job as any).scheduled_end) : null;
+        console.log(`  - ${job.title}: ${startTime.toLocaleTimeString()} - ${endTime ? endTime.toLocaleTimeString() : 'N/A'}`);
+      } else {
+        console.log(`  - ${job.title}: No scheduled time`);
+      }
+    });
 
     totalDistance = waypoints.reduce((sum, wp) => sum + (wp.distance_to_next || 0), 0);
 
@@ -448,7 +460,14 @@ export class MockAgentService {
    * Get mock jobs for testing (from atom)
    */
   static getMockJobs() {
-    return mockJobsAtom.init;
+    // Get the latest jobs from the store, not the initial values
+    const latestJobs = store.get(mockJobsAtom);
+    console.log('🔍 getMockJobs - Latest jobs from store:', latestJobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      scheduled_start: job.scheduled_start
+    })));
+    return latestJobs;
   }
 
   /**
@@ -492,4 +511,79 @@ export class MockAgentService {
     store.set(mockDailyPlanAtom, null);
     console.log('🧹 Mock data cleared');
   }
-} 
+
+    /**
+   * Initialize mock jobs with calculated times for immediate display
+   * This ensures jobs have proper sequential times even before a plan is created
+   */
+  static initializeMockJobsWithTimes(): void {
+    console.log('🔄 Initializing mock jobs with calculated times...');
+    
+    // Get current mock jobs
+    const currentJobs = store.get(mockJobsAtom) || mockJobsAtom.init;
+    
+    // Only initialize if jobs don't already have scheduled times
+    if (currentJobs.some(job => job.scheduled_start)) {
+      console.log('✅ Jobs already have scheduled times, skipping initialization');
+      return;
+    }
+    
+    // Calculate simple sequential times starting at 8 AM TODAY
+    const today = new Date();
+    const startHour = 8;
+    let currentTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, 0, 0);
+    
+    console.log('⏰ Starting job scheduling at:', currentTime.toISOString());
+    
+    const updatedJobs = currentJobs.map((job, index) => {
+      const duration = job.estimated_duration || 60;
+      const arrivalTime = new Date(currentTime);
+      const departureTime = new Date(currentTime.getTime() + duration * 60 * 1000);
+      
+      console.log(`📋 Scheduling job ${index + 1}: ${job.title}`);
+      console.log(`   - Start: ${arrivalTime.toISOString()}`);
+      console.log(`   - End: ${departureTime.toISOString()}`);
+      console.log(`   - Duration: ${duration} minutes`);
+      
+      // Create updated job with proper scheduled times
+      const updatedJob = {
+        ...job,
+        scheduled_start: arrivalTime.toISOString(),
+        scheduled_end: departureTime.toISOString()
+      };
+      
+      // Move to next time slot with buffer
+      currentTime = new Date(departureTime.getTime() + (15 * 60 * 1000)); // 15 min buffer
+      
+      return updatedJob;
+    });
+    
+         // Update the jobs atom with the scheduled jobs (cast to bypass type checking)
+     store.set(mockJobsAtom, updatedJobs as any);
+     
+     console.log('✅ Mock jobs initialized with sequential times');
+     console.log('📅 Final job schedule:');
+     updatedJobs.forEach(job => {
+       if (job.scheduled_start && (job as any).scheduled_end) {
+         const startTime = new Date(job.scheduled_start);
+         const endTime = new Date((job as any).scheduled_end);
+         console.log(`  - ${job.title}: ${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}`);
+       } else {
+         console.log(`  - ${job.title}: NO SCHEDULED TIME SET`);
+       }
+     });
+     
+     // Verify the atom was updated
+     const verifyJobs = store.get(mockJobsAtom);
+     console.log('🔍 Verification - Jobs after update:', verifyJobs.map(job => ({
+       id: job.id,
+       title: job.title,
+       scheduled_start: job.scheduled_start,
+       scheduled_end: (job as any).scheduled_end
+          })));
+   }
+}
+
+// Initialize mock jobs with times immediately when the service loads
+console.log('🚀 MockAgentService loaded - initializing jobs with times...');
+MockAgentService.initializeMockJobsWithTimes(); 

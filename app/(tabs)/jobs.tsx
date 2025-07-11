@@ -29,6 +29,16 @@ export default function JobsScreen() {
     job.scheduled_start && job.scheduled_start.startsWith(today)
   );
   const isLoadingToday = isLoadingAll;
+  
+  // Debug logging to see filtering
+  console.log('📅 Jobs screen - Today filter:', today);
+  console.log('📅 Jobs screen - All jobs:', allJobs.length);
+  console.log('📅 Jobs screen - Today jobs:', todaysJobs.length);
+  console.log('📅 Jobs screen - Sample job dates:', allJobs.slice(0, 3).map(job => ({
+    id: job.id,
+    title: job.title,
+    scheduled_start: job.scheduled_start
+  })));
 
   // Determine which jobs to show
   const jobs = selectedJobFilter === 'today' ? todaysJobs : allJobs;
