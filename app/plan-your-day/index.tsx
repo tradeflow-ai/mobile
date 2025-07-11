@@ -57,12 +57,12 @@ export default function PlanYourDayIndex() {
       case 'dispatcher_complete':
       case 'awaiting_confirmation':
         // Show dispatcher results for user confirmation
-        router.push('./dispatcher-confirmation');
+        router.push('/plan-your-day/dispatcher-confirmation');
         break;
       case 'ready_for_execution':
       case 'hardware_store_added':
         // Show inventory results and final plan
-        router.push('./inventory-results');
+        router.push('/plan-your-day/inventory-results');
         break;
       case 'approved':
         // Planning complete - show success and navigate to execution
