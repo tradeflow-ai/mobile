@@ -53,14 +53,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-maps",
-        {
-          "requestLocationPermission": true,
-          "locationPermission": "Allow TradeFlow to use your location for job routing and navigation"
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true

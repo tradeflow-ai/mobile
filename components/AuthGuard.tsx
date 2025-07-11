@@ -102,15 +102,6 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     const inMainApp = segments[0] === '(tabs)';
     const wasInOnboarding = segments.length > 0 && segments[0] === 'onboarding';
 
-    console.log('AuthGuard: Navigation check:', {
-      user: user?.email || 'none',
-      segments: segments.join('/'),
-      inAuthGroup,
-      inOnboardingGroup,
-      inMainApp,
-      hasCompletedOnboarding: userPreferences?.has_ever_completed_onboarding,
-    });
-
     // If user is navigating to main app and we suspect they might have just completed onboarding,
     // refresh their profile data to get the latest onboarding_completed_at status
     if (user && inMainApp && userPreferences && !userPreferences.has_ever_completed_onboarding) {
