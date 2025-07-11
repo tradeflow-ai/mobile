@@ -176,9 +176,16 @@ export const useDailyPlan = (
       }
 
       // Update plan with dispatcher output
-      await DailyPlanService.completeDispatcherStep(plan.id, dispatchResult.dispatch_output);
+      console.log('📝 Updating daily plan with dispatcher output...');
+      const { data: updatedPlan, error: updateError } = await DailyPlanService.completeDispatcherStep(plan.id, dispatchResult.dispatch_output);
+
+      if (updateError) {
+        console.error('❌ Failed to update daily plan:', updateError);
+        throw new Error(`Failed to save dispatcher results: ${updateError.message || updateError}`);
+      }
 
       console.log('🎯 Dispatcher completed successfully');
+      console.log('✅ Daily plan updated:', updatedPlan?.id, 'Status:', updatedPlan?.status);
     } catch (err) {
       console.error('Error starting planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to start planning');

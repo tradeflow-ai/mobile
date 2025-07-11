@@ -388,6 +388,38 @@ export class DailyPlanService {
    */
 
   /**
+   * Calculate total estimated duration from dispatcher output
+   */
+  private static calculateTotalDuration(dispatcherOutput: DispatcherOutput): number | null {
+    try {
+      // Try to get from scheduling_constraints first
+      if (dispatcherOutput.scheduling_constraints?.total_work_hours) {
+        return dispatcherOutput.scheduling_constraints.total_work_hours * 60;
+      }
+      
+      // Fallback: Calculate from optimization_summary
+      if (dispatcherOutput.optimization_summary?.total_travel_time) {
+        return dispatcherOutput.optimization_summary.total_travel_time;
+      }
+      
+      // Fallback: Calculate from prioritized jobs
+      if (dispatcherOutput.prioritized_jobs?.length) {
+        const totalMinutes = dispatcherOutput.prioritized_jobs.reduce((total, job) => {
+          const duration = job.buffer_time_minutes || 60; // Default 1 hour
+          return total + duration;
+        }, 0);
+        return totalMinutes;
+      }
+      
+      // No duration data available
+      return null;
+    } catch (error) {
+      console.warn('Error calculating total duration:', error);
+      return null;
+    }
+  }
+
+  /**
    * Update daily plan after dispatcher function completion
    */
   static async completeDispatcherStep(
@@ -399,7 +431,7 @@ export class DailyPlanService {
       status: 'dispatcher_complete',
       current_step: 'confirmation',
       dispatcher_output: dispatcherOutput,
-      total_estimated_duration: dispatcherOutput.scheduling_constraints.total_work_hours * 60
+      total_estimated_duration: this.calculateTotalDuration(dispatcherOutput)
     });
   }
 
