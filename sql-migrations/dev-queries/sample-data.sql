@@ -10,19 +10,6 @@
 DO $$
 DECLARE
     first_user_id UUID;
-
-    -- BoM variables
-    jt_hvac_id UUID;
-    jt_plumbing_id UUID;
-    jt_electrical_id UUID;
-    jt_emergency_id UUID;
-    pt_filter_id UUID;
-    pt_pipe_id UUID;
-    pt_valve_id UUID;
-    pt_gfci_id UUID;
-    pt_wire_id UUID;
-    pt_wrench_id UUID;
-    pt_tape_id UUID;
 BEGIN
     -- Get the first user ID from auth.users
     SELECT id INTO first_user_id FROM auth.users LIMIT 1;
@@ -91,99 +78,6 @@ BEGIN
               (first_user_id, 'Tech Startup Office', 'Equipment pickup and disposal', 'pickup', 'low', 'pending', 37.7549, -122.4394, '321 Mission Street', 'San Francisco', 'CA', '94105', '2024-02-15 16:00:00+00', 60, 'Sarah Johnson', '(555) 456-7890', 'Old server equipment for recycling'),
               
               (first_user_id, 'Coffee Shop', 'Emergency plumbing - burst pipe', 'emergency', 'urgent', 'in_progress', 37.7449, -122.4194, '555 Valencia Street', 'San Francisco', 'CA', '94110', '2024-02-14 08:00:00+00', 240, 'Mike Chen', '(555) 567-8901', 'Water main break in basement, urgent!');
-
-        -- =====================================================
-        -- SAMPLE JOB TYPES (Bill of Materials)
-        -- =====================================================
-
-        INSERT INTO public.job_types (
-          user_id,
-          name,
-          description,
-          category,
-          estimated_duration,
-          default_priority,
-          labor_rate,
-          instructions,
-          safety_notes
-        ) VALUES
-          (first_user_id, 'HVAC Maintenance', 'Regular HVAC system maintenance and filter replacement', 'hvac', 120, 'medium', 85.00, 'Check all units, replace filters, inspect ductwork, test thermostat calibration', 'Turn off power before servicing. Check for gas leaks.'),
-          (first_user_id, 'Plumbing Repair', 'Standard plumbing repair work including leaks and clogs', 'plumbing', 90, 'medium', 95.00, 'Diagnose issue, shut off water if needed, repair or replace components, test for leaks', 'Always shut off water supply before starting work.'),
-          (first_user_id, 'Electrical Inspection', 'Safety inspection of electrical systems and installations', 'electrical', 180, 'high', 105.00, 'Check all outlets, test GFCI functionality, inspect panel, verify grounding', 'TURN OFF POWER at breaker. Use proper PPE. Test circuits before touching.'),
-          (first_user_id, 'Equipment Pickup', 'Collection and disposal of old equipment', 'general', 60, 'low', 65.00, 'Safely disconnect and remove equipment, transport to disposal facility', 'Use proper lifting techniques. Check for hazardous materials.'),
-          (first_user_id, 'Emergency Plumbing', 'Urgent plumbing repairs for leaks and bursts', 'plumbing', 240, 'urgent', 125.00, 'Assess damage, stop water flow, implement temporary fix, plan permanent repair', 'Safety first - check for electrical hazards around water.');
-
-        -- =====================================================
-        -- SAMPLE PART TEMPLATES (Bill of Materials)
-        -- =====================================================
-
-        INSERT INTO public.part_templates (
-          user_id,
-          name,
-          description,
-          part_number,
-          category,
-          unit,
-          estimated_cost,
-          preferred_supplier,
-          specifications,
-          is_common
-        ) VALUES
-          (first_user_id, 'HVAC Filter 16x20', 'Standard HVAC air filter', 'FILT-16X20-M11', 'HVAC', 'each', 8.99, 'Filtrete', 'MERV 11 rating, pleated', true),
-          (first_user_id, 'PVC Pipe 1/2 inch', 'Half-inch PVC pipe for plumbing', 'PVC-12-10FT', 'Plumbing', 'feet', 2.50, 'Home Depot', 'Schedule 40 PVC, white', true),
-          (first_user_id, 'Ball Valve 3/4 inch', 'Quarter-turn ball valve', 'BV-34-QT', 'Plumbing', 'each', 12.50, 'Ferguson', '3/4 inch NPT threads, brass', false),
-          (first_user_id, 'GFCI Outlet', 'Ground fault circuit interrupter outlet', 'GFCI-15A-WH', 'Electrical', 'each', 24.99, 'Leviton', '15A, tamper resistant, white', true),
-          (first_user_id, 'Wire 12 AWG', 'Electrical wire 12 gauge', 'WIRE-12AWG-CU', 'Electrical', 'feet', 0.85, 'Southwire', 'Copper, THHN insulation', true),
-          (first_user_id, 'Pipe Wrench 14 inch', 'Heavy duty pipe wrench', 'PW-14-HD', 'Tools', 'each', 35.00, 'Ridgid', 'Cast iron construction', false),
-          (first_user_id, 'Duct Tape', 'Professional grade duct tape', 'DT-2IN-SV', 'General', 'roll', 12.99, '3M', '2 inch wide, silver', true);
-
-        -- =====================================================
-        -- SAMPLE BILL OF MATERIALS (Job Type Parts)
-        -- =====================================================
-
-        -- Get job type IDs
-        SELECT id INTO jt_hvac_id FROM public.job_types WHERE user_id = first_user_id AND name = 'HVAC Maintenance';
-        SELECT id INTO jt_plumbing_id FROM public.job_types WHERE user_id = first_user_id AND name = 'Plumbing Repair';
-        SELECT id INTO jt_electrical_id FROM public.job_types WHERE user_id = first_user_id AND name = 'Electrical Inspection';
-        SELECT id INTO jt_emergency_id FROM public.job_types WHERE user_id = first_user_id AND name = 'Emergency Plumbing';
-
-        -- Get part template IDs
-        SELECT id INTO pt_filter_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'HVAC Filter 16x20';
-        SELECT id INTO pt_pipe_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'PVC Pipe 1/2 inch';
-        SELECT id INTO pt_valve_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'Ball Valve 3/4 inch';
-        SELECT id INTO pt_gfci_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'GFCI Outlet';
-        SELECT id INTO pt_wire_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'Wire 12 AWG';
-        SELECT id INTO pt_wrench_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'Pipe Wrench 14 inch';
-        SELECT id INTO pt_tape_id FROM public.part_templates WHERE user_id = first_user_id AND name = 'Duct Tape';
-
-        -- Create Bill of Materials associations
-        INSERT INTO public.job_type_parts (
-          user_id,
-          job_type_id,
-          part_template_id,
-          quantity_needed,
-          is_required,
-          notes
-        ) VALUES
-          -- HVAC Maintenance BoM
-          (first_user_id, jt_hvac_id, pt_filter_id, 2.0, true, 'Typically need 2 filters per system'),
-          (first_user_id, jt_hvac_id, pt_tape_id, 1.0, false, 'For minor duct repairs'),
-          
-          -- Plumbing Repair BoM
-          (first_user_id, jt_plumbing_id, pt_pipe_id, 5.0, false, 'For pipe replacements'),
-          (first_user_id, jt_plumbing_id, pt_valve_id, 1.0, false, 'If valve replacement needed'),
-          (first_user_id, jt_plumbing_id, pt_wrench_id, 1.0, true, 'Required tool for most repairs'),
-          (first_user_id, jt_plumbing_id, pt_tape_id, 1.0, true, 'For temporary sealing'),
-          
-          -- Electrical Inspection BoM
-          (first_user_id, jt_electrical_id, pt_gfci_id, 2.0, false, 'For wet area upgrades'),
-          (first_user_id, jt_electrical_id, pt_wire_id, 10.0, false, 'For wiring repairs'),
-          
-          -- Emergency Plumbing BoM
-          (first_user_id, jt_emergency_id, pt_pipe_id, 10.0, true, 'Emergency pipe replacement'),
-          (first_user_id, jt_emergency_id, pt_valve_id, 2.0, true, 'Shut-off valves'),
-          (first_user_id, jt_emergency_id, pt_wrench_id, 1.0, true, 'Essential tool'),
-          (first_user_id, jt_emergency_id, pt_tape_id, 2.0, true, 'Emergency sealing');
 
         RAISE NOTICE 'Sample data inserted successfully for user: %', first_user_id;
         

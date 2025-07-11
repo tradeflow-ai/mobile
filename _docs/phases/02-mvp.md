@@ -95,14 +95,6 @@ To build and integrate the core, end-to-end AI-powered daily planning workflow. 
 
 
 
-### Feature 9: In-Field Execution UI (Josh)
-
-1.  **Job Progress Tracking:** Real-time job status updates and completion tracking.
-2.  **Navigation Integration:** Connect with device navigation apps for turn-by-turn directions.
-3.  **Inventory Usage Tracking:** Track parts used during job completion.
-
-
-
 ---
 
 ## Team Task Allocation
