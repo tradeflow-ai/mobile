@@ -8,10 +8,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAtom } from 'jotai';
-import { userAtom } from '@/store/atoms';
+import { useAtom, useSetAtom } from 'jotai';
+import { userAtom, activeJobAtom } from '@/store/atoms';
 import { DailyPlanService, type DailyPlan, type UserModifications } from '@/services/dailyPlanService';
 import { AgentService } from '@/services/agentService';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/services/queryClient';
+import { JobLocation } from './useJobs';
 
 interface UseDailyPlanOptions {
   /**
@@ -72,6 +75,8 @@ export const useDailyPlan = (
   options: UseDailyPlanOptions = {}
 ): UseDailyPlanReturn => {
   const [user] = useAtom(userAtom);
+  const setActiveJob = useSetAtom(activeJobAtom);
+  const queryClient = useQueryClient();
   const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -295,10 +300,29 @@ export const useDailyPlan = (
     try {
       setError(null);
       
-      const { error: approveError } = await DailyPlanService.approveDailyPlan(dailyPlan.id);
+      const { data: approvedPlan, error: approveError } = await DailyPlanService.approveDailyPlan(dailyPlan.id);
       
       if (approveError) {
         throw approveError;
+      }
+
+      if (approvedPlan) {
+        // The dispatcher output contains the definitive, final order of jobs,
+        // including any hardware store runs. We just need to pick the first one.
+        if (approvedPlan.dispatcher_output?.prioritized_jobs?.length > 0) {
+          const firstJobId = approvedPlan.dispatcher_output.prioritized_jobs[0].job_id;
+          
+          // Fetch the full job details from the cache or network
+          const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
+            queryKey: queryKeys.job(firstJobId),
+          });
+
+          if (jobDetails) {
+            setActiveJob(jobDetails);
+          } else {
+            console.warn(`Could not fetch details for the first job (ID: ${firstJobId}).`);
+          }
+        }
       }
 
       console.log('Daily plan approved:', dailyPlan.id);
@@ -306,7 +330,7 @@ export const useDailyPlan = (
       console.error('Error approving plan:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve plan');
     }
-  }, [dailyPlan]);
+  }, [dailyPlan, setActiveJob, queryClient]);
 
   /**
    * Confirm dispatcher output and mark as ready for inventory

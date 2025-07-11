@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  View,
   ViewStyle,
   TextStyle,
 } from 'react-native';
@@ -18,6 +19,7 @@ export interface ButtonProps {
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
+  icon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -29,6 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'medium',
   disabled = false,
   loading = false,
+  icon,
   style,
   textStyle,
 }) => {
@@ -121,7 +124,10 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={getTextStyle().color} size="small" />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <View style={styles.contentContainer}>
+          {icon}
+          <Text style={[getTextStyle(), icon ? styles.textWithIcon : {}]}>{title}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -134,6 +140,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     ...touchTargets.styles.minimum,
+  },
+  contentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textWithIcon: {
+    marginLeft: spacing.s,
   },
   // Size variants using theme spacing
   small: {

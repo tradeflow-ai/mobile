@@ -150,4 +150,7 @@ export const dailyPlanWorkflowAtom = atom<DailyPlanWorkflowState>({
 // Hardware store job state for cross-component access
 export const hardwareStoreJobAtom = atom<any | null>(null);
 
+// Active job state for real-time tracking during the workday
+export const activeJobAtom = atom<JobLocation | null>(null);
+
 
