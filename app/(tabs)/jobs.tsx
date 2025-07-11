@@ -8,7 +8,7 @@ import { typography, spacing, shadows, radius, touchTargets } from '@/constants/
 import { Header } from '@/components/Header';
 import { SearchBar, EmptyState, TabSelector, TabOption } from '@/components/ui';
 import { useJobs, useTodaysJobs, JobLocation } from '@/hooks/useJobs';
-import { formatDate } from '@/utils/dateUtils';
+import { formatDate, formatDateOnly } from '@/utils/dateUtils';
 import { useAtomValue } from 'jotai';
 import { activeJobAtom } from '@/store/atoms';
 import { ActiveJobCard } from '@/components/ActiveJobCard';
@@ -137,10 +137,30 @@ export default function JobsScreen() {
         )}
         
         <View style={styles.jobDetailRow}>
-          <FontAwesome name="clock-o" size={14} color={colors.placeholder} />
-          <Text style={[styles.scheduledTime, { color: colors.placeholder }]}>
-            {formatDate(item.scheduled_start, 'Not scheduled')}
-          </Text>
+          <FontAwesome 
+            name={item.use_ai_scheduling ? "magic" : "clock-o"} 
+            size={14} 
+            color={item.use_ai_scheduling ? colors.primary : colors.placeholder} 
+          />
+          <View style={styles.timeContainer}>
+            <Text style={[styles.scheduledTime, { color: colors.placeholder }]}>
+              {item.use_ai_scheduling 
+                ? formatDateOnly(item.scheduled_start, 'Not scheduled')
+                : formatDate(item.scheduled_start, 'Not scheduled')
+              }
+            </Text>
+            {item.use_ai_scheduling && (
+              <Text style={[
+                styles.aiSchedulingIndicator, 
+                { 
+                  color: colors.primary,
+                  fontStyle: 'italic'
+                }
+              ]}>
+                ✨ AI will select optimal times
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
@@ -319,6 +339,13 @@ const styles = StyleSheet.create({
   },
   scheduledTime: {
     ...typography.body,
+  },
+  timeContainer: {
+    flex: 1,
+  },
+  aiSchedulingIndicator: {
+    ...typography.caption,
+    marginTop: spacing.xs,
   },
   jobFooter: {
     flexDirection: 'row',

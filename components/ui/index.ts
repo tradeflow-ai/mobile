@@ -13,5 +13,6 @@ export type { TabSelectorProps, TabOption } from './TabSelector';
 export { Label } from './Label';
 export { ErrorMessage } from './ErrorMessage';
 export { EmptyState } from './EmptyState';
+export { NativeDatePicker } from './NativeDatePicker';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 
