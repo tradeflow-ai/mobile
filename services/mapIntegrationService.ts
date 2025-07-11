@@ -416,10 +416,7 @@ export class MapIntegrationService {
         [{ text: 'OK' }]
       );
     } finally {
-      // Log analytics
-      if (userId && selectedApp) {
-        // Removed analytics logging as per edit hint
-      }
+      // Cleanup or additional logging could go here
     }
 
     return success;

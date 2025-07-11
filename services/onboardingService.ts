@@ -1,17 +1,16 @@
 /**
- * Onboarding Service - User Onboarding Configuration and Progress Tracking
+ * Onboarding Service - User Onboarding Flow Management
  * 
- * This service manages user onboarding flow configuration, progress tracking,
- * analytics collection, and completion scoring for the TradeFlow app.
+ * This service handles the complete onboarding workflow including preferences storage,
+ * step progression, validation, and configuration management.
  */
 
 import { supabase } from './supabase';
 
-// =====================================================
-// TYPESCRIPT INTERFACES
-// =====================================================
+// ===========================================
+// TYPE DEFINITIONS
+// ===========================================
 
-// Onboarding step data interfaces
 export interface WorkScheduleData {
   workDays: string[];
   startTime: string;
@@ -36,63 +35,31 @@ export interface SuppliersData {
   }>;
 }
 
-// Onboarding preferences interface
 export interface OnboardingPreferences {
   id: string;
   user_id: string;
+  current_step: string;
   is_completed: boolean;
   completion_score: number;
-  current_step: 'work-schedule' | 'time-buffers' | 'suppliers' | 'completed';
-  steps_completed: string[];
   
-  // Step data
-  work_schedule_data: WorkScheduleData;
-  work_schedule_completed: boolean;
-  work_schedule_completed_at?: string;
+  // Preferences Data
+  work_schedule: WorkScheduleData;
+  time_buffers: TimeBuffersData;
+  suppliers: SuppliersData;
   
-  time_buffers_data: TimeBuffersData;
-  time_buffers_completed: boolean;
-  time_buffers_completed_at?: string;
-  
-  suppliers_data: SuppliersData;
-  suppliers_completed: boolean;
-  suppliers_completed_at?: string;
-  
-  // Metadata
+  // Timestamps
   started_at: string;
   completed_at?: string;
-  last_accessed_at: string;
-  onboarding_version: string;
-  skip_reasons: Record<string, string>;
   created_at: string;
   updated_at: string;
 }
 
-// Analytics event interface
-export interface OnboardingAnalyticsEvent {
-  user_id: string;
-  event_type: 'onboarding_started' | 'step_started' | 'step_completed' | 'step_skipped' | 'onboarding_completed' | 'onboarding_abandoned';
-  step_name?: 'work-schedule' | 'time-buffers' | 'suppliers';
-  event_timestamp?: string;
-  time_spent_seconds?: number;
-  user_agent?: string;
-  platform?: 'ios' | 'android' | 'web';
-  onboarding_version?: string;
-  form_data?: Record<string, any>;
-  validation_errors?: Record<string, any>;
-  session_id?: string;
-  previous_step?: string;
-  next_step?: string;
-}
-
-// Configuration interfaces
 export interface StepDefinition {
   title: string;
   description: string;
   required: boolean;
   order: number;
-  points: number;
-  default_values: Record<string, any>;
+  fields: Record<string, any>;
 }
 
 export interface FlowConfiguration {
@@ -120,7 +87,6 @@ export interface OnboardingConfiguration {
   updated_at: string;
 }
 
-// Validation result interface
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
@@ -128,14 +94,13 @@ export interface ValidationResult {
   completeness_score: number;
 }
 
-// =====================================================
-// ONBOARDING SERVICE CLASS
-// =====================================================
+// ===========================================
+// ONBOARDING SERVICE
+// ===========================================
 
 export class OnboardingService {
-  
   /**
-   * Get active onboarding configuration
+   * Get onboarding configuration
    */
   static async getOnboardingConfiguration(): Promise<{ data: OnboardingConfiguration | null; error: any }> {
     try {
@@ -143,7 +108,6 @@ export class OnboardingService {
         .from('onboarding_configurations')
         .select('*')
         .eq('is_active', true)
-        .eq('config_name', 'default')
         .single();
 
       if (error) throw error;
@@ -165,13 +129,8 @@ export class OnboardingService {
         .eq('user_id', userId)
         .single();
 
-      if (error && error.code === 'PGRST116') {
-        // No preferences found, return null (not an error)
-        return { data: null, error: null };
-      }
-
-      if (error) throw error;
-      return { data, error: null };
+      if (error && error.code !== 'PGRST116') throw error;
+      return { data: data || null, error: null };
     } catch (error) {
       console.error('Error getting user onboarding preferences:', error);
       return { data: null, error };
@@ -179,53 +138,31 @@ export class OnboardingService {
   }
 
   /**
-   * Initialize onboarding for a new user
+   * Initialize onboarding for a user
    */
   static async initializeOnboarding(userId: string): Promise<{ data: OnboardingPreferences | null; error: any }> {
     try {
-      // Check if onboarding is already initialized
+      // Check if already exists
       const { data: existing } = await this.getUserOnboardingPreferences(userId);
-      const isFirstInitialization = !existing;
+      if (existing) return { data: existing, error: null };
 
-      // Get default configuration
-      const { data: config, error: configError } = await this.getOnboardingConfiguration();
-      if (configError) throw configError;
-
-      const initialData = {
-        user_id: userId,
-        is_completed: false,
-        completion_score: 0,
-        current_step: 'work-schedule' as const,
-        steps_completed: [],
-        work_schedule_data: config?.step_definitions?.['work-schedule']?.default_values || {},
-        work_schedule_completed: false,
-        time_buffers_data: config?.step_definitions?.['time-buffers']?.default_values || {},
-        time_buffers_completed: false,
-        suppliers_data: config?.step_definitions?.['suppliers']?.default_values || {},
-        suppliers_completed: false,
-        started_at: existing?.started_at || new Date().toISOString(),
-        last_accessed_at: new Date().toISOString(),
-        onboarding_version: config?.config_version || '1.0',
-        skip_reasons: {},
-      };
-
+      // Create new onboarding preferences
       const { data, error } = await supabase
         .from('onboarding_preferences')
-        .upsert([initialData], { onConflict: 'user_id' })
+        .insert({
+          user_id: userId,
+          current_step: 'work-schedule',
+          is_completed: false,
+          completion_score: 0,
+          work_schedule: {},
+          time_buffers: {},
+          suppliers: {},
+          started_at: new Date().toISOString(),
+        })
         .select()
         .single();
 
       if (error) throw error;
-
-      // Only track onboarding started event for first initialization
-      if (isFirstInitialization) {
-        await this.trackOnboardingProgress({
-          user_id: userId,
-          event_type: 'onboarding_started',
-          onboarding_version: config?.config_version || '1.0',
-        });
-      }
-
       return { data, error: null };
     } catch (error) {
       console.error('Error initializing onboarding:', error);
@@ -234,7 +171,7 @@ export class OnboardingService {
   }
 
   /**
-   * Update onboarding preferences for a specific step
+   * Update onboarding preferences for a step
    */
   static async updateOnboardingPreferences(
     userId: string,
@@ -243,69 +180,32 @@ export class OnboardingService {
     completed: boolean = false
   ): Promise<{ data: OnboardingPreferences | null; error: any }> {
     try {
-      // Get current preferences
-      let { data: current } = await this.getUserOnboardingPreferences(userId);
-      
-      // Initialize if doesn't exist
-      if (!current) {
-        const { data: initialized } = await this.initializeOnboarding(userId);
-        current = initialized;
-      }
+      const { data: current } = await this.getUserOnboardingPreferences(userId);
+      if (!current) throw new Error('Onboarding preferences not found');
 
-      if (!current) throw new Error('Failed to initialize onboarding preferences');
-
-      // Prepare update data
-      const updateData: any = {
-        last_accessed_at: new Date().toISOString(),
-      };
-
-      // Update step-specific data
-      switch (stepName) {
-        case 'work-schedule':
-          updateData.work_schedule_data = stepData;
-          updateData.work_schedule_completed = completed;
-          if (completed) {
-            updateData.work_schedule_completed_at = new Date().toISOString();
-          }
-          break;
-        case 'time-buffers':
-          updateData.time_buffers_data = stepData;
-          updateData.time_buffers_completed = completed;
-          if (completed) {
-            updateData.time_buffers_completed_at = new Date().toISOString();
-          }
-          break;
-        case 'suppliers':
-          updateData.suppliers_data = stepData;
-          updateData.suppliers_completed = completed;
-          if (completed) {
-            updateData.suppliers_completed_at = new Date().toISOString();
-          }
-          break;
-      }
-
-      // Update steps completed array
-      if (completed && !current.steps_completed.includes(stepName)) {
-        updateData.steps_completed = [...current.steps_completed, stepName];
+      // Validate step data
+      const validation = await this.validateStepData(stepName, stepData);
+      if (!validation.valid) {
+        return { data: null, error: { message: 'Validation failed', details: validation.errors } };
       }
 
       // Calculate completion score
-      const { score, isFullyCompleted } = await this.calculateCompletionScore(userId, updateData);
-      updateData.completion_score = score;
+      const { score, isFullyCompleted } = await this.calculateCompletionScore(userId, {
+        [stepName]: stepData,
+      });
 
-      if (isFullyCompleted) {
-        updateData.is_completed = true;
-        updateData.completed_at = new Date().toISOString();
-        updateData.current_step = 'completed';
-      } else {
-        // Update current step to next step
-        const nextStep = this.getNextStep(stepName);
-        if (nextStep) {
-          updateData.current_step = nextStep;
-        }
-      }
+      const nextStep = isFullyCompleted ? 'completed' : this.getNextStep(stepName);
 
-      // Update in database
+      const updateData = {
+        [stepName]: stepData,
+        completion_score: score,
+        current_step: nextStep,
+        ...(isFullyCompleted && {
+          is_completed: true,
+          completed_at: new Date().toISOString(),
+        }),
+      };
+
       const { data, error } = await supabase
         .from('onboarding_preferences')
         .update(updateData)
@@ -314,52 +214,10 @@ export class OnboardingService {
         .single();
 
       if (error) throw error;
-
-      // Track analytics event
-      await this.trackOnboardingProgress({
-        user_id: userId,
-        event_type: completed ? 'step_completed' : 'step_started',
-        step_name: stepName,
-        form_data: stepData,
-        onboarding_version: current.onboarding_version,
-      });
-
-      // Track completion if fully completed
-      if (isFullyCompleted) {
-        await this.trackOnboardingProgress({
-          user_id: userId,
-          event_type: 'onboarding_completed',
-          onboarding_version: current.onboarding_version,
-        });
-      }
-
       return { data, error: null };
     } catch (error) {
       console.error('Error updating onboarding preferences:', error);
       return { data: null, error };
-    }
-  }
-
-  /**
-   * Track onboarding progress analytics
-   */
-  static async trackOnboardingProgress(event: OnboardingAnalyticsEvent): Promise<{ error: any }> {
-    try {
-      const analyticsData = {
-        ...event,
-        event_timestamp: event.event_timestamp || new Date().toISOString(),
-        onboarding_version: event.onboarding_version || '1.0',
-      };
-
-      const { error } = await supabase
-        .from('onboarding_analytics')
-        .insert([analyticsData]);
-
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      console.error('Error tracking onboarding progress:', error);
-      return { error };
     }
   }
 
@@ -375,24 +233,12 @@ export class OnboardingService {
       const { data: current } = await this.getUserOnboardingPreferences(userId);
       if (!current) throw new Error('Onboarding preferences not found');
 
-      const skipReasons = { ...current.skip_reasons, [stepName]: reason };
-      const stepsCompleted = [...current.steps_completed];
-      if (!stepsCompleted.includes(stepName)) {
-        stepsCompleted.push(stepName);
-      }
-
       const nextStep = this.getNextStep(stepName);
-      const { score, isFullyCompleted } = await this.calculateCompletionScore(userId, {
-        steps_completed: stepsCompleted,
-        skip_reasons: skipReasons,
-      });
+      const { score, isFullyCompleted } = await this.calculateCompletionScore(userId, current);
 
       const updateData = {
-        skip_reasons: skipReasons,
-        steps_completed: stepsCompleted,
-        completion_score: score,
         current_step: isFullyCompleted ? 'completed' : nextStep,
-        last_accessed_at: new Date().toISOString(),
+        completion_score: score,
         ...(isFullyCompleted && {
           is_completed: true,
           completed_at: new Date().toISOString(),
@@ -407,16 +253,6 @@ export class OnboardingService {
         .single();
 
       if (error) throw error;
-
-      // Track skip event
-      await this.trackOnboardingProgress({
-        user_id: userId,
-        event_type: 'step_skipped',
-        step_name: stepName,
-        form_data: { skip_reason: reason },
-        onboarding_version: current.onboarding_version,
-      });
-
       return { data, error: null };
     } catch (error) {
       console.error('Error skipping step:', error);
@@ -548,48 +384,43 @@ export class OnboardingService {
     try {
       // Get configuration for scoring
       const { data: config } = await this.getOnboardingConfiguration();
-      if (!config) throw new Error('Configuration not found');
+      if (!config) return { score: 0, isFullyCompleted: false };
 
-      // Get current preferences
       const { data: current } = await this.getUserOnboardingPreferences(userId);
       if (!current) return { score: 0, isFullyCompleted: false };
 
-      // Merge with overrides
+      // Apply overrides
       const preferences = { ...current, ...overrides };
 
-      const scoring = config.flow_configuration.scoring;
       let totalScore = 0;
+      const scoring = config.flow_configuration.scoring;
 
       // Calculate score for each step
-      if (preferences.work_schedule_completed || preferences.steps_completed.includes('work-schedule')) {
+      if (preferences.work_schedule && Object.keys(preferences.work_schedule).length > 0) {
         totalScore += scoring['work-schedule'];
       }
 
-      if (preferences.time_buffers_completed || preferences.steps_completed.includes('time-buffers')) {
+      if (preferences.time_buffers && Object.keys(preferences.time_buffers).length > 0) {
         totalScore += scoring['time-buffers'];
       }
 
-      if (preferences.suppliers_completed || preferences.steps_completed.includes('suppliers')) {
-        totalScore += scoring['suppliers'];
+      if (preferences.suppliers && Object.keys(preferences.suppliers).length > 0) {
+        totalScore += scoring.suppliers;
       }
 
-      // Bonus points for completing all steps without skipping
-      const allStepsCompleted = preferences.steps_completed.includes('work-schedule') &&
-                               preferences.steps_completed.includes('time-buffers') &&
-                               preferences.steps_completed.includes('suppliers');
+      // Bonus for completion
+      const allStepsCompleted = 
+        preferences.work_schedule && Object.keys(preferences.work_schedule).length > 0 &&
+        preferences.time_buffers && Object.keys(preferences.time_buffers).length > 0 &&
+        preferences.suppliers && Object.keys(preferences.suppliers).length > 0;
 
-      const noStepsSkipped = Object.keys(preferences.skip_reasons || {}).length === 0;
-
-      if (allStepsCompleted && noStepsSkipped) {
+      if (allStepsCompleted) {
         totalScore += scoring.bonus;
       }
 
       const isFullyCompleted = totalScore >= config.flow_configuration.completion_threshold;
 
-      return {
-        score: Math.min(totalScore, 100),
-        isFullyCompleted,
-      };
+      return { score: Math.min(totalScore, 100), isFullyCompleted };
     } catch (error) {
       console.error('Error calculating completion score:', error);
       return { score: 0, isFullyCompleted: false };
@@ -597,7 +428,7 @@ export class OnboardingService {
   }
 
   /**
-   * Get completion status and analytics
+   * Get onboarding status for user
    */
   static async getOnboardingStatus(userId: string): Promise<{
     data: {
@@ -615,47 +446,34 @@ export class OnboardingService {
         this.getOnboardingConfiguration(),
       ]);
 
-      if (preferencesResult.error) throw preferencesResult.error;
-      if (configResult.error) throw configResult.error;
+      if (preferencesResult.error || configResult.error) {
+        throw preferencesResult.error || configResult.error;
+      }
 
       const preferences = preferencesResult.data;
       const configuration = configResult.data;
 
-      let completionScore = 0;
-      let isCompleted = false;
-      let nextStep: string | null = null;
-
-      if (preferences) {
-        // Use new onboarding system, but also check legacy preferences as fallback
-        const { score, isFullyCompleted } = await this.calculateCompletionScore(userId);
-        
-        // If new system shows incomplete, double-check with legacy system
-        if (!isFullyCompleted) {
-          const legacyCompletion = await this.checkLegacyOnboardingCompletion(userId);
-          if (legacyCompletion.isCompleted) {
-            // Legacy system shows complete, use those results
-            completionScore = legacyCompletion.completionScore;
-            isCompleted = true;
-            nextStep = null;
-          } else {
-            // Both systems show incomplete
-            completionScore = score;
-            isCompleted = isFullyCompleted;
-            nextStep = preferences.current_step;
-          }
-        } else {
-          // New system shows complete
-          completionScore = score;
-          isCompleted = isFullyCompleted;
-          nextStep = null;
-        }
-      } else {
-        // Fallback: Check old preferences system for completion
-        const legacyCompletion = await this.checkLegacyOnboardingCompletion(userId);
-        isCompleted = legacyCompletion.isCompleted;
-        completionScore = legacyCompletion.completionScore;
-        nextStep = isCompleted ? null : 'work-schedule';
+      if (!preferences) {
+        // No preferences yet - return initial state
+        return {
+          data: {
+            preferences: null,
+            configuration,
+            completionScore: 0,
+            isCompleted: false,
+            nextStep: 'work-schedule',
+          },
+          error: null,
+        };
       }
+
+      // Check for legacy completion
+      const { isCompleted: legacyCompleted, completionScore: legacyScore } = 
+        await this.checkLegacyOnboardingCompletion(userId);
+
+      const completionScore = preferences.completion_score || legacyScore;
+      const isCompleted = preferences.is_completed || legacyCompleted;
+      const nextStep = isCompleted ? null : preferences.current_step;
 
       return {
         data: {
@@ -674,47 +492,43 @@ export class OnboardingService {
   }
 
   /**
-   * Check if user has completed onboarding via the legacy preferences system
-   * This provides compatibility with the existing onboarding UI
+   * Check if user has completed onboarding via legacy system
    */
   private static async checkLegacyOnboardingCompletion(userId: string): Promise<{
     isCompleted: boolean;
     completionScore: number;
   }> {
     try {
-      // Check if user has preferences saved via the old system
-      const { data: profile, error } = await supabase
+      // Check if user has profile preferences that indicate completion
+      const { data: profile } = await supabase
         .from('profiles')
         .select('preferences')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.log('No profile preferences found for legacy check');
+      if (!profile?.preferences) {
         return { isCompleted: false, completionScore: 0 };
       }
 
-      const prefs = profile?.preferences || {};
+      const prefs = profile.preferences;
       let score = 0;
 
-      // Check work schedule completion (30 points)
-      if (prefs.work_days && prefs.work_start_time && prefs.work_end_time) {
-        score += 30;
-      }
-
-      // Check time buffers completion (30 points)
-      if ((prefs.travel_buffer_percentage !== undefined || prefs.travel_buffer_minutes !== undefined) && prefs.job_duration_buffer_minutes !== undefined) {
-        score += 30;
-      }
-
-      // Check supplier preferences completion (40 points)
-      if (prefs.primary_supplier || (prefs.preferred_suppliers && prefs.preferred_suppliers.length > 0)) {
+      // Check for work schedule completion
+      if (prefs.work_schedule && Object.keys(prefs.work_schedule).length > 0) {
         score += 40;
       }
 
-      const isCompleted = score >= 75; // At least work schedule + time buffers OR work schedule + suppliers
+      // Check for time buffers completion
+      if (prefs.travel_time_buffers && Object.keys(prefs.travel_time_buffers).length > 0) {
+        score += 30;
+      }
 
-      console.log('Legacy onboarding check:', { userId, score, isCompleted, hasPrefs: !!prefs.work_days });
+      // Check for supplier preferences completion
+      if (prefs.suppliers && Object.keys(prefs.suppliers).length > 0) {
+        score += 30;
+      }
+
+      const isCompleted = score >= 75; // 75% threshold
 
       return { isCompleted, completionScore: score };
     } catch (error) {
@@ -723,32 +537,6 @@ export class OnboardingService {
     }
   }
 
-  /**
-   * Get onboarding analytics for a user
-   */
-  static async getOnboardingAnalytics(userId: string): Promise<{ data: OnboardingAnalyticsEvent[] | null; error: any }> {
-    try {
-      const { data, error } = await supabase
-        .from('onboarding_analytics')
-        .select('*')
-        .eq('user_id', userId)
-        .order('event_timestamp', { ascending: true });
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      console.error('Error getting onboarding analytics:', error);
-      return { data: null, error };
-    }
-  }
-
-  // =====================================================
-  // HELPER METHODS
-  // =====================================================
-
-  /**
-   * Get the next step in the onboarding flow
-   */
   private static getNextStep(currentStep: string): 'work-schedule' | 'time-buffers' | 'suppliers' | 'completed' {
     switch (currentStep) {
       case 'work-schedule':
@@ -763,15 +551,12 @@ export class OnboardingService {
   }
 
   /**
-   * Reset onboarding for a user (useful for testing)
+   * Reset onboarding progress for user
    */
   static async resetOnboarding(userId: string): Promise<{ error: any }> {
     try {
-      // Delete existing preferences and analytics
-      await Promise.all([
-        supabase.from('onboarding_preferences').delete().eq('user_id', userId),
-        supabase.from('onboarding_analytics').delete().eq('user_id', userId),
-      ]);
+      // Delete onboarding preferences
+      await supabase.from('onboarding_preferences').delete().eq('user_id', userId);
 
       return { error: null };
     } catch (error) {

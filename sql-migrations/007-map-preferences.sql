@@ -103,7 +103,6 @@ CREATE TABLE IF NOT EXISTS public.user_map_preferences (
   long_route_threshold_miles DECIMAL(5,2) DEFAULT 5.0,
   
   -- Privacy settings
-  allow_usage_analytics BOOLEAN DEFAULT TRUE,
   allow_performance_tracking BOOLEAN DEFAULT FALSE,
   
   -- Usage tracking

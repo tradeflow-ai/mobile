@@ -73,21 +73,19 @@ export const queryKeys = {
   partTemplate: (partTemplateId: string) => ['part-templates', partTemplateId] as const,
   jobTypeParts: (jobTypeId: string) => ['job-types', jobTypeId, 'parts'] as const,
   
+  // Daily Plans
+  dailyPlans: () => ['daily-plans'] as const,
+  dailyPlan: (planId: string) => ['daily-plan', planId] as const,
+  
   // Onboarding queries
   onboarding: () => ['onboarding'] as const,
   onboardingConfig: () => ['onboarding', 'configuration'] as const,
   onboardingPreferences: (userId: string) => ['onboarding', 'preferences', userId] as const,
   onboardingStatus: (userId: string) => ['onboarding', 'status', userId] as const,
-  onboardingAnalytics: (userId: string) => ['onboarding', 'analytics', userId] as const,
   
-  // Onboarding analytics queries
-  onboardingAnalyticsAll: () => ['onboarding-analytics'] as const,
-  onboardingFunnel: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'funnel', startDate, endDate] as const,
-  onboardingCompletionTrends: (period: string, startDate?: string, endDate?: string) => ['onboarding-analytics', 'completion-trends', period, startDate, endDate] as const,
-  onboardingDropOff: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'drop-off', startDate, endDate] as const,
-  onboardingPerformance: (startDate?: string, endDate?: string) => ['onboarding-analytics', 'performance', startDate, endDate] as const,
-  onboardingUserJourney: (userId: string) => ['onboarding-analytics', 'user-journey', userId] as const,
-  onboardingExport: (format: string, startDate?: string, endDate?: string) => ['onboarding-analytics', 'export', format, startDate, endDate] as const,
+  // Map Integration
+  mapApps: () => ['map-apps'] as const,
+  mapPreferences: (userId: string) => ['map-preferences', userId] as const,
 } as const;
 
 // Helper function to invalidate related queries after mutations
@@ -161,6 +159,15 @@ export const invalidateQueries = {
     queryClient.invalidateQueries({ queryKey: queryKeys.partTemplates() });
   },
   
+  // Invalidate daily plans
+  allDailyPlans: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.dailyPlans() });
+  },
+  
+  dailyPlan: (planId: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.dailyPlan(planId) });
+  },
+  
   // Invalidate all onboarding data
   allOnboarding: () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.onboarding() });
@@ -170,7 +177,6 @@ export const invalidateQueries = {
   userOnboarding: (userId: string) => {
     queryClient.invalidateQueries({ queryKey: queryKeys.onboardingPreferences(userId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.onboardingStatus(userId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingAnalytics(userId) });
   },
   
   // Invalidate onboarding configuration
@@ -178,30 +184,13 @@ export const invalidateQueries = {
     queryClient.invalidateQueries({ queryKey: queryKeys.onboardingConfig() });
   },
   
-  // Invalidate all onboarding analytics data
-  allOnboardingAnalytics: () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingAnalyticsAll() });
+  // Map integration invalidation
+  allMapApps: () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.mapApps() });
   },
   
-  // Invalidate specific onboarding analytics queries
-  onboardingFunnel: (startDate?: string, endDate?: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingFunnel(startDate, endDate) });
-  },
-  
-  onboardingCompletionTrends: (period: string, startDate?: string, endDate?: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingCompletionTrends(period, startDate, endDate) });
-  },
-  
-  onboardingDropOff: (startDate?: string, endDate?: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingDropOff(startDate, endDate) });
-  },
-  
-  onboardingPerformance: (startDate?: string, endDate?: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingPerformance(startDate, endDate) });
-  },
-  
-  onboardingUserJourney: (userId: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.onboardingUserJourney(userId) });
+  mapPreferences: (userId: string) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.mapPreferences(userId) });
   },
 } as const;
 
