@@ -10,7 +10,6 @@ import {
   MapIntegrationService, 
   MapApp, 
   UserMapPreference, 
-  MapIntegrationAnalytics,
   MapIntegrationOptions,
   AvailableMapApp,
   openExternalMap,
@@ -18,7 +17,7 @@ import {
   getUserPreferredMapApp
 } from '@/services/mapIntegrationService';
 import { queryKeys as baseQueryKeys, invalidateQueries as baseInvalidateQueries, handleQueryError, queryClient } from '@/services/queryClient';
-import { JobLocation } from '@/store/atoms';
+import { JobLocation } from '@/hooks/useJobs';
 
 const mapIntegrationService = MapIntegrationService.getInstance();
 
@@ -32,10 +31,6 @@ export const mapQueryKeys = {
   availableMapApps: () => ['map-apps', 'available'] as const,
   supportedMapApps: () => ['map-apps', 'supported'] as const,
   
-  // Map analytics queries
-  mapAnalytics: (userId: string) => ['map-analytics', userId] as const,
-  mapAnalyticsLimited: (userId: string, limit: number) => ['map-analytics', userId, limit] as const,
-  
   // User's preferred map app
   preferredMapApp: (userId: string) => ['map-preferred', userId] as const,
 } as const;
@@ -46,7 +41,6 @@ export const mapInvalidateQueries = {
   // Invalidate all map-related data for a user
   allMapData: (userId: string) => {
     queryClient.invalidateQueries({ queryKey: mapQueryKeys.mapPreferences(userId) });
-    queryClient.invalidateQueries({ queryKey: mapQueryKeys.mapAnalytics(userId) });
     queryClient.invalidateQueries({ queryKey: mapQueryKeys.preferredMapApp(userId) });
   },
   
@@ -59,11 +53,6 @@ export const mapInvalidateQueries = {
   // Invalidate available apps (when apps are installed/uninstalled)
   availableMapApps: () => {
     queryClient.invalidateQueries({ queryKey: mapQueryKeys.availableMapApps() });
-  },
-  
-  // Invalidate map analytics
-  mapAnalytics: (userId: string) => {
-    queryClient.invalidateQueries({ queryKey: mapQueryKeys.mapAnalytics(userId) });
   },
 };
 
@@ -165,33 +154,6 @@ export const useSupportedMapApps = () => {
   });
 };
 
-/**
- * Get map integration analytics for user
- */
-export const useMapIntegrationAnalytics = (userId?: string, limit: number = 100) => {
-  const [user] = useAtom(userAtom);
-  const targetUserId = userId || user?.id;
-
-  return useQuery({
-    queryKey: mapQueryKeys.mapAnalyticsLimited(targetUserId || '', limit),
-    queryFn: async (): Promise<MapIntegrationAnalytics[]> => {
-      if (!targetUserId) {
-        throw new Error('No user ID available');
-      }
-      
-      const { data: analytics, error } = await mapIntegrationService.getMapIntegrationAnalytics(targetUserId, limit);
-      
-      if (error) {
-        throw error;
-      }
-      
-      return analytics;
-    },
-    enabled: !!targetUserId,
-    staleTime: 1000 * 60 * 5, // 5 minutes for analytics
-  });
-};
-
 // ==================== MUTATION HOOKS ====================
 
 /**
@@ -255,7 +217,7 @@ export const useOpenInExternalMap = () => {
         
         // Invalidate analytics to get fresh data
         if (user?.id) {
-          mapInvalidateQueries.mapAnalytics(user.id);
+          // mapInvalidateQueries.mapAnalytics(user.id); // Removed
         }
       }
     },
@@ -296,7 +258,7 @@ export const useOpenExternalDirections = () => {
     ...mutation,
     openDirections: (jobLocation: JobLocation) => {
       return mutation.mutate({
-        coordinates: jobLocation.coordinates,
+        coordinates: { latitude: jobLocation.latitude, longitude: jobLocation.longitude },
         label: jobLocation.title,
         jobLocation,
       });
@@ -364,33 +326,6 @@ export const useMapAppInstallationStatus = () => {
     installedAppsCount,
     isLoading,
     hasInstalledApps: installedAppsCount > 0,
-  };
-};
-
-/**
- * Get map integration usage statistics
- */
-export const useMapIntegrationStats = (userId?: string) => {
-  const { data: analytics, isLoading } = useMapIntegrationAnalytics(userId);
-
-  const totalUsage = analytics?.length || 0;
-  const successfulUsage = analytics?.filter(a => a.success).length || 0;
-  const failedUsage = totalUsage - successfulUsage;
-  const successRate = totalUsage > 0 ? (successfulUsage / totalUsage) * 100 : 0;
-
-  // Group by action type
-  const actionStats = analytics?.reduce((acc, item) => {
-    acc[item.action_type] = (acc[item.action_type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
-
-  return {
-    totalUsage,
-    successfulUsage,
-    failedUsage,
-    successRate,
-    actionStats,
-    isLoading,
   };
 };
 

@@ -16,7 +16,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 4. `routes` - Route planning
 5. `inventory_movements` - Inventory audit trail
 
-### Actually Implemented Tables (10 tables)
+### Actually Implemented Tables (9 tables)
 **Current Supabase Database:**
 
 #### Core Business (5 tables) ✅
@@ -29,11 +29,10 @@ This document summarizes the major updates made to the TradeFlow database docume
 #### AI & Planning System (1 table) 🆕
 6. `daily_plans` - AI-powered daily planning workflow
 
-#### Map Integration System (4 tables) 🆕
+#### Map Integration System (3 tables) 🆕
 7. `supported_map_apps` - Map application registry
 8. `map_app_deep_links` - Deep link configuration
 9. `user_map_preferences` - User map preferences
-10. `map_integration_analytics` - Map usage analytics
 
 ## 📊 Documentation Gaps Addressed
 
@@ -46,19 +45,18 @@ This document summarizes the major updates made to the TradeFlow database docume
 - **Status:** Fully implemented but completely undocumented
 
 #### 2. **Map Integration System** 🗺️
-- **Tables:** 4 tables for multi-platform map support
+- **Tables:** 3 tables for multi-platform map support
 - **Purpose:** Smart map app integration with deep linking
 - **Features:**
   - Multi-platform support (iOS, Android, Web)
   - User preferences and fallback handling
-  - Usage analytics and performance tracking
 - **Status:** Full feature set implemented, not documented
 
 ## 📚 Documentation Updates Made
 
 ### 1. Created Comprehensive Schema Documentation
 **File:** `_docs/complete-database-schema.md`
-- Complete overview of all 10 tables
+- Complete overview of all 9 tables
 - Detailed field descriptions and relationships
 - Business logic and integration points
 - Security and compliance information
@@ -122,7 +120,7 @@ This document summarizes the major updates made to the TradeFlow database docume
 ## 💡 Key Insights
 
 ### Documentation Debt Impact
-- **200% more tables** than documented (10 vs 5)
+- **80% more tables** than documented (9 vs 5)
 - **Major systems** completely undocumented
 - **Production features** invisible to development team
 

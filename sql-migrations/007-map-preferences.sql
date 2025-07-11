@@ -1,444 +1,316 @@
 -- =============================================
--- Migration 007: Map Integration Preferences
--- =============================================
--- Description: User preferences for external map app integration and analytics
--- Author: Backend Architecture Team
--- Date: 2024-12-20
--- Dependencies: 005-onboarding-analytics-functions.sql
-
--- =============================================
--- SUPPORTED MAP APPS REFERENCE TABLE
+-- MAP INTEGRATION PREFERENCES MIGRATION
 -- =============================================
 
--- Reference table for supported external map applications
+-- This migration creates the map integration system with:
+-- 1. supported_map_apps - Registry of supported map applications
+-- 2. map_app_deep_links - Deep link configurations for each app/platform
+-- 3. user_map_preferences - User preferences for map applications
+
+-- Create supported_map_apps table
 CREATE TABLE IF NOT EXISTS public.supported_map_apps (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   
-  -- App identification
-  app_name TEXT NOT NULL UNIQUE,
-  app_display_name TEXT NOT NULL,
+  -- App Identity
+  app_name TEXT NOT NULL UNIQUE, -- Internal identifier (e.g., 'apple-maps', 'google-maps')
+  app_display_name TEXT NOT NULL, -- User-friendly name (e.g., 'Apple Maps', 'Google Maps')
   app_description TEXT,
   
-  -- Platform availability
-  ios_available BOOLEAN NOT NULL DEFAULT FALSE,
-  android_available BOOLEAN NOT NULL DEFAULT FALSE,
-  web_available BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Platform Support
+  ios_supported BOOLEAN DEFAULT FALSE,
+  android_supported BOOLEAN DEFAULT FALSE,
+  web_supported BOOLEAN DEFAULT FALSE,
   
-  -- App store information
-  ios_bundle_id TEXT, -- e.g., 'com.apple.Maps', 'com.google.Maps'
+  -- Platform-specific Identifiers
+  ios_bundle_id TEXT, -- e.g., 'com.apple.Maps'
   android_package_name TEXT, -- e.g., 'com.google.android.apps.maps'
-  web_url TEXT,
+  ios_app_store_id TEXT, -- App Store ID for installation links
+  google_play_store_id TEXT, -- Play Store ID for installation links
+  
+  -- Features Support
+  supports_directions BOOLEAN DEFAULT TRUE,
+  supports_search BOOLEAN DEFAULT FALSE,
+  supports_coordinates BOOLEAN DEFAULT TRUE,
+  supports_waypoints BOOLEAN DEFAULT FALSE,
   
   -- Configuration
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  sort_order INTEGER DEFAULT 0,
-  popularity_score INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  sort_order INTEGER DEFAULT 100,
+  popularity_score INTEGER DEFAULT 50, -- 0-100, higher = more popular
   
-  -- Features supported
-  supports_directions BOOLEAN NOT NULL DEFAULT TRUE,
-  supports_search BOOLEAN NOT NULL DEFAULT TRUE,
-  supports_coordinates BOOLEAN NOT NULL DEFAULT TRUE,
-  supports_address BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Metadata
+  -- Visual
   icon_url TEXT,
-  documentation_url TEXT,
   
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create map_app_deep_links table
+CREATE TABLE IF NOT EXISTS public.map_app_deep_links (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  map_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE CASCADE UNIQUE,
+  
+  -- Platform-specific deep link templates
+  platform TEXT NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+  
+  -- Deep Link Templates (support {latitude}, {longitude}, {coordinates}, {label}, etc.)
+  directions_url_template TEXT, -- For navigation/directions
+  search_url_template TEXT, -- For location search
+  coordinate_url_template TEXT, -- For coordinate-based navigation
+  address_url_template TEXT, -- For address-based navigation
+  
+  -- Platform-specific schemes
+  ios_url_scheme TEXT, -- e.g., 'maps://'
+  android_intent_action TEXT, -- e.g., 'android.intent.action.VIEW'
+  
+  -- Configuration
+  is_default_for_platform BOOLEAN DEFAULT FALSE,
+  supports_app_detection BOOLEAN DEFAULT TRUE,
+  fallback_to_web BOOLEAN DEFAULT TRUE,
+  
+  -- Testing
+  is_active BOOLEAN DEFAULT TRUE,
+  last_tested_at TIMESTAMP WITH TIME ZONE,
+  test_status TEXT CHECK (test_status IN ('untested', 'passing', 'failing')),
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_map_preferences table
+CREATE TABLE IF NOT EXISTS public.user_map_preferences (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE UNIQUE,
+  
+  -- Primary map app preferences
+  preferred_map_app_id UUID REFERENCES public.supported_map_apps(id),
+  
+  -- Platform-specific preferences
+  ios_preferred_app_id UUID REFERENCES public.supported_map_apps(id),
+  android_preferred_app_id UUID REFERENCES public.supported_map_apps(id),
+  web_preferred_app_id UUID REFERENCES public.supported_map_apps(id),
+  
+  -- Fallback options (ordered by preference)
+  fallback_map_apps UUID[], -- Array of map app IDs
+  
+  -- Behavior preferences
+  auto_open_directions BOOLEAN DEFAULT TRUE,
+  prompt_before_opening BOOLEAN DEFAULT FALSE,
+  remember_choice BOOLEAN DEFAULT TRUE,
+  prefer_navigation_for_long_routes BOOLEAN DEFAULT TRUE,
+  long_route_threshold_miles DECIMAL(5,2) DEFAULT 5.0,
+  
+  -- Privacy settings
+  allow_usage_analytics BOOLEAN DEFAULT TRUE,
+  allow_performance_tracking BOOLEAN DEFAULT FALSE,
+  
+  -- Usage tracking
+  last_used_app_id UUID REFERENCES public.supported_map_apps(id),
+  total_usage_count INTEGER DEFAULT 0,
+  
+  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- =============================================
--- MAP APP DEEP LINKS CONFIGURATION
+-- ROW LEVEL SECURITY (RLS)
 -- =============================================
 
--- Configuration for app-specific deep link URL patterns
-CREATE TABLE IF NOT EXISTS public.map_app_deep_links (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  
-  -- Links to supported app
-  map_app_id UUID NOT NULL REFERENCES public.supported_map_apps(id) ON DELETE CASCADE,
-  
-  -- Deep link patterns
-  directions_url_template TEXT NOT NULL,
-  -- Example: 'https://maps.apple.com/?daddr={latitude},{longitude}&dirflg=d'
-  
-  search_url_template TEXT,
-  -- Example: 'https://maps.apple.com/?q={query}&ll={latitude},{longitude}'
-  
-  coordinate_url_template TEXT,
-  -- Example: 'https://maps.apple.com/?ll={latitude},{longitude}'
-  
-  address_url_template TEXT,
-  -- Example: 'https://maps.apple.com/?address={address}'
-  
-  -- Platform-specific templates
-  ios_url_scheme TEXT, -- e.g., 'maps://', 'comgooglemaps://'
-  android_intent_action TEXT,
-  
-  -- Configuration
-  is_default_for_platform TEXT CHECK (is_default_for_platform IN ('ios', 'android', 'web', NULL)),
-  requires_app_detection BOOLEAN NOT NULL DEFAULT TRUE,
-  fallback_to_web BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Validation and testing
-  last_tested_at TIMESTAMP WITH TIME ZONE,
-  test_status TEXT CHECK (test_status IN ('passed', 'failed', 'pending', NULL)),
-  
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  -- Ensure one configuration per app
-  UNIQUE(map_app_id)
-);
-
--- =============================================
--- USER MAP PREFERENCES
--- =============================================
-
--- Individual user preferences for map app integration
-CREATE TABLE IF NOT EXISTS public.user_map_preferences (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  
-  -- Primary preference
-  preferred_map_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  
-  -- Fallback preferences (ordered by priority)
-  fallback_map_apps UUID[] DEFAULT '{}', -- Array of map_app_ids
-  
-  -- Platform-specific preferences
-  ios_preferred_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  android_preferred_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  web_preferred_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  
-  -- Usage behavior preferences
-  auto_open_directions BOOLEAN NOT NULL DEFAULT FALSE,
-  prompt_before_opening BOOLEAN NOT NULL DEFAULT TRUE,
-  remember_choice BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Context preferences
-  prefer_navigation_for_long_routes BOOLEAN NOT NULL DEFAULT TRUE,
-  long_route_threshold_miles DECIMAL(5,2) DEFAULT 5.0,
-  prefer_search_for_addresses BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Integration settings
-  enable_deep_linking BOOLEAN NOT NULL DEFAULT TRUE,
-  enable_fallback_apps BOOLEAN NOT NULL DEFAULT TRUE,
-  enable_web_fallback BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Analytics preferences
-  allow_usage_analytics BOOLEAN NOT NULL DEFAULT TRUE,
-  allow_performance_tracking BOOLEAN NOT NULL DEFAULT TRUE,
-  
-  -- Last usage tracking
-  last_used_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  last_used_at TIMESTAMP WITH TIME ZONE,
-  total_usage_count INTEGER DEFAULT 0,
-  
-  -- Metadata
-  preferences_version TEXT DEFAULT '1.0',
-  
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  -- Constraints
-  UNIQUE(user_id),
-  CONSTRAINT valid_route_threshold CHECK (long_route_threshold_miles > 0)
-);
-
--- =============================================
--- MAP INTEGRATION ANALYTICS
--- =============================================
-
--- Analytics for map integration usage and performance
-CREATE TABLE IF NOT EXISTS public.map_integration_analytics (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  
-  -- Event identification
-  event_type TEXT NOT NULL CHECK (event_type IN (
-    'map_app_opened',
-    'directions_requested',
-    'search_performed',
-    'app_detection_performed',
-    'fallback_triggered',
-    'preference_changed',
-    'deep_link_failed',
-    'web_fallback_used'
-  )),
-  
-  -- App and platform context
-  map_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  platform TEXT CHECK (platform IN ('ios', 'android', 'web')),
-  user_agent TEXT,
-  
-  -- Request details
-  request_type TEXT CHECK (request_type IN ('directions', 'search', 'coordinates', 'address')),
-  source_screen TEXT, -- which screen triggered the map integration
-  
-  -- Location context
-  origin_latitude DECIMAL(10, 8),
-  origin_longitude DECIMAL(11, 8),
-  destination_latitude DECIMAL(10, 8),
-  destination_longitude DECIMAL(11, 8),
-  search_query TEXT,
-  
-  -- Performance metrics
-  detection_time_ms INTEGER CHECK (detection_time_ms >= 0),
-  app_launch_time_ms INTEGER CHECK (app_launch_time_ms >= 0),
-  total_interaction_time_ms INTEGER CHECK (total_interaction_time_ms >= 0),
-  
-  -- Success metrics
-  app_detection_successful BOOLEAN,
-  deep_link_successful BOOLEAN,
-  user_completed_action BOOLEAN,
-  returned_to_app BOOLEAN,
-  
-  -- Error tracking
-  error_type TEXT,
-  error_message TEXT,
-  fallback_used BOOLEAN DEFAULT FALSE,
-  fallback_app_id UUID REFERENCES public.supported_map_apps(id) ON DELETE SET NULL,
-  
-  -- Context data
-  job_location_id UUID, -- Reference to job if applicable
-  session_id TEXT,
-  
-  -- Timing
-  event_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- =============================================
--- TRIGGERS FOR UPDATED_AT
--- =============================================
-
--- Apply the existing update trigger to new tables
-CREATE TRIGGER update_supported_map_apps_updated_at 
-  BEFORE UPDATE ON public.supported_map_apps 
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_map_app_deep_links_updated_at 
-  BEFORE UPDATE ON public.map_app_deep_links 
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_map_preferences_updated_at 
-  BEFORE UPDATE ON public.user_map_preferences 
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- =====================================================
--- ENABLE ROW LEVEL SECURITY
--- =====================================================
-
--- Enable RLS for user_map_preferences
-ALTER TABLE public.user_map_preferences ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own map preferences" ON public.user_map_preferences
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own map preferences" ON public.user_map_preferences
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own map preferences" ON public.user_map_preferences
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own map preferences" ON public.user_map_preferences
-  FOR DELETE USING (auth.uid() = user_id);
-
--- Enable RLS for map_integration_analytics
-ALTER TABLE public.map_integration_analytics ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own map analytics" ON public.map_integration_analytics
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own map analytics" ON public.map_integration_analytics
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Note: No UPDATE/DELETE policies for analytics - they should be append-only
-
--- Enable RLS for reference tables (public read access)
+-- Enable RLS for all tables
 ALTER TABLE public.supported_map_apps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.map_app_deep_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_map_preferences ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can view supported map apps" ON public.supported_map_apps
-  FOR SELECT USING (TRUE);
+-- Public read access for supported_map_apps (configuration data)
+CREATE POLICY "Public read access for supported map apps" ON public.supported_map_apps
+  FOR SELECT TO authenticated
+  USING (true);
 
-CREATE POLICY "Anyone can view map app deep links" ON public.map_app_deep_links
-  FOR SELECT USING (TRUE);
+-- Public read access for map_app_deep_links (configuration data)
+CREATE POLICY "Public read access for map app deep links" ON public.map_app_deep_links
+  FOR SELECT TO authenticated
+  USING (true);
 
--- Only authenticated users can modify reference tables (admin functionality)
-CREATE POLICY "Authenticated users can modify supported map apps" ON public.supported_map_apps
-  FOR ALL USING (auth.role() = 'authenticated');
+-- User can view and manage their own map preferences
+CREATE POLICY "Users can view own map preferences" ON public.user_map_preferences
+  FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
 
-CREATE POLICY "Authenticated users can modify map app deep links" ON public.map_app_deep_links
-  FOR ALL USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert own map preferences" ON public.user_map_preferences
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
--- =====================================================
+CREATE POLICY "Users can update own map preferences" ON public.user_map_preferences
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own map preferences" ON public.user_map_preferences
+  FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+
+-- =============================================
 -- INDEXES FOR PERFORMANCE
--- =====================================================
+-- =============================================
 
--- User map preferences indexes
-CREATE INDEX IF NOT EXISTS idx_user_map_preferences_user_id ON public.user_map_preferences(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_map_preferences_preferred_app ON public.user_map_preferences(preferred_map_app_id);
-CREATE INDEX IF NOT EXISTS idx_user_map_preferences_last_used ON public.user_map_preferences(last_used_app_id);
-CREATE INDEX IF NOT EXISTS idx_user_map_preferences_platform_ios ON public.user_map_preferences(ios_preferred_app_id);
-CREATE INDEX IF NOT EXISTS idx_user_map_preferences_platform_android ON public.user_map_preferences(android_preferred_app_id);
+-- Indexes for supported_map_apps
+CREATE INDEX IF NOT EXISTS idx_supported_apps_active ON public.supported_map_apps(is_active);
+CREATE INDEX IF NOT EXISTS idx_supported_apps_platform_ios ON public.supported_map_apps(ios_supported) WHERE ios_supported = true;
+CREATE INDEX IF NOT EXISTS idx_supported_apps_platform_android ON public.supported_map_apps(android_supported) WHERE android_supported = true;
+CREATE INDEX IF NOT EXISTS idx_supported_apps_platform_web ON public.supported_map_apps(web_supported) WHERE web_supported = true;
+CREATE INDEX IF NOT EXISTS idx_supported_apps_popularity ON public.supported_map_apps(popularity_score DESC);
 
--- Map integration analytics indexes
-CREATE INDEX IF NOT EXISTS idx_map_analytics_user_id ON public.map_integration_analytics(user_id);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_event_type ON public.map_integration_analytics(event_type);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_map_app_id ON public.map_integration_analytics(map_app_id);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_platform ON public.map_integration_analytics(platform);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_timestamp ON public.map_integration_analytics(event_timestamp);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_source_screen ON public.map_integration_analytics(source_screen);
+-- Indexes for map_app_deep_links
+CREATE INDEX IF NOT EXISTS idx_deep_links_map_app_id ON public.map_app_deep_links(map_app_id);
+CREATE INDEX IF NOT EXISTS idx_deep_links_platform ON public.map_app_deep_links(platform);
+CREATE INDEX IF NOT EXISTS idx_deep_links_active ON public.map_app_deep_links(is_active);
+CREATE INDEX IF NOT EXISTS idx_deep_links_default_platform ON public.map_app_deep_links(platform, is_default_for_platform) WHERE is_default_for_platform = true;
 
--- Composite indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_map_analytics_user_event_time ON public.map_integration_analytics(user_id, event_type, event_timestamp);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_app_event_time ON public.map_integration_analytics(map_app_id, event_type, event_timestamp);
-CREATE INDEX IF NOT EXISTS idx_map_analytics_platform_event_time ON public.map_integration_analytics(platform, event_type, event_timestamp);
+-- Indexes for user_map_preferences
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_user_id ON public.user_map_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_preferred_app ON public.user_map_preferences(preferred_map_app_id);
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_ios_app ON public.user_map_preferences(ios_preferred_app_id);
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_android_app ON public.user_map_preferences(android_preferred_app_id);
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_web_app ON public.user_map_preferences(web_preferred_app_id);
+CREATE INDEX IF NOT EXISTS idx_user_map_prefs_last_used ON public.user_map_preferences(last_used_app_id);
 
--- Supported map apps indexes
-CREATE INDEX IF NOT EXISTS idx_supported_map_apps_app_name ON public.supported_map_apps(app_name);
-CREATE INDEX IF NOT EXISTS idx_supported_map_apps_is_active ON public.supported_map_apps(is_active);
-CREATE INDEX IF NOT EXISTS idx_supported_map_apps_sort_order ON public.supported_map_apps(sort_order);
-CREATE INDEX IF NOT EXISTS idx_supported_map_apps_ios ON public.supported_map_apps(ios_available) WHERE ios_available = TRUE;
-CREATE INDEX IF NOT EXISTS idx_supported_map_apps_android ON public.supported_map_apps(android_available) WHERE android_available = TRUE;
+-- =============================================
+-- SEED DATA FOR SUPPORTED MAP APPS
+-- =============================================
 
--- Map app deep links indexes
-CREATE INDEX IF NOT EXISTS idx_map_app_deep_links_map_app_id ON public.map_app_deep_links(map_app_id);
-CREATE INDEX IF NOT EXISTS idx_map_app_deep_links_default_platform ON public.map_app_deep_links(is_default_for_platform) WHERE is_default_for_platform IS NOT NULL;
-
--- =====================================================
--- INSERT DEFAULT SUPPORTED MAP APPS
--- =====================================================
-
--- Insert default supported map applications
+-- Insert popular map applications
 INSERT INTO public.supported_map_apps (
   app_name, app_display_name, app_description,
-  ios_available, android_available, web_available,
-  ios_bundle_id, android_package_name, web_url,
-  is_active, sort_order, popularity_score,
-  supports_directions, supports_search, supports_coordinates, supports_address
+  ios_supported, android_supported, web_supported,
+  ios_bundle_id, android_package_name,
+  supports_directions, supports_search, supports_coordinates, supports_waypoints,
+  popularity_score, sort_order
 ) VALUES 
 -- Apple Maps (iOS default)
-(
-  'apple_maps', 'Apple Maps', 'Apple''s built-in navigation app for iOS devices',
-  TRUE, FALSE, TRUE,
-  'com.apple.Maps', NULL, 'https://maps.apple.com',
-  TRUE, 1, 90,
-  TRUE, TRUE, TRUE, TRUE
-),
--- Google Maps (Cross-platform)
-(
-  'google_maps', 'Google Maps', 'Google''s comprehensive mapping and navigation service',
-  TRUE, TRUE, TRUE,
-  'com.google.Maps', 'com.google.android.apps.maps', 'https://maps.google.com',
-  TRUE, 2, 95,
-  TRUE, TRUE, TRUE, TRUE
-),
--- Waze (Navigation focused)
-(
-  'waze', 'Waze', 'Community-driven navigation app with real-time traffic updates',
-  TRUE, TRUE, TRUE,
-  'com.waze.iphone', 'com.waze', 'https://www.waze.com',
-  TRUE, 3, 80,
-  TRUE, FALSE, TRUE, TRUE
-),
--- MapQuest
-(
-  'mapquest', 'MapQuest', 'MapQuest navigation and mapping service',
-  TRUE, TRUE, TRUE,
-  'com.mapquest.MapQuestMobile', 'com.mapquest.android.ace', 'https://www.mapquest.com',
-  TRUE, 4, 60,
-  TRUE, TRUE, TRUE, TRUE
-),
--- HERE Maps
-(
-  'here_maps', 'HERE Maps', 'HERE Technologies mapping and navigation service',
-  FALSE, TRUE, TRUE,
-  NULL, 'com.here.app.maps', 'https://wego.here.com',
-  TRUE, 5, 50,
-  TRUE, TRUE, TRUE, TRUE
-)
+('apple-maps', 'Apple Maps', 'Apple''s built-in mapping service', 
+ true, false, false,
+ 'com.apple.Maps', null,
+ true, true, true, true,
+ 95, 1),
+
+-- Google Maps (Most popular cross-platform)
+('google-maps', 'Google Maps', 'Google''s comprehensive mapping service',
+ true, true, true,
+ 'com.google.Maps', 'com.google.android.apps.maps',
+ true, true, true, true,
+ 98, 2),
+
+-- Waze (Popular for navigation)
+('waze', 'Waze', 'Community-driven navigation app',
+ true, true, false,
+ 'com.waze.iphone', 'com.waze',
+ true, false, true, false,
+ 85, 3),
+
+-- MapQuest (Alternative option)
+('mapquest', 'MapQuest', 'Classic mapping service',
+ true, true, true,
+ 'com.mapquest.mapquest', 'com.mapquest.android',
+ true, true, true, false,
+ 60, 4),
+
+-- HERE WeGo (Offline-capable)
+('here-maps', 'HERE WeGo', 'HERE mapping with offline support',
+ true, true, true,
+ 'com.here.Here', 'com.here.app.maps',
+ true, true, true, false,
+ 70, 5)
+
 ON CONFLICT (app_name) DO NOTHING;
 
--- =====================================================
--- INSERT DEFAULT DEEP LINK CONFIGURATIONS
--- =====================================================
+-- =============================================
+-- SEED DATA FOR DEEP LINKS
+-- =============================================
 
--- Insert deep link configurations for supported apps
+-- iOS Deep Links
 INSERT INTO public.map_app_deep_links (
-  map_app_id, directions_url_template, search_url_template, 
-  coordinate_url_template, address_url_template,
-  ios_url_scheme, android_intent_action,
-  is_default_for_platform, requires_app_detection, fallback_to_web
-)
-SELECT 
-  sma.id,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'maps://?daddr={latitude},{longitude}&dirflg=d'
-    WHEN 'google_maps' THEN 'comgooglemaps://?daddr={latitude},{longitude}&directionsmode=driving'
-    WHEN 'waze' THEN 'waze://?ll={latitude},{longitude}&navigate=yes'
-    WHEN 'mapquest' THEN 'mapquest://navigation/v2/route?to={latitude},{longitude}'
-    WHEN 'here_maps' THEN 'here-route://mylocation/{latitude},{longitude}'
-  END as directions_url_template,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'maps://?q={query}&ll={latitude},{longitude}'
-    WHEN 'google_maps' THEN 'comgooglemaps://?q={query}&center={latitude},{longitude}'
-    WHEN 'waze' THEN NULL -- Waze doesn't support search
-    WHEN 'mapquest' THEN 'mapquest://search/v1/find?query={query}&location={latitude},{longitude}'
-    WHEN 'here_maps' THEN 'here-location://search?q={query}&at={latitude},{longitude}'
-  END as search_url_template,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'maps://?ll={latitude},{longitude}'
-    WHEN 'google_maps' THEN 'comgooglemaps://?center={latitude},{longitude}&zoom=15'
-    WHEN 'waze' THEN 'waze://?ll={latitude},{longitude}'
-    WHEN 'mapquest' THEN 'mapquest://search/v1/find?location={latitude},{longitude}'
-    WHEN 'here_maps' THEN 'here-location://{latitude},{longitude}'
-  END as coordinate_url_template,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'maps://?address={address}'
-    WHEN 'google_maps' THEN 'comgooglemaps://?q={address}'
-    WHEN 'waze' THEN 'waze://?q={address}'
-    WHEN 'mapquest' THEN 'mapquest://search/v1/find?query={address}'
-    WHEN 'here_maps' THEN 'here-location://search?q={address}'
-  END as address_url_template,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'maps://'
-    WHEN 'google_maps' THEN 'comgooglemaps://'
-    WHEN 'waze' THEN 'waze://'
-    WHEN 'mapquest' THEN 'mapquest://'
-    WHEN 'here_maps' THEN 'here-location://'
-  END as ios_url_scheme,
-  CASE sma.app_name
-    WHEN 'google_maps' THEN 'android.intent.action.VIEW'
-    WHEN 'waze' THEN 'android.intent.action.VIEW'
-    WHEN 'mapquest' THEN 'android.intent.action.VIEW'
-    WHEN 'here_maps' THEN 'android.intent.action.VIEW'
-    ELSE NULL
-  END as android_intent_action,
-  CASE sma.app_name
-    WHEN 'apple_maps' THEN 'ios'
-    WHEN 'google_maps' THEN NULL -- Available on all platforms
-    ELSE NULL
-  END as is_default_for_platform,
-  TRUE as requires_app_detection,
-  TRUE as fallback_to_web
-FROM public.supported_map_apps sma
-WHERE sma.is_active = TRUE;
+  map_app_id, platform,
+  directions_url_template, coordinate_url_template, search_url_template,
+  ios_url_scheme, is_default_for_platform, is_active
+) VALUES 
+-- Apple Maps iOS
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'apple-maps'), 'ios',
+ 'maps://?daddr={latitude},{longitude}&t=m',
+ 'maps://?ll={latitude},{longitude}&t=m',
+ 'maps://?q={label}',
+ 'maps://', true, true),
 
--- =====================================================
--- MIGRATION COMPLETION NOTICE
--- =====================================================
+-- Google Maps iOS  
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'google-maps'), 'ios',
+ 'comgooglemaps://?daddr={latitude},{longitude}&directionsmode=driving',
+ 'comgooglemaps://?center={latitude},{longitude}&zoom=15',
+ 'comgooglemaps://?q={label}',
+ 'comgooglemaps://', false, true),
 
--- Log migration completion
+-- Waze iOS
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'waze'), 'ios',
+ 'waze://?ll={latitude},{longitude}&navigate=yes',
+ 'waze://?ll={latitude},{longitude}',
+ null,
+ 'waze://', false, true)
+
+ON CONFLICT (map_app_id) DO NOTHING;
+
+-- Android Deep Links  
+INSERT INTO public.map_app_deep_links (
+  map_app_id, platform,
+  directions_url_template, coordinate_url_template, search_url_template,
+  android_intent_action, is_default_for_platform, is_active
+) VALUES
+-- Google Maps Android (default)
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'google-maps'), 'android',
+ 'google.navigation:q={latitude},{longitude}&mode=d',
+ 'geo:{latitude},{longitude}?z=15',
+ 'geo:0,0?q={label}',
+ 'android.intent.action.VIEW', true, true),
+
+-- Waze Android
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'waze'), 'android',
+ 'waze://?ll={latitude},{longitude}&navigate=yes',
+ 'waze://?ll={latitude},{longitude}',
+ null,
+ 'android.intent.action.VIEW', false, true)
+
+ON CONFLICT (map_app_id) DO NOTHING;
+
+-- Web Deep Links
+INSERT INTO public.map_app_deep_links (
+  map_app_id, platform,
+  directions_url_template, coordinate_url_template, search_url_template,
+  is_default_for_platform, is_active
+) VALUES
+-- Google Maps Web (default)
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'google-maps'), 'web',
+ 'https://www.google.com/maps/dir/?api=1&destination={latitude},{longitude}',
+ 'https://www.google.com/maps?q={latitude},{longitude}',
+ 'https://www.google.com/maps/search/{label}',
+ true, true),
+
+-- MapQuest Web
+((SELECT id FROM public.supported_map_apps WHERE app_name = 'mapquest'), 'web',
+ 'https://www.mapquest.com/directions/to/{latitude},{longitude}',
+ 'https://www.mapquest.com/latlng/{latitude},{longitude}',
+ 'https://www.mapquest.com/search/{label}',
+ false, true)
+
+ON CONFLICT (map_app_id) DO NOTHING;
+
+-- =============================================
+-- COMPLETION MESSAGE
+-- =============================================
+
 DO $$
 BEGIN
-  RAISE NOTICE 'Migration 007: Map integration preferences tables created successfully';
-  RAISE NOTICE 'Tables created: supported_map_apps, map_app_deep_links, user_map_preferences, map_integration_analytics';
-  RAISE NOTICE 'Default map apps inserted: Apple Maps, Google Maps, Waze, MapQuest, HERE Maps';
-  RAISE NOTICE 'Deep link configurations created for all supported apps';
-  RAISE NOTICE 'RLS policies and indexes applied for optimal performance';
+  RAISE NOTICE 'Map integration migration completed successfully!';
+  RAISE NOTICE 'Tables created: supported_map_apps, map_app_deep_links, user_map_preferences';
+  RAISE NOTICE 'Seeded % map apps with deep link configurations', (SELECT COUNT(*) FROM public.supported_map_apps);
+  RAISE NOTICE 'Ready for map integration service initialization';
 END $$; 

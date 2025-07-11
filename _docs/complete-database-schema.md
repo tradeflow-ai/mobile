@@ -235,39 +235,6 @@ User-specific map application preferences and settings.
 
 ---
 
-#### 10. **`map_integration_analytics`** - Map Usage Analytics
-Detailed analytics for map integration usage and performance.
-
-**Key Fields:**
-- `id` (UUID, PK)
-- `user_id` (UUID, FK to profiles)
-- `event_type` (TEXT) - Type of map integration event
-- `map_app_id` (UUID, FK to supported_map_apps) - App used
-- `platform` (TEXT) - Platform (iOS, Android, Web)
-- `request_type` (TEXT) - 'directions', 'search', 'coordinates', 'address'
-- `source_screen` (TEXT) - Where request originated
-- Location data (origin/destination coordinates, search query)
-- Performance metrics:
-  - `detection_time_ms` (INTEGER) - App detection time
-  - `app_launch_time_ms` (INTEGER) - App launch time
-  - `total_interaction_time_ms` (INTEGER) - Total interaction time
-- Success/failure tracking:
-  - `app_detection_successful` (BOOLEAN)
-  - `deep_link_successful` (BOOLEAN)
-  - `user_completed_action` (BOOLEAN)
-  - `returned_to_app` (BOOLEAN)
-- Error information (`error_type`, `error_message`)
-- Fallback usage (`fallback_used`, `fallback_app_id`)
-- Context (`job_location_id`, `session_id`)
-
-**Analytics:**
-- Map integration performance monitoring
-- User behavior analysis
-- Error tracking and optimization
-- A/B testing support
-
----
-
 ## 🔄 **Data Relationships & Flow**
 
 ### **Core Business Flow**
@@ -281,7 +248,7 @@ inventory_items → inventory_movements
 ```
 job_locations → user_map_preferences → supported_map_apps
                         ↓                       ↓
-            map_integration_analytics ← map_app_deep_links
+                 map_app_deep_links
 ```
 
 ## 🔒 **Security & Compliance**
