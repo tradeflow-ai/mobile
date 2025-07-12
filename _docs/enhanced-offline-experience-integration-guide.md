@@ -166,36 +166,6 @@ const MyScreen = () => {
 - `variant="compact"`: Standard status bar (recommended)
 - `variant="detailed"`: Full metrics display
 
-### **`OfflineOperationIndicator`**
-Individual item status indicators.
-
-```typescript
-import { OfflineOperationIndicator } from '@/components/ui';
-
-const JobCard = ({ job }) => {
-  return (
-    <View style={styles.jobCard}>
-      <Text>{job.title}</Text>
-      
-      {/* Show operation status for individual items */}
-      <OfflineOperationIndicator 
-        status="pending" 
-        operationId={job.id}
-        size="small"
-        showText={false}
-      />
-    </View>
-  );
-};
-```
-
-**Status Types:**
-- `pending`: Operation queued for sync
-- `syncing`: Currently synchronizing
-- `failed`: Sync failed, needs retry
-- `synced`: Successfully synchronized
-- `offline`: Offline mode active
-
 ---
 
 ## 📊 **Connection Quality Integration**

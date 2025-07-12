@@ -15,12 +15,6 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { DeepLinkHandler } from '@/components/DeepLinkHandler';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
-import { offlineStatusService } from '@/services/offlineStatusService';
-import { batchOperationsService } from '@/services/batchOperationsService';
-import { retryManagementService } from '@/services/retryManagementService';
-import { criticalOperationsService } from '@/services/criticalOperationsService';
-import { connectionQualityService } from '@/services/connectionQualityService';
-
 import { queryClient, initializeQueryPersistence } from '@/services/queryClient';
 
 import { typography, spacing, touchTargets } from '@/constants/Theme';
@@ -323,29 +317,6 @@ function RootLayoutNav() {
         options={{ 
           headerShown: false,
         }} 
-      />
-      <Stack.Screen 
-        name="offline-debug" 
-        options={({ navigation }) => ({
-          title: 'Offline Debug',
-          headerBackTitle: '',
-          headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()}
-              style={{
-                ...touchTargets.styles.minimum,
-                ...spacing.helpers.paddingHorizontal('s'),
-                justifyContent: 'center',
-              }}
-            >
-              <FontAwesome 
-                name="arrow-left" 
-                size={20} 
-                color={colors.primary} 
-              />
-            </TouchableOpacity>
-          ),
-        })}
       />
     </Stack>
   );
