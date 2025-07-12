@@ -62,6 +62,7 @@ export class AuthManager {
         // No valid session, check secure storage
         const savedSession = await this.getStoredSession();
         if (savedSession) {
+          console.log('AuthManager: Found saved session, attempting to refresh...');
           // Try to refresh the session
           await this.refreshSession();
         } else {
@@ -100,6 +101,23 @@ export class AuthManager {
           });
         }
       });
+
+      // Add a timeout to ensure loading state is cleared even if something goes wrong
+      setTimeout(() => {
+        if (this.currentState.isLoading) {
+          console.log('AuthManager: Timeout reached, clearing loading state');
+          this.updateAuthState({ isLoading: false });
+        }
+      }, 5000); // 5 second timeout
+
+      // Also add an immediate check after initialization
+      setTimeout(() => {
+        if (this.currentState.isLoading) {
+          console.log('AuthManager: Initialization completed but still loading, clearing state');
+          this.updateAuthState({ isLoading: false });
+        }
+      }, 100); // 100ms delay to allow async operations to complete
+      
     } catch (error) {
       console.error('Error initializing auth:', error);
       this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
@@ -143,10 +161,11 @@ export class AuthManager {
 
   private async refreshSession() {
     try {
+      console.log('AuthManager: Refreshing session...');
       const storedSession = await this.getStoredSession();
       
       if (!storedSession?.refresh_token) {
-        console.log('No refresh token found - user needs to sign in');
+        console.log('AuthManager: No refresh token found - user needs to sign in');
         await this.clearSession();
         this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
         return;
@@ -159,9 +178,9 @@ export class AuthManager {
       if (error) {
         // Handle session missing error gracefully (this is expected when no session exists)
         if (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found') || error.message.includes('Invalid refresh token')) {
-          console.log('Invalid or expired refresh token - user needs to sign in');
+          console.log('AuthManager: Invalid or expired refresh token - user needs to sign in');
         } else {
-          console.error('Error refreshing session:', error);
+          console.error('AuthManager: Error refreshing session:', error);
         }
         await this.clearSession();
         this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
@@ -176,18 +195,19 @@ export class AuthManager {
           isLoading: false,
           isAuthenticated: true,
         });
-        console.log('Session refreshed successfully for user:', session.user.email);
+        console.log('AuthManager: Session refreshed successfully for user:', session.user.email);
       } else {
         // No session returned - clear stored session
+        console.log('AuthManager: No session returned from refresh - clearing stored session');
         await this.clearSession();
         this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
       }
     } catch (error) {
       // Handle session missing error gracefully
       if (error instanceof Error && (error.message.includes('Auth session missing') || error.message.includes('refresh_token_not_found') || error.message.includes('Invalid refresh token'))) {
-        console.log('Invalid or expired refresh token - user needs to sign in');
+        console.log('AuthManager: Invalid or expired refresh token - user needs to sign in');
       } else {
-        console.error('Error refreshing session:', error);
+        console.error('AuthManager: Error in refreshSession:', error);
       }
       await this.clearSession();
       this.updateAuthState({ user: null, session: null, isLoading: false, isAuthenticated: false });
@@ -237,7 +257,15 @@ export class AuthManager {
       
       const result = await AuthService.signOut();
       
-      // Session clearing will be handled by onAuthStateChange
+      // Ensure we clear the session and update state even if onAuthStateChange doesn't trigger
+      await this.clearSession();
+      this.updateAuthState({
+        user: null,
+        session: null,
+        isLoading: false,
+        isAuthenticated: false,
+      });
+      
       return result;
     } catch (error) {
       this.updateAuthState({ isLoading: false });

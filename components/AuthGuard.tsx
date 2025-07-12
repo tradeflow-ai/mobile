@@ -8,12 +8,10 @@ import {
 } from 'react-native';
 import { useAtom } from 'jotai';
 import { useRouter, useSegments } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { userAtom, isAuthLoadingAtom } from '@/store/atoms';
 import { AuthManager } from '@/services/authManager';
-import { PreferencesService } from '@/services/preferencesService';
 import { supabase } from '@/services/supabase';
 
 interface AuthGuardProps {
@@ -26,6 +24,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [forceStopLoading, setForceStopLoading] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const colorScheme = useColorScheme();
@@ -84,6 +83,20 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     return unsubscribe;
   }, [setUser, setIsAuthLoading]);
 
+  // Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isAuthLoading || isLoadingPreferences) {
+        console.log('AuthGuard: Force stopping loading after timeout');
+        setForceStopLoading(true);
+        setIsAuthLoading(false);
+        setIsLoadingPreferences(false);
+      }
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [isAuthLoading, isLoadingPreferences, setIsAuthLoading]);
+
   // Check if user needs onboarding (only if they've never completed it)
   const needsOnboarding = (profileData: any): boolean => {
     if (!profileData) return false;
@@ -95,12 +108,21 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // Navigation logic
   useEffect(() => {
-    if (!isInitialized || isAuthLoading || isLoadingPreferences) return;
+    if (!forceStopLoading && (!isInitialized || isAuthLoading || isLoadingPreferences)) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
     const inOnboardingGroup = segments[0] === 'onboarding';
     const inMainApp = segments[0] === '(tabs)';
     const wasInOnboarding = segments.length > 0 && segments[0] === 'onboarding';
+
+    // If loading was force stopped, treat as logged out
+    if (forceStopLoading) {
+      if (!inAuthGroup) {
+        console.log('AuthGuard: Loading was force stopped, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+    }
 
     // If user is navigating to main app and we suspect they might have just completed onboarding,
     // refresh their profile data to get the latest onboarding_completed_at status
@@ -161,10 +183,10 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         }
       }
     }
-  }, [isInitialized, isAuthLoading, isLoadingPreferences, user, userPreferences, segments, router]);
+  }, [isInitialized, isAuthLoading, isLoadingPreferences, user, userPreferences, segments, router, forceStopLoading]);
 
-  // Show loading screen while initializing
-  if (!isInitialized || isAuthLoading || (user && isLoadingPreferences)) {
+  // Show loading screen while initializing (unless force stopped)
+  if (!forceStopLoading && (!isInitialized || isAuthLoading || (user && isLoadingPreferences))) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingContent}>
