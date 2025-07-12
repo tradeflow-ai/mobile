@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
   },
   jobsList: {
     flexGrow: 1,
+    paddingBottom: 64, // Add extra bottom padding to ensure full scrollability (spacing.2xl + spacing.m = 48 + 16)
   },
   separator: {
     height: spacing.s,
