@@ -15,13 +15,14 @@ import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { QuickActionButton } from '@/components/QuickActionButton';
-import { Button, Card, OptimisticStatusBar, BatchProgressBar } from '@/components/ui';
+import { Button, Card, OptimisticStatusBar, BatchProgressBar, RetryManagementPanel } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { useCreateInventoryItem } from '@/hooks/useInventory';
 import { useBatchOperations } from '@/hooks/useBatchOperations';
+import { useRetryManagement } from '@/hooks/useRetryManagement';
 
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   // Add for testing
   const createItem = useCreateInventoryItem();
   const { queueOperation, pendingCount, forceProcess } = useBatchOperations();
+  const { retryStats, failedOperations } = useRetryManagement();
 
   // Get user's first name from ProfileManager
   const profileManager = ProfileManager.getInstance();
@@ -347,13 +349,29 @@ export default function HomeScreen() {
                 onPress={() => forceProcess()}
                 style={styles.testButton}
               />
+              
+              <Button
+                title="Test Failed Op"
+                variant="outline"
+                onPress={() => {
+                  // Create an operation that will fail (missing required fields)
+                  queueOperation('create', 'job', {
+                    title: `Failed Job ${Date.now()}`,
+                    // Missing required fields to trigger failure
+                  }, undefined, 'critical');
+                }}
+                style={styles.testButton}
+              />
             </View>
           </View>
 
           {/* Info about status feedback */}
           <View style={styles.infoSection}>
             <Text style={[styles.infoText, { color: colors.placeholder }]}>
-              💡 Batch operations and sync status appear at the bottom
+              💡 Batch operations, sync status, and retry management appear at the bottom
+            </Text>
+            <Text style={[styles.infoText, { color: colors.placeholder }]}>
+              Failed operations: {retryStats.totalFailed} (Retryable: {retryStats.totalRetryable})
             </Text>
           </View>
 
@@ -364,6 +382,14 @@ export default function HomeScreen() {
         
         {/* Batch Progress Bar */}
         <BatchProgressBar position="bottom" detailed={true} />
+        
+        {/* Retry Management Panel */}
+        <RetryManagementPanel 
+          visible={failedOperations.length > 0}
+          detailed={true}
+          showStats={true}
+          maxOperations={5}
+        />
       </View>
     </SafeAreaView>
   );

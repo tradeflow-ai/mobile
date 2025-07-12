@@ -5,6 +5,7 @@ export { TextInput } from './TextInput';
 export { Card } from './Card';
 export { Checkbox } from './Checkbox';
 export { RadioButton } from './RadioButton';
+export { RetryManagementPanel } from './RetryManagementPanel';
 export { SearchBar } from './SearchBar';
 export { StatusBadge } from './StatusBadge';
 export { StepIndicator } from './StepIndicator';

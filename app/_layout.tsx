@@ -17,6 +17,7 @@ import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
 import { offlineStatusService } from '@/services/offlineStatusService';
 import { batchOperationsService } from '@/services/batchOperationsService';
+import { retryManagementService } from '@/services/retryManagementService';
 
 import { queryClient } from '@/services/queryClient';
 
@@ -54,6 +55,8 @@ export default function RootLayout() {
       // Initialize OfflineStatusService to start monitoring network status
       // Service is already initialized on import
       // Initialize BatchOperationsService to start processing queued operations
+      // Service is already initialized on import
+      // Initialize RetryManagementService to start monitoring failed operations
       // Service is already initialized on import
     }
   }, [loaded]);
