@@ -24,8 +24,9 @@ export interface JobLocation {
   business_category?: 'Demand' | 'Maintenance';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  scheduled_start?: string;
-  scheduled_end?: string;
+  scheduled_date?: string; // User-selected date and optional time for scheduling
+  scheduled_start?: string; // AI-generated or manual start time
+  scheduled_end?: string; // AI-generated or manual end time
   estimated_duration?: number;
   actual_start?: string;
   actual_end?: string;
@@ -50,8 +51,9 @@ export interface CreateJobData {
   job_type: JobLocation['job_type'];
   business_category?: JobLocation['business_category'];
   priority: JobLocation['priority'];
-  scheduled_start?: string;
-  scheduled_end?: string;
+  scheduled_date?: string; // User-selected date and optional time for scheduling
+  scheduled_start?: string; // AI-generated or manual start time
+  scheduled_end?: string; // AI-generated or manual end time
   estimated_duration?: number;
   required_items?: string[];
   notes?: string;
@@ -72,8 +74,9 @@ export interface UpdateJobData {
   business_category?: JobLocation['business_category'];
   status?: JobLocation['status'];
   priority?: JobLocation['priority'];
-  scheduled_start?: string;
-  scheduled_end?: string;
+  scheduled_date?: string; // User-selected date and optional time for scheduling
+  scheduled_start?: string; // AI-generated or manual start time
+  scheduled_end?: string; // AI-generated or manual end time
   estimated_duration?: number;
   actual_start?: string;
   actual_end?: string;
@@ -232,6 +235,8 @@ export const useCreateJob = () => {
         ...restJobData,
         user_id: user.id,
         status: 'pending' as const,
+        scheduled_start: scheduled_start,
+        scheduled_end: scheduled_end,
         instructions: notes,
       };
 
@@ -257,7 +262,6 @@ export const useCreateJob = () => {
           ...restJobData,
           user_id: user.id,
           status: 'pending',
-          // Map fields to match JobLocation interface (which mirrors database schema)
           scheduled_start: scheduled_start,
           scheduled_end: scheduled_end,
           notes: notes,
@@ -587,13 +591,13 @@ export const useJobsForDateRange = (startDate: Date, endDate: Date) => {
       const startUTC = new Date(`${startDateStr}T00:00:00`).toISOString();
       const endUTC = new Date(`${endDateStr}T00:00:00`).toISOString();
 
+      // Query for jobs that have either scheduled_start OR scheduled_date in the date range
       const { data, error } = await supabase
         .from('job_locations')
         .select('*')
         .eq('user_id', user.id)
-        .gte('scheduled_start', startUTC)
-        .lt('scheduled_start', endUTC)
-        .order('scheduled_start', { ascending: true });
+        .or(`and(scheduled_start.gte.${startUTC},scheduled_start.lt.${endUTC}),and(scheduled_date.gte.${startUTC},scheduled_date.lt.${endUTC})`)
+        .order('scheduled_start', { ascending: true, nullsFirst: false });
 
       if (error) {
         throw error;

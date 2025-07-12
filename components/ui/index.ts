@@ -20,5 +20,7 @@ export { OptimisticStatusBar } from './OptimisticStatusBar';
 export { OfflineExperienceBar } from './OfflineExperienceBar';
 export { NativeDatePicker } from './NativeDatePicker';
 export { LocationMapView } from './LocationMapView';
+export { LocationPicker } from './LocationPicker';
+export type { LocationData } from './LocationPicker';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar';

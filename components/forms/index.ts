@@ -29,6 +29,7 @@ export { FormSelect } from './FormSelect';
 export { FormCheckbox } from './FormCheckbox';
 export { FormTimeInput } from './FormTimeInput';
 export { FormRadioGroup } from './FormRadioGroup';
+export { FormLocationPicker } from './FormLocationPicker';
 
 // Validation schemas
 export * from './validationSchemas'; 

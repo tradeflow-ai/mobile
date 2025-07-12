@@ -4,7 +4,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useForm } from 'react-hook-form';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { FormProvider, FormTextInput, FormSelect, FormQuantitySelector, FormActions, SelectOption, FormValidationRules } from '@/components/forms';
+import { spacing, typography } from '@/constants/Theme';
+import { FormProvider, FormTextInput, FormSelect, FormQuantitySelector, FormActions, FormTimeInput, FormCheckbox, SelectOption, FormValidationRules } from '@/components/forms';
+import { Label, NativeDatePicker } from '@/components/ui';
 import { useUpdateJob, useJob, UpdateJobData } from '@/hooks/useJobs';
 import { useInventory } from '@/hooks/useInventory';
 
@@ -15,6 +17,8 @@ interface JobFormData {
   job_type: 'service' | 'inspection' | 'emergency';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  scheduled_date?: Date;
+  use_ai_scheduling?: boolean;
   estimated_duration?: number;
   completion_notes?: string;
 }
@@ -40,6 +44,7 @@ const statusOptions: SelectOption[] = [
   { label: 'In Progress', value: 'in_progress' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Paused', value: 'paused' },
 ];
 
 
@@ -55,7 +60,7 @@ export default function EditJobScreen() {
     mode: 'onChange',
   });
 
-  const { handleSubmit, formState: { isSubmitting }, reset } = methods;
+  const { handleSubmit, watch, setValue, formState: { isSubmitting }, reset } = methods;
 
   // Data fetching
   const { data: job, isLoading: isLoadingJob } = useJob(id!);
@@ -77,14 +82,14 @@ export default function EditJobScreen() {
   // Pre-populate form with existing job data
   useEffect(() => {
     if (job) {
-      const validTypes = ['service', 'inspection', 'emergency'] as const;
-      const formJobType = validTypes.includes(job.job_type) ? job.job_type : 'service';
       const formData: JobFormData = {
         title: job.title,
         description: job.description || '',
-        job_type: formJobType,
+        job_type: job.job_type,
         status: job.status,
         priority: job.priority,
+        scheduled_date: job.scheduled_date ? new Date(job.scheduled_date) : undefined,
+        use_ai_scheduling: job.use_ai_scheduling || false,
         estimated_duration: job.estimated_duration || 60,
         completion_notes: job.completion_notes || '',
       };
@@ -99,6 +104,15 @@ export default function EditJobScreen() {
         return;
       }
 
+      // Handle scheduled_date timestamp
+      let scheduledDate = data.scheduled_date ? new Date(data.scheduled_date) : undefined;
+      
+      // If using AI scheduling, set time to 00:00 (midnight) to let AI determine optimal time
+      if (scheduledDate && data.use_ai_scheduling) {
+        scheduledDate.setHours(0, 0, 0, 0);
+      }
+      // If not using AI scheduling, use the user-selected date and time from the picker
+
       // Convert form data to UpdateJobData format
       const updateData: UpdateJobData = {
         title: data.title.trim(),
@@ -106,6 +120,8 @@ export default function EditJobScreen() {
         job_type: data.job_type,
         status: data.status,
         priority: data.priority,
+        scheduled_date: scheduledDate ? scheduledDate.toISOString() : undefined,
+        use_ai_scheduling: data.use_ai_scheduling,
         estimated_duration: data.estimated_duration || 60,
         completion_notes: data.completion_notes?.trim(),
       };
@@ -201,6 +217,31 @@ export default function EditJobScreen() {
                 required
               />
 
+              {/* Scheduled Date */}
+              <View style={styles.dateContainer}>
+                <Label text="Scheduled Date" />
+                <View style={styles.miniCalendarContainer}>
+                  <NativeDatePicker
+                    selectedDate={watch('scheduled_date') || new Date()}
+                    onDateChange={(date) => setValue('scheduled_date', date)}
+                    containerStyle={styles.nativeDatePicker}
+                  />
+                </View>
+              </View>
+
+              {/* AI Scheduling Option */}
+              <FormCheckbox
+                name="use_ai_scheduling"
+                label="Let AI Agent select optimal times"
+                containerStyle={styles.aiCheckbox}
+              />
+
+              {watch('use_ai_scheduling') && (
+                <Text style={[styles.helpText, { color: colors.placeholder }]}>
+                  Time will be set to 12:00 AM - AI will determine optimal scheduling
+                </Text>
+              )}
+
               {/* Estimated Duration */}
               <FormQuantitySelector
                 name="estimated_duration"
@@ -256,5 +297,23 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+  },
+  dateContainer: {
+    marginBottom: spacing.m,
+  },
+  miniCalendarContainer: {
+    marginTop: spacing.s,
+  },
+  nativeDatePicker: {
+    // Custom styles for the date picker if needed
+  },
+  aiCheckbox: {
+    marginBottom: spacing.m,
+  },
+  helpText: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginTop: spacing.s,
+    fontStyle: 'italic',
   },
 }); 
