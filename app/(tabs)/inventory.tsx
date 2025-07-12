@@ -178,6 +178,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flexGrow: 1,
+    paddingBottom: spacing.xl + spacing.l, // Extra padding for tab bar + buffer
   },
   separator: {
     height: spacing.s,

@@ -52,11 +52,9 @@ export default function JobDetailsScreen() {
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [scheduledDate, setScheduledDate] = useState(new Date());
   const [scheduledStartTime, setScheduledStartTime] = useState('8:00 AM');
-  const [scheduledEndTime, setScheduledEndTime] = useState('5:00 PM');
   const [useAITimes, setUseAITimes] = useState(false);
   const [originalScheduledDate, setOriginalScheduledDate] = useState(new Date());
   const [originalScheduledStartTime, setOriginalScheduledStartTime] = useState('8:00 AM');
-  const [originalScheduledEndTime, setOriginalScheduledEndTime] = useState('5:00 PM');
   const [originalUseAITimes, setOriginalUseAITimes] = useState(false);
   const [hasInitializedAITimes, setHasInitializedAITimes] = useState(false);
 
@@ -180,7 +178,6 @@ export default function JobDetailsScreen() {
           setOriginalCompletionNotes(currentCompletionNotes);
 
           const currentScheduledStart = job.scheduled_start || '';
-          const currentScheduledEnd = job.scheduled_end || '';
           // Read AI scheduling preference from job data, defaulting to false for new jobs
           const currentUseAITimes = job.use_ai_scheduling || false;
           
@@ -198,40 +195,23 @@ export default function JobDetailsScreen() {
             setScheduledStartTime(formattedStartTime);
             setOriginalScheduledStartTime(formattedStartTime);
             
-            // Handle end time if exists
-            if (currentScheduledEnd) {
-              const endDate = new Date(currentScheduledEnd);
-              const endHours = endDate.getHours();
-              const endMinutes = endDate.getMinutes();
-              const endPeriod = endHours >= 12 ? 'PM' : 'AM';
-              const endDisplayHours = endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours;
-              const formattedEndTime = `${endDisplayHours}:${endMinutes.toString().padStart(2, '0')} ${endPeriod}`;
-              setScheduledEndTime(formattedEndTime);
-              setOriginalScheduledEndTime(formattedEndTime);
-            } else {
-              setScheduledEndTime('');
-              setOriginalScheduledEndTime('');
-            }
+            // Set AI times flag from job data - always reload when job data changes
+            setUseAITimes(currentUseAITimes);
+            setOriginalUseAITimes(currentUseAITimes);
+            setHasInitializedAITimes(true);
+          } else {
+            // Default to current date and default times
+            const today = new Date();
+            setScheduledDate(today);
+            setOriginalScheduledDate(new Date(today));
+            setScheduledStartTime('8:00 AM');
+            setOriginalScheduledStartTime('8:00 AM');
             
             // Set AI times flag from job data - always reload when job data changes
             setUseAITimes(currentUseAITimes);
             setOriginalUseAITimes(currentUseAITimes);
             setHasInitializedAITimes(true);
-                  } else {
-              // Default to current date and default times
-              const today = new Date();
-              setScheduledDate(today);
-              setOriginalScheduledDate(new Date(today));
-              setScheduledStartTime('8:00 AM');
-              setOriginalScheduledStartTime('8:00 AM');
-              setScheduledEndTime('');
-              setOriginalScheduledEndTime('');
-              
-              // Set AI times flag from job data - always reload when job data changes
-              setUseAITimes(currentUseAITimes);
-              setOriginalUseAITimes(currentUseAITimes);
-              setHasInitializedAITimes(true);
-            }
+          }
 
       const currentRequiredItems = job.required_items || [];
       setRequiredItems(currentRequiredItems);
@@ -428,15 +408,11 @@ export default function JobDetailsScreen() {
 
     try {
       let scheduledStartDate: Date;
-      let scheduledEndDate: Date | undefined = undefined;
 
       if (useAITimes) {
         // AI will select optimal times - just use the date with default business hours
         scheduledStartDate = new Date(scheduledDate);
         scheduledStartDate.setHours(9, 0, 0, 0); // 9:00 AM default for AI
-
-        scheduledEndDate = new Date(scheduledDate);
-        scheduledEndDate.setHours(17, 0, 0, 0); // 5:00 PM default for AI
       } else {
         // Manual time selection - convert user input to 24-hour format
         const startTimeMatch = scheduledStartTime.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
@@ -455,41 +431,18 @@ export default function JobDetailsScreen() {
 
         scheduledStartDate = new Date(scheduledDate);
         scheduledStartDate.setHours(startHours, startMinutes, 0, 0);
-
-        // Convert end time string to 24-hour format for database
-        const endTimeMatch = scheduledEndTime.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
-        
-        if (endTimeMatch) {
-          let endHours = parseInt(endTimeMatch[1], 10);
-          const endMinutes = parseInt(endTimeMatch[2], 10);
-          const endPeriod = endTimeMatch[3].toUpperCase();
-
-          // Convert end time to 24-hour format
-          if (endPeriod === 'PM' && endHours !== 12) endHours += 12;
-          if (endPeriod === 'AM' && endHours === 12) endHours = 0;
-
-          scheduledEndDate = new Date(scheduledDate);
-          scheduledEndDate.setHours(endHours, endMinutes, 0, 0);
-
-          // If end time is before start time, assume it's next day
-          if (scheduledEndDate <= scheduledStartDate) {
-            scheduledEndDate.setDate(scheduledEndDate.getDate() + 1);
-          }
-        }
       }
 
       await updateJobMutation.mutateAsync({
         jobId: job.id,
         updates: { 
           scheduled_start: scheduledStartDate.toISOString(),
-          scheduled_end: scheduledEndDate?.toISOString() || undefined,
           use_ai_scheduling: useAITimes,
         },
       });
       
       setOriginalScheduledDate(new Date(scheduledDate));
       setOriginalScheduledStartTime(scheduledStartTime);
-      setOriginalScheduledEndTime(scheduledEndTime);
       setOriginalUseAITimes(useAITimes);
       setIsEditingSchedule(false);
       Alert.alert('Success', 'Schedule updated successfully!', [{ text: 'OK' }]);
@@ -502,7 +455,6 @@ export default function JobDetailsScreen() {
   const handleCancelSchedule = () => {
     setScheduledDate(new Date(originalScheduledDate));
     setScheduledStartTime(originalScheduledStartTime);
-    setScheduledEndTime(originalScheduledEndTime);
     setUseAITimes(originalUseAITimes);
     setIsEditingSchedule(false);
   };
@@ -1051,16 +1003,6 @@ export default function JobDetailsScreen() {
                       format24Hour={false}
                     />
                   </View>
-                  
-                  <View style={styles.scheduleInputContainer}>
-                    <TimeInput
-                      value={scheduledEndTime}
-                      onTimeChange={setScheduledEndTime}
-                      label="End Time (Optional)"
-                      placeholder="Optional - leave empty for open-ended"
-                      format24Hour={false}
-                    />
-                  </View>
                 </>
               )}
               
@@ -1099,9 +1041,7 @@ export default function JobDetailsScreen() {
                   <Text style={[styles.scheduleTime, { color: colors.text }]}>
                     {useAITimes 
                       ? "AI will select optimal times" 
-                      : scheduledEndTime 
-                        ? `${scheduledStartTime} - ${scheduledEndTime}`
-                        : `${scheduledStartTime} - `
+                      : scheduledStartTime
                     }
                   </Text>
                 </View>
