@@ -751,13 +751,13 @@ export class InventoryAgent {
         
         return {
           id: `hardware_store_${Date.now()}`,
-          title: `Hardware Store Stop - Mock Data`,
+          title: `Home Depot - SE Austin`,
           job_type: 'hardware_store',
           priority: 'high',
           estimated_duration: estimatedDuration,
-          address: '1250 Bayshore Hwy, Burlingame, CA 94010', // Default store
-          latitude: 37.5847,
-          longitude: -122.3617,
+          address: '3600 Interstate Hwy 35 South, Austin, TX 78704',
+          latitude: 30.2711,
+          longitude: -97.7437,
           description: `Pick up ${criticalItems.length} critical items needed for today's jobs. Stock verification unavailable.`,
           shopping_list: enhancedShoppingList,
           preferred_supplier: 'fallback_store',
@@ -773,13 +773,13 @@ export class InventoryAgent {
       
       return {
         id: `hardware_store_${Date.now()}`,
-        title: `Hardware Store Stop - Supplier Check`,
+        title: `Home Depot - SE Austin`,
         job_type: 'hardware_store',
         priority: 'high',
         estimated_duration: estimatedDuration,
-        address: '1250 Bayshore Hwy, Burlingame, CA 94010', // Default store
-        latitude: 37.5847,
-        longitude: -122.3617,
+        address: '3600 Interstate Hwy 35 South, Austin, TX 78704',
+        latitude: 30.2711,
+        longitude: -97.7437,
         description: `Pick up ${criticalItems.length} critical items needed for today's jobs. Stock verification unavailable.`,
         shopping_list: shoppingList,
         preferred_supplier: 'fallback_store',

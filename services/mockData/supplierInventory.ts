@@ -145,14 +145,14 @@ export const MOCK_INVENTORY_DATA: SupplierItem[] = [
 export const MOCK_STORE_LOCATIONS: StoreLocation[] = [
   {
     storeId: '0595',
-    name: 'Lowe\'s Home Improvement',
-    address: '1250 Bayshore Hwy',
-    city: 'Burlingame',
-    state: 'CA',
-    zipCode: '94010',
-    latitude: 37.5847,
-    longitude: -122.3617,
-    phone: '(650) 558-0595',
+    name: 'Home Depot - SE Austin',
+    address: '3600 Interstate Hwy 35 South',
+    city: 'Austin',
+    state: 'TX',
+    zipCode: '78704',
+    latitude: 30.2711,
+    longitude: -97.7437,
+    phone: '(512) 693-9811',
     hours: {
       monday: '6:00 AM - 10:00 PM',
       tuesday: '6:00 AM - 10:00 PM',
