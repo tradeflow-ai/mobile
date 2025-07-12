@@ -25,6 +25,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [forceStopLoading, setForceStopLoading] = useState(false);
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const router = useRouter();
   const segments = useSegments();
   const colorScheme = useColorScheme();
@@ -108,7 +109,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // Navigation logic
   useEffect(() => {
-    if (!forceStopLoading && (!isInitialized || isAuthLoading || isLoadingPreferences)) return;
+    if (!forceStopLoading && (!isInitialized || isAuthLoading || isLoadingPreferences || isRefreshingProfile)) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
     const inOnboardingGroup = segments[0] === 'onboarding';
@@ -126,16 +127,20 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
     // If user is navigating to main app and we suspect they might have just completed onboarding,
     // refresh their profile data to get the latest onboarding_completed_at status
-    if (user && inMainApp && userPreferences && !userPreferences.has_ever_completed_onboarding) {
+    if (user && inMainApp && userPreferences && !userPreferences.has_ever_completed_onboarding && !isRefreshingProfile) {
       console.log('AuthGuard: Refreshing profile data - user may have just completed onboarding');
       
+      setIsRefreshingProfile(true);
+      
       // Re-fetch profile data to check for onboarding completion
-      supabase
-        .from('profiles')
-        .select('preferences, onboarding_completed_at')
-        .eq('id', user.id)
-        .single()
-        .then(({ data: profile, error }) => {
+      const refreshProfile = async () => {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('preferences, onboarding_completed_at')
+            .eq('id', user.id)
+            .single();
+
           if (!error && profile) {
             setUserPreferences({
               preferences: profile?.preferences || null,
@@ -144,7 +149,14 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             });
             console.log('AuthGuard: Profile data refreshed, onboarding status:', Boolean(profile?.onboarding_completed_at));
           }
-        });
+        } catch (error) {
+          console.error('AuthGuard: Error refreshing profile:', error);
+        } finally {
+          setIsRefreshingProfile(false);
+        }
+      };
+      
+      refreshProfile();
       
       // Don't proceed with navigation logic yet, let the refresh complete
       return;
@@ -183,7 +195,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
         }
       }
     }
-  }, [isInitialized, isAuthLoading, isLoadingPreferences, user, userPreferences, segments, router, forceStopLoading]);
+  }, [isInitialized, isAuthLoading, isLoadingPreferences, user, userPreferences, segments, router, forceStopLoading, isRefreshingProfile]);
 
   // Show loading screen while initializing (unless force stopped)
   if (!forceStopLoading && (!isInitialized || isAuthLoading || (user && isLoadingPreferences))) {
