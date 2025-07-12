@@ -370,8 +370,43 @@ export const useDailyPlan = (
       }
 
       if (approvedPlan) {
-        // Set active job using the helper function
-        await setActiveJobFromApprovedPlan(approvedPlan);
+        // The dispatcher output contains the definitive, final order of jobs,
+        // including any hardware store runs. We just need to pick the first one.
+        if (approvedPlan.dispatcher_output?.prioritized_jobs?.length > 0) {
+          const firstJobId = approvedPlan.dispatcher_output.prioritized_jobs[0].job_id;
+          
+          // Fetch the full job details from the cache or network
+          const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
+            queryKey: queryKeys.job(firstJobId),
+            queryFn: async (): Promise<JobLocation | null> => {
+              if (!user?.id) {
+                throw new Error('No authenticated user');
+              }
+
+              const { data, error } = await supabase
+                .from('job_locations')
+                .select('*')
+                .eq('id', firstJobId)
+                .eq('user_id', user.id)
+                .single();
+
+              if (error) {
+                if (error.code === 'PGRST116') {
+                  return null; // Job not found
+                }
+                throw error;
+              }
+
+              return data;
+            },
+          });
+
+          if (jobDetails) {
+            setActiveJob(jobDetails);
+          } else {
+            console.warn(`Could not fetch details for the first job (ID: ${firstJobId}).`);
+          }
+        }
       }
 
       console.log('Daily plan approved:', dailyPlan.id);

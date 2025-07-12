@@ -31,6 +31,8 @@ export default function InventoryResultsScreen() {
     hasHardwareStoreJob,
   } = useTodaysPlan();
 
+
+
   const handleApprovePlan = async () => {
     if (!dailyPlan) return;
 
@@ -92,10 +94,14 @@ export default function InventoryResultsScreen() {
   const shoppingList = inventoryAnalysis?.shopping_list || [];
   const criticalItems = shoppingList.filter(item => item.priority === 'critical');
 
+
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.container}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          
+
           
           {/* Header */}
           <View style={styles.header}>
@@ -474,4 +480,5 @@ const styles = StyleSheet.create({
   approveButton: {
     flex: 1,
   },
+
 }); 
