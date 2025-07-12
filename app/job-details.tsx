@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, radius, touchTargets, shadows } from '@/constants/Theme';
-import { Card, Button, TextInput, SearchBar, TimeInput, NativeDatePicker, Checkbox } from '@/components/ui';
+import { Card, Button, TextInput, SearchBar, TimeInput, NativeDatePicker, Checkbox, LocationMapView } from '@/components/ui';
 import { FormProvider, FormTextInput, FormQuantitySelector, FormActions } from '@/components/forms';
 import { useJob, useStartJob, useCompleteJob, useUpdateJob, JobLocation } from '@/hooks/useJobs';
 import { useInventory, useCreateInventoryItem, InventoryItem, CreateInventoryData } from '@/hooks/useInventory';
@@ -41,14 +41,7 @@ export default function JobDetailsScreen() {
   const [locationText, setLocationText] = useState('');
   const [originalLocation, setOriginalLocation] = useState('');
 
-  // Customer editing state
-  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [originalCustomerName, setOriginalCustomerName] = useState('');
-  const [originalCustomerPhone, setOriginalCustomerPhone] = useState('');
-  const [originalCustomerEmail, setOriginalCustomerEmail] = useState('');
+
 
   // Completion notes editing state
   const [isEditingCompletionNotes, setIsEditingCompletionNotes] = useState(false);
@@ -85,7 +78,7 @@ export default function JobDetailsScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const notesContainerRef = useRef<View>(null);
   const locationContainerRef = useRef<View>(null);
-  const customerContainerRef = useRef<View>(null);
+
   const completionNotesContainerRef = useRef<View>(null);
   const scheduleContainerRef = useRef<View>(null);
   const inventoryContainerRef = useRef<View>(null);
@@ -169,84 +162,76 @@ export default function JobDetailsScreen() {
 
   const { handleSubmit: handleCreateSubmit, reset: resetCreateForm, formState: { isSubmitting: isCreatingItem } } = createItemMethods;
 
-  // Update states when job data changes
-  useEffect(() => {
-    if (job) {
-      const currentNotes = job.notes || '';
-      setNotesText(currentNotes);
-      setOriginalNotes(currentNotes);
+        // Update states when job data changes
+      useEffect(() => {
+        if (job) {
+          const currentNotes = job.notes || '';
+          setNotesText(currentNotes);
+          setOriginalNotes(currentNotes);
 
-      const currentLocation = job.address || '';
-      setLocationText(currentLocation);
-      setOriginalLocation(currentLocation);
+          const currentLocation = job.address || '';
+          setLocationText(currentLocation);
+          setOriginalLocation(currentLocation);
 
-      const currentCustomerName = job.customer_name || '';
-      const currentCustomerPhone = job.customer_phone || '';
-      const currentCustomerEmail = job.customer_email || '';
-      setCustomerName(currentCustomerName);
-      setCustomerPhone(currentCustomerPhone);
-      setCustomerEmail(currentCustomerEmail);
-      setOriginalCustomerName(currentCustomerName);
-      setOriginalCustomerPhone(currentCustomerPhone);
-      setOriginalCustomerEmail(currentCustomerEmail);
 
-      const currentCompletionNotes = job.completion_notes || '';
-      setCompletionNotesText(currentCompletionNotes);
-      setOriginalCompletionNotes(currentCompletionNotes);
 
-      const currentScheduledStart = job.scheduled_start || '';
-      const currentScheduledEnd = job.scheduled_end || '';
-      // Read AI scheduling preference from job data, defaulting to false for new jobs
-      const currentUseAITimes = job.use_ai_scheduling || false;
-      
-      if (currentScheduledStart) {
-        const startDate = new Date(currentScheduledStart);
-        setScheduledDate(startDate);
-        setOriginalScheduledDate(new Date(startDate));
-        
-        // Format start time for display (12-hour format)
-        const hours = startDate.getHours();
-        const minutes = startDate.getMinutes();
-        const period = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-        const formattedStartTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-        setScheduledStartTime(formattedStartTime);
-        setOriginalScheduledStartTime(formattedStartTime);
-        
-        // Handle end time if exists
-        if (currentScheduledEnd) {
-          const endDate = new Date(currentScheduledEnd);
-          const endHours = endDate.getHours();
-          const endMinutes = endDate.getMinutes();
-          const endPeriod = endHours >= 12 ? 'PM' : 'AM';
-          const endDisplayHours = endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours;
-          const formattedEndTime = `${endDisplayHours}:${endMinutes.toString().padStart(2, '0')} ${endPeriod}`;
-          setScheduledEndTime(formattedEndTime);
-          setOriginalScheduledEndTime(formattedEndTime);
-        } else {
-          setScheduledEndTime('5:00 PM');
-          setOriginalScheduledEndTime('5:00 PM');
-        }
-        
-        // Set AI times flag from job data - always reload when job data changes
-        setUseAITimes(currentUseAITimes);
-        setOriginalUseAITimes(currentUseAITimes);
-        setHasInitializedAITimes(true);
-              } else {
-          // Default to current date and default times
-          const today = new Date();
-          setScheduledDate(today);
-          setOriginalScheduledDate(new Date(today));
-          setScheduledStartTime('8:00 AM');
-          setOriginalScheduledStartTime('8:00 AM');
-          setScheduledEndTime('5:00 PM');
-          setOriginalScheduledEndTime('5:00 PM');
+          const currentCompletionNotes = job.completion_notes || '';
+          setCompletionNotesText(currentCompletionNotes);
+          setOriginalCompletionNotes(currentCompletionNotes);
+
+          const currentScheduledStart = job.scheduled_start || '';
+          const currentScheduledEnd = job.scheduled_end || '';
+          // Read AI scheduling preference from job data, defaulting to false for new jobs
+          const currentUseAITimes = job.use_ai_scheduling || false;
           
-          // Set AI times flag from job data - always reload when job data changes
-          setUseAITimes(currentUseAITimes);
-          setOriginalUseAITimes(currentUseAITimes);
-          setHasInitializedAITimes(true);
-        }
+          if (currentScheduledStart) {
+            const startDate = new Date(currentScheduledStart);
+            setScheduledDate(startDate);
+            setOriginalScheduledDate(new Date(startDate));
+            
+            // Format start time for display (12-hour format)
+            const hours = startDate.getHours();
+            const minutes = startDate.getMinutes();
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+            const formattedStartTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+            setScheduledStartTime(formattedStartTime);
+            setOriginalScheduledStartTime(formattedStartTime);
+            
+            // Handle end time if exists
+            if (currentScheduledEnd) {
+              const endDate = new Date(currentScheduledEnd);
+              const endHours = endDate.getHours();
+              const endMinutes = endDate.getMinutes();
+              const endPeriod = endHours >= 12 ? 'PM' : 'AM';
+              const endDisplayHours = endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours;
+              const formattedEndTime = `${endDisplayHours}:${endMinutes.toString().padStart(2, '0')} ${endPeriod}`;
+              setScheduledEndTime(formattedEndTime);
+              setOriginalScheduledEndTime(formattedEndTime);
+            } else {
+              setScheduledEndTime('');
+              setOriginalScheduledEndTime('');
+            }
+            
+            // Set AI times flag from job data - always reload when job data changes
+            setUseAITimes(currentUseAITimes);
+            setOriginalUseAITimes(currentUseAITimes);
+            setHasInitializedAITimes(true);
+                  } else {
+              // Default to current date and default times
+              const today = new Date();
+              setScheduledDate(today);
+              setOriginalScheduledDate(new Date(today));
+              setScheduledStartTime('8:00 AM');
+              setOriginalScheduledStartTime('8:00 AM');
+              setScheduledEndTime('');
+              setOriginalScheduledEndTime('');
+              
+              // Set AI times flag from job data - always reload when job data changes
+              setUseAITimes(currentUseAITimes);
+              setOriginalUseAITimes(currentUseAITimes);
+              setHasInitializedAITimes(true);
+            }
 
       const currentRequiredItems = job.required_items || [];
       setRequiredItems(currentRequiredItems);
@@ -402,40 +387,7 @@ export default function JobDetailsScreen() {
     setIsEditingLocation(false);
   };
 
-  // Customer editing functions
-  const handleEditCustomer = () => {
-    setIsEditingCustomer(true);
-  };
 
-  const handleSaveCustomer = async () => {
-    if (!job) return;
-
-    try {
-      await updateJobMutation.mutateAsync({
-        jobId: job.id,
-        updates: { 
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
-          customer_email: customerEmail.trim(),
-        },
-      });
-      setOriginalCustomerName(customerName);
-      setOriginalCustomerPhone(customerPhone);
-      setOriginalCustomerEmail(customerEmail);
-      setIsEditingCustomer(false);
-      Alert.alert('Success', 'Customer information updated successfully!', [{ text: 'OK' }]);
-    } catch (error) {
-      console.error('Error updating customer information:', error);
-      Alert.alert('Error', 'Failed to update customer information. Please try again.', [{ text: 'OK' }]);
-    }
-  };
-
-  const handleCancelCustomer = () => {
-    setCustomerName(originalCustomerName);
-    setCustomerPhone(originalCustomerPhone);
-    setCustomerEmail(originalCustomerEmail);
-    setIsEditingCustomer(false);
-  };
 
   // Completion notes editing functions
   const handleEditCompletionNotes = () => {
@@ -771,13 +723,13 @@ export default function JobDetailsScreen() {
           </View>
         </Card>
 
-        {/* Notes - Always visible and editable */}
+        {/* Location Information - Always visible and editable */}
         <Card style={styles.sectionCard}>
           <View style={styles.sectionHeaderCompact}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Notes</Text>
-            {!isEditingNotes && (
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
+            {!isEditingLocation && !(job?.latitude && job?.longitude) && (
               <TouchableOpacity
-                onPress={handleEditNotes}
+                onPress={handleEditLocation}
                 style={styles.editButton}
                 disabled={updateJobMutation.isPending}
               >
@@ -785,30 +737,29 @@ export default function JobDetailsScreen() {
               </TouchableOpacity>
             )}
           </View>
-          
-          {isEditingNotes ? (
-            <View ref={notesContainerRef} style={styles.editContainer}>
+
+          {isEditingLocation ? (
+            <View ref={locationContainerRef} style={styles.editContainer}>
               <TextInput
-                value={notesText}
-                onChangeText={setNotesText}
-                placeholder="Add notes about this job..."
+                value={locationText}
+                onChangeText={setLocationText}
+                placeholder="Enter job location address..."
                 multiline
-                numberOfLines={4}
+                numberOfLines={2}
                 style={styles.textInput}
                 autoFocus
-                onFocus={() => scrollToSection(notesContainerRef)}
               />
               <View style={styles.editActions}>
                 <Button
                   variant="outline"
-                  onPress={handleCancelNotes}
+                  onPress={handleCancelLocation}
                   title="Cancel"
                   style={styles.actionButton}
                   disabled={updateJobMutation.isPending}
                 />
                 <Button
                   variant="primary"
-                  onPress={handleSaveNotes}
+                  onPress={handleSaveLocation}
                   title="Save"
                   style={styles.actionButton}
                   disabled={updateJobMutation.isPending}
@@ -816,11 +767,39 @@ export default function JobDetailsScreen() {
               </View>
             </View>
           ) : (
-            <TouchableOpacity onPress={handleEditNotes} style={styles.displayContainer}>
-              <Text style={[styles.displayText, { color: notesText ? colors.text : colors.placeholder }]}>
-                {notesText || 'Tap to add notes about this job...'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.displayContainer}>
+              {/* Map View if coordinates are available */}
+              {job?.latitude && job?.longitude ? (
+                <View style={styles.locationMapContainer}>
+                  <LocationMapView
+                    latitude={job.latitude}
+                    longitude={job.longitude}
+                    title={job.title}
+                    address={locationText}
+                    height={220}
+                    style={styles.locationMap}
+                  />
+                  {locationText && (
+                    <View style={styles.locationAddressContainer}>
+                      <FontAwesome name="map-marker" size={14} color={colors.primary} />
+                      <Text style={[styles.locationAddressText, { color: colors.text }]}>
+                        {locationText}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                /* Fallback to text display if no coordinates */
+                <TouchableOpacity onPress={handleEditLocation} style={styles.locationFallback}>
+                  <View style={styles.locationRow}>
+                    <FontAwesome name="map-marker" size={16} color={colors.primary} />
+                    <Text style={[styles.displayText, { color: locationText ? colors.text : colors.placeholder }]}>
+                      {locationText || 'Tap to add location address...'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </Card>
 
@@ -966,13 +945,13 @@ export default function JobDetailsScreen() {
           )}
         </Card>
 
-        {/* Location Information - Always visible and editable */}
+        {/* Notes - Always visible and editable */}
         <Card style={styles.sectionCard}>
           <View style={styles.sectionHeaderCompact}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-            {!isEditingLocation && (
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Notes</Text>
+            {!isEditingNotes && (
               <TouchableOpacity
-                onPress={handleEditLocation}
+                onPress={handleEditNotes}
                 style={styles.editButton}
                 disabled={updateJobMutation.isPending}
               >
@@ -980,29 +959,30 @@ export default function JobDetailsScreen() {
               </TouchableOpacity>
             )}
           </View>
-
-          {isEditingLocation ? (
-            <View ref={locationContainerRef} style={styles.editContainer}>
+          
+          {isEditingNotes ? (
+            <View ref={notesContainerRef} style={styles.editContainer}>
               <TextInput
-                value={locationText}
-                onChangeText={setLocationText}
-                placeholder="Enter job location address..."
+                value={notesText}
+                onChangeText={setNotesText}
+                placeholder="Add notes about this job..."
                 multiline
-                numberOfLines={2}
+                numberOfLines={4}
                 style={styles.textInput}
                 autoFocus
+                onFocus={() => scrollToSection(notesContainerRef)}
               />
               <View style={styles.editActions}>
                 <Button
                   variant="outline"
-                  onPress={handleCancelLocation}
+                  onPress={handleCancelNotes}
                   title="Cancel"
                   style={styles.actionButton}
                   disabled={updateJobMutation.isPending}
                 />
                 <Button
                   variant="primary"
-                  onPress={handleSaveLocation}
+                  onPress={handleSaveNotes}
                   title="Save"
                   style={styles.actionButton}
                   disabled={updateJobMutation.isPending}
@@ -1010,13 +990,10 @@ export default function JobDetailsScreen() {
               </View>
             </View>
           ) : (
-            <TouchableOpacity onPress={handleEditLocation} style={styles.displayContainer}>
-              <View style={styles.locationRow}>
-                <FontAwesome name="map-marker" size={16} color={colors.primary} />
-                <Text style={[styles.displayText, { color: locationText ? colors.text : colors.placeholder }]}>
-                  {locationText || 'Tap to add location address...'}
-                </Text>
-              </View>
+            <TouchableOpacity onPress={handleEditNotes} style={styles.displayContainer}>
+              <Text style={[styles.displayText, { color: notesText ? colors.text : colors.placeholder }]}>
+                {notesText || 'Tap to add notes about this job...'}
+              </Text>
             </TouchableOpacity>
           )}
         </Card>
@@ -1079,8 +1056,8 @@ export default function JobDetailsScreen() {
                     <TimeInput
                       value={scheduledEndTime}
                       onTimeChange={setScheduledEndTime}
-                      label="End Time"
-                      placeholder="Select end time"
+                      label="End Time (Optional)"
+                      placeholder="Optional - leave empty for open-ended"
                       format24Hour={false}
                     />
                   </View>
@@ -1122,7 +1099,9 @@ export default function JobDetailsScreen() {
                   <Text style={[styles.scheduleTime, { color: colors.text }]}>
                     {useAITimes 
                       ? "AI will select optimal times" 
-                      : `${scheduledStartTime} - ${scheduledEndTime}`
+                      : scheduledEndTime 
+                        ? `${scheduledStartTime} - ${scheduledEndTime}`
+                        : `${scheduledStartTime} - `
                     }
                   </Text>
                 </View>
@@ -1133,91 +1112,6 @@ export default function JobDetailsScreen() {
                     </Text>
                   </View>
                 )}
-              </View>
-            </TouchableOpacity>
-          )}
-        </Card>
-
-        {/* Customer Information - Always visible and editable */}
-        <Card style={styles.sectionCard}>
-          <View style={styles.sectionHeaderCompact}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Customer</Text>
-            {!isEditingCustomer && (
-              <TouchableOpacity
-                onPress={handleEditCustomer}
-                style={styles.editButton}
-                disabled={updateJobMutation.isPending}
-              >
-                <FontAwesome name="edit" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {isEditingCustomer ? (
-            <View ref={customerContainerRef} style={styles.editContainer}>
-              <TextInput
-                value={customerName}
-                onChangeText={setCustomerName}
-                placeholder="Customer name..."
-                style={styles.textInput}
-                autoFocus
-                onFocus={() => scrollToSection(customerContainerRef)}
-              />
-              <TextInput
-                value={customerPhone}
-                onChangeText={setCustomerPhone}
-                placeholder="Customer phone number..."
-                style={styles.textInput}
-                keyboardType="phone-pad"
-                onFocus={() => scrollToSection(customerContainerRef)}
-              />
-              <TextInput
-                value={customerEmail}
-                onChangeText={setCustomerEmail}
-                placeholder="Customer email address..."
-                style={styles.textInput}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onFocus={() => scrollToSection(customerContainerRef)}
-              />
-              <View style={styles.editActions}>
-                <Button
-                  variant="outline"
-                  onPress={handleCancelCustomer}
-                  title="Cancel"
-                  style={styles.actionButton}
-                  disabled={updateJobMutation.isPending}
-                />
-                <Button
-                  variant="primary"
-                  onPress={handleSaveCustomer}
-                  title="Save"
-                  style={styles.actionButton}
-                  disabled={updateJobMutation.isPending}
-                />
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity onPress={handleEditCustomer} style={styles.displayContainer}>
-              <View style={styles.customerInfo}>
-                <View style={styles.customerRow}>
-                  <FontAwesome name="user" size={16} color={colors.primary} />
-                  <Text style={[styles.displayText, { color: customerName ? colors.text : colors.placeholder }]}>
-                    {customerName || 'Tap to add customer name...'}
-                  </Text>
-                </View>
-                <View style={styles.customerRow}>
-                  <FontAwesome name="phone" size={16} color={colors.primary} />
-                  <Text style={[styles.displayText, { color: customerPhone ? colors.text : colors.placeholder }]}>
-                    {customerPhone || 'Tap to add phone number...'}
-                  </Text>
-                </View>
-                <View style={styles.customerRow}>
-                  <FontAwesome name="envelope" size={16} color={colors.primary} />
-                  <Text style={[styles.displayText, { color: customerEmail ? colors.text : colors.placeholder }]}>
-                    {customerEmail || 'Tap to add email address...'}
-                  </Text>
-                </View>
               </View>
             </TouchableOpacity>
           )}
@@ -1632,14 +1526,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.s,
   },
-  customerInfo: {
-    gap: spacing.s,
-  },
-  customerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.s,
-  },
+
   // Inventory styles
   inventoryList: {
     gap: spacing.m,
@@ -1887,5 +1774,26 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontStyle: 'italic',
     fontSize: 12,
+  },
+  // Location map styles
+  locationMapContainer: {
+    width: '100%',
+  },
+  locationMap: {
+    marginBottom: spacing.s,
+  },
+  locationAddressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.s,
+    paddingHorizontal: spacing.s,
+    paddingVertical: spacing.xs,
+  },
+  locationAddressText: {
+    ...typography.body,
+    flex: 1,
+  },
+  locationFallback: {
+    // Same as original displayContainer styling
   },
 }); 

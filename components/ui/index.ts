@@ -14,5 +14,6 @@ export { Label } from './Label';
 export { ErrorMessage } from './ErrorMessage';
 export { EmptyState } from './EmptyState';
 export { NativeDatePicker } from './NativeDatePicker';
+export { LocationMapView } from './LocationMapView';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 

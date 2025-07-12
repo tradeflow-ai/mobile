@@ -406,8 +406,18 @@ export const useJobsCount = () => {
  */
 export const useJobsForDateRange = (startDate: Date, endDate: Date) => {
   const [user] = useAtom(userAtom);
-  const startDateStr = startDate.toISOString().split('T')[0];
-  const endDateStr = endDate.toISOString().split('T')[0];
+  
+  // Convert local dates to UTC for database query
+  // Get the local date string first, then convert to UTC
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const startDateStr = getLocalDateString(startDate);
+  const endDateStr = getLocalDateString(endDate);
 
   return useQuery({
     queryKey: ['jobs', 'date-range', startDateStr, endDateStr],
@@ -416,12 +426,16 @@ export const useJobsForDateRange = (startDate: Date, endDate: Date) => {
         throw new Error('No authenticated user');
       }
 
+      // Convert local date strings to UTC timestamps for database query
+      const startUTC = new Date(`${startDateStr}T00:00:00`).toISOString();
+      const endUTC = new Date(`${endDateStr}T00:00:00`).toISOString();
+
       const { data, error } = await supabase
         .from('job_locations')
         .select('*')
         .eq('user_id', user.id)
-        .gte('scheduled_start', `${startDateStr}T00:00:00`)
-        .lt('scheduled_start', `${endDateStr}T23:59:59`)
+        .gte('scheduled_start', startUTC)
+        .lt('scheduled_start', endUTC)
         .order('scheduled_start', { ascending: true });
 
       if (error) {
