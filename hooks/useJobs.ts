@@ -226,6 +226,15 @@ export const useCreateJob = () => {
         throw new Error('No authenticated user');
       }
 
+      // Map CreateJobData fields to database schema once
+      const { scheduled_start, scheduled_end, notes, ...restJobData } = jobData;
+      const dbData = {
+        ...restJobData,
+        user_id: user.id,
+        status: 'pending' as const,
+        instructions: notes,
+      };
+
       // Check if we're offline or should batch this operation
       const { offlineStatusService } = await import('@/services/offlineStatusService');
       const { batchOperationsService } = await import('@/services/batchOperationsService');
@@ -235,11 +244,7 @@ export const useCreateJob = () => {
         const batchOperationId = batchOperationsService.queueOperation(
           'create',
           'job',
-          {
-            ...jobData,
-            user_id: user.id,
-            status: 'pending',
-          },
+          dbData,
           undefined,
           'critical' // Job operations are critical
         );
@@ -249,9 +254,13 @@ export const useCreateJob = () => {
         // Create a temporary response for optimistic updates
         const tempJob: JobLocation = {
           id: `temp_${Date.now()}`,
-          ...jobData,
+          ...restJobData,
           user_id: user.id,
           status: 'pending',
+          // Map fields to match JobLocation interface (which mirrors database schema)
+          scheduled_start: scheduled_start,
+          scheduled_end: scheduled_end,
+          notes: notes,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -262,11 +271,7 @@ export const useCreateJob = () => {
       try {
         const { data, error } = await supabase
           .from('job_locations')
-          .insert({
-            ...jobData,
-            user_id: user.id,
-            status: 'pending',
-          })
+          .insert(dbData)
           .select()
           .single();
 
@@ -285,11 +290,7 @@ export const useCreateJob = () => {
         const batchOperationId = batchOperationsService.queueOperation(
           'create',
           'job',
-          {
-            ...jobData,
-            user_id: user.id,
-            status: 'pending',
-          },
+          dbData,
           undefined,
           'critical'
         );
