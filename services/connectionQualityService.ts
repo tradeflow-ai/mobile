@@ -49,8 +49,8 @@ export interface ConnectionQualityListener {
 // ==================== CONSTANTS ====================
 
 const DEFAULT_CONFIG: ConnectionQualityConfig = {
-  speedTestInterval: 30000, // 30 seconds
-  latencyTestInterval: 5000, // 5 seconds
+  speedTestInterval: 60000, // 60 seconds - less frequent speed tests
+  latencyTestInterval: 30000, // 30 seconds - less frequent latency tests
   stabilityThreshold: 10, // 10 seconds
   speedTestDuration: 5000, // 5 seconds
   speedTestSize: 1024 * 100, // 100KB
@@ -115,6 +115,11 @@ class ConnectionQualityService {
       offlineStatusService.subscribe((status) => {
         this.handleOfflineStatusChange(status);
       });
+
+      // Only start monitoring if we're online
+      if (offlineStatusService.getStatus().connection.isOnline) {
+        this.startMonitoring();
+      }
 
       this.isInitialized = true;
       console.log('ConnectionQualityService: Initialized successfully');
@@ -313,8 +318,14 @@ class ConnectionQualityService {
   }
 
   private handleOfflineStatusChange(status: any): void {
+    const wasOffline = this.currentQuality?.level === 'offline';
+    const isNowOnline = status.connection.isOnline;
+    
     if (!status.connection.isOnline) {
-      // Update to offline quality
+      // Stop monitoring when offline to save resources
+      this.stopMonitoring();
+      
+      // Update to offline quality immediately
       const offlineQuality: ConnectionQuality = {
         level: 'offline',
         speed: 'unknown',
@@ -327,12 +338,17 @@ class ConnectionQualityService {
         qualityScore: 0,
       };
       this.updateQuality(offlineQuality);
-    } else {
-      // When coming online, test quality immediately
+    } else if (wasOffline && isNowOnline) {
+      // Start monitoring when coming online
+      this.startMonitoring();
+      
+      // Only test quality immediately when coming online from offline
+      console.log('ConnectionQualityService: Coming online from offline, testing quality...');
       this.testQuality().catch(error => {
         console.error('ConnectionQualityService: Error testing quality on reconnect:', error);
       });
     }
+    // For other online status changes, let the scheduled timers handle testing
   }
 
   private scheduleSpeedTest(): void {

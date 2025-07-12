@@ -20,9 +20,6 @@ import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useInventory } from '@/hooks/useInventory';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
-import { useCreateInventoryItem } from '@/hooks/useInventory';
-import { useBatchOperations } from '@/hooks/useBatchOperations';
-import { useRetryManagement } from '@/hooks/useRetryManagement';
 
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
@@ -41,11 +38,6 @@ export default function HomeScreen() {
   const [isOnBreak, setIsOnBreak] = useState(false);
 
   const { navigate } = useAppNavigation();
-  
-  // Add for testing
-  const createItem = useCreateInventoryItem();
-  const { queueOperation, pendingCount, forceProcess } = useBatchOperations();
-  const { retryStats, failedOperations } = useRetryManagement();
 
   // Get user's first name from ProfileManager
   const profileManager = ProfileManager.getInstance();
@@ -303,77 +295,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Batch Operations Testing */}
-          <View style={styles.testSection}>
-            <Text style={[styles.testTitle, { color: colors.text }]}>
-              Batch Operations Testing
-            </Text>
-            <Text style={[styles.testSubtitle, { color: colors.placeholder }]}>
-              Pending: {pendingCount.total} (Critical: {pendingCount.critical}, Normal: {pendingCount.normal}, Low: {pendingCount.low})
-            </Text>
-            
-            <View style={styles.testButtonContainer}>
-              <Button
-                title="Queue Test Job"
-                variant="outline"
-                onPress={() => {
-                  queueOperation('create', 'job', {
-                    title: `Test Job ${Date.now()}`,
-                    address: '123 Test Street',
-                    latitude: 40.7128,
-                    longitude: -74.0060,
-                    job_type: 'service',
-                    priority: 'medium',
-                  }, undefined, 'critical');
-                }}
-                style={styles.testButton}
-              />
-              
-              <Button
-                title="Queue Test Item"
-                variant="outline"
-                onPress={() => {
-                  queueOperation('create', 'inventory', {
-                    name: `Test Item ${Date.now()}`,
-                    category: 'test',
-                    quantity: Math.floor(Math.random() * 100),
-                    unit: 'pcs',
-                  }, undefined, 'normal');
-                }}
-                style={styles.testButton}
-              />
-              
-              <Button
-                title="Force Process"
-                variant="primary"
-                onPress={() => forceProcess()}
-                style={styles.testButton}
-              />
-              
-              <Button
-                title="Test Failed Op"
-                variant="outline"
-                onPress={() => {
-                  // Create an operation that will fail (missing required fields)
-                  queueOperation('create', 'job', {
-                    title: `Failed Job ${Date.now()}`,
-                    // Missing required fields to trigger failure
-                  }, undefined, 'critical');
-                }}
-                style={styles.testButton}
-              />
-            </View>
-          </View>
 
-          {/* Info about status feedback */}
-          <View style={styles.infoSection}>
-            <Text style={[styles.infoText, { color: colors.placeholder }]}>
-              💡 Batch operations, sync status, and retry management appear at the bottom
-            </Text>
-            <Text style={[styles.infoText, { color: colors.placeholder }]}>
-              Failed operations: {retryStats.totalFailed} (Retryable: {retryStats.totalRetryable})
-            </Text>
-          </View>
 
         </ScrollView>
         
@@ -383,13 +305,7 @@ export default function HomeScreen() {
         {/* Batch Progress Bar */}
         <BatchProgressBar position="bottom" detailed={true} />
         
-        {/* Retry Management Panel */}
-        <RetryManagementPanel 
-          visible={failedOperations.length > 0}
-          detailed={true}
-          showStats={true}
-          maxOperations={5}
-        />
+
       </View>
     </SafeAreaView>
   );

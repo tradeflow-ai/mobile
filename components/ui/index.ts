@@ -20,5 +20,7 @@ export { EmptyState } from './EmptyState';
 export { OfflineStatusBar } from './OfflineStatusBar';
 export { OfflineStatusIndicator } from './OfflineStatusIndicator';
 export { OptimisticStatusBar } from './OptimisticStatusBar';
+export { OfflineExperienceBar } from './OfflineExperienceBar';
+export { OfflineOperationIndicator } from './OfflineOperationIndicator';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 

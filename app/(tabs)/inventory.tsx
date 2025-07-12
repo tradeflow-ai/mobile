@@ -11,7 +11,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { SearchBar, Avatar, EmptyState, TabSelector, TabOption } from '@/components/ui';
+import { SearchBar, Avatar, EmptyState, TabSelector, TabOption, OfflineExperienceBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 import { useInventory, InventoryItem } from '@/hooks/useInventory';
 import { createDataUri } from '@/utils/imageUtils';
@@ -122,6 +122,9 @@ export default function InventoryScreen() {
             onPress: handleAddItem,
           }}
         />
+
+        {/* Offline Experience Bar */}
+        <OfflineExperienceBar variant="compact" />
 
         <View style={styles.content}>
           {/* Search Bar */}
