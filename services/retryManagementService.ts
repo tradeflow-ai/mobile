@@ -8,6 +8,7 @@ import { queryClient } from './queryClient';
 import { batchOperationsService } from './batchOperationsService';
 import { offlineStatusService } from './offlineStatusService';
 import { supabase } from './supabase';
+import { AuthManager, type AuthState } from './authManager';
 
 // ==================== TYPES ====================
 
@@ -84,6 +85,9 @@ export class RetryManagementService {
   private listeners: RetryManagementListener[] = [];
   private monitoringInterval: ReturnType<typeof setInterval> | null = null;
   private currentUserId: string | null = null;
+  private reconnectionDebounceTimer: any = null;
+  private lastReconnectionTime = 0;
+  private reconnectionDebounceMs = 3000; // 3 seconds debounce
 
   private constructor() {
     this.initialize();
@@ -117,6 +121,11 @@ export class RetryManagementService {
       if (status.connection.isOnline) {
         this.handleReconnection();
       }
+    });
+
+    // Subscribe to authentication changes
+    AuthManager.getInstance().onAuthStateChange((authState: AuthState) => {
+      this.currentUserId = authState.user?.email || null;
     });
 
     console.log('RetryManagementService: Initialized successfully');
@@ -264,6 +273,13 @@ export class RetryManagementService {
     if (!this.currentUserId) return;
 
     try {
+      // Check if we're online before making network requests
+      const offlineStatus = offlineStatusService.getStatus();
+      if (!offlineStatus.connection.isOnline) {
+        // Skip database queries when offline
+        return;
+      }
+
       const { data: failedPlans, error } = await supabase
         .from('daily_plans')
         .select('*')
@@ -271,7 +287,13 @@ export class RetryManagementService {
         .eq('status', 'error')
         .not('error_state', 'is', null);
 
-      if (error) throw error;
+      if (error) {
+        // Only log error if it's not a network connectivity issue
+        if (error.message !== 'Network request failed') {
+          console.error('RetryManagementService: Database error scanning failed daily plans:', error);
+        }
+        return;
+      }
 
       failedPlans?.forEach((plan) => {
         const operationId = `daily_plan_${plan.id}`;
@@ -297,7 +319,11 @@ export class RetryManagementService {
         }
       });
     } catch (error) {
-      console.error('RetryManagementService: Error scanning failed daily plans:', error);
+      // Only log errors that aren't network-related
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage !== 'Network request failed' && errorMessage !== 'TypeError: Network request failed') {
+        console.error('RetryManagementService: Error scanning failed daily plans:', error);
+      }
     }
   }
 
@@ -396,19 +422,35 @@ export class RetryManagementService {
   }
 
   private handleReconnection() {
-    console.log('RetryManagementService: Handling reconnection - scanning for auto-retries');
-    
-    // Trigger TanStack Query to retry failed operations
-    queryClient.resumePausedMutations();
-    queryClient.refetchQueries({
-      type: 'all',
-      stale: true,
-    });
-    
-    // Force process batch operations
-    batchOperationsService.forceProcessOperations().catch(error => {
-      console.error('RetryManagementService: Error forcing batch operations:', error);
-    });
+    // Debounce reconnection attempts to prevent excessive operations
+    const now = Date.now();
+    if (now - this.lastReconnectionTime < this.reconnectionDebounceMs) {
+      // Too soon since last reconnection, skip this one
+      return;
+    }
+
+    // Clear any existing reconnection timer
+    if (this.reconnectionDebounceTimer) {
+      clearTimeout(this.reconnectionDebounceTimer);
+    }
+
+    // Debounce the reconnection handling
+    this.reconnectionDebounceTimer = setTimeout(() => {
+      this.lastReconnectionTime = Date.now();
+      console.log('RetryManagementService: Handling reconnection - scanning for auto-retries');
+      
+      // Trigger TanStack Query to retry failed operations
+      queryClient.resumePausedMutations();
+      queryClient.refetchQueries({
+        type: 'all',
+        stale: true,
+      });
+      
+      // Force process batch operations
+      batchOperationsService.forceProcessOperations().catch(error => {
+        console.error('RetryManagementService: Error forcing batch operations:', error);
+      });
+    }, 1000); // Wait 1 second before processing
   }
 
   // ==================== MANUAL RETRY METHODS ====================
@@ -807,11 +849,18 @@ export class RetryManagementService {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
-
+    
+    // Clear debounce timer
+    if (this.reconnectionDebounceTimer) {
+      clearTimeout(this.reconnectionDebounceTimer);
+      this.reconnectionDebounceTimer = null;
+    }
+    
     this.failedOperations.clear();
     this.retryAttempts.clear();
     this.listeners = [];
-
+    this.currentUserId = null;
+    
     console.log('RetryManagementService: Destroyed');
   }
 }

@@ -347,10 +347,10 @@ For development and testing:
 
 ```typescript
 // Debug offline status
-import { OfflineStatusIndicator } from '@/components/ui';
+import { OfflineExperienceBar } from '@/components/ui';
 
-// Debug connection quality
-import { ConnectionQualityIndicator } from '@/components/ui';
+// Debug connection quality - use the useConnectionQuality hook
+const { qualityLevel, qualityScore, speed, latency } = useConnectionQuality();
 
 // Debug batch operations
 const { pendingOperations, activeRequests } = useBatchOperations();
@@ -388,8 +388,8 @@ forceProcessNow();
 - [ ] Test offline queuing
 
 ### **For UI Components**
-- [ ] Add `OfflineOperationIndicator` for individual items
-- [ ] Use connection quality for adaptive UI
+- [ ] Use `OfflineExperienceBar` for comprehensive offline status
+- [ ] Use connection quality hooks for adaptive UI
 - [ ] Handle offline states gracefully
 - [ ] Test with various connection qualities
 
