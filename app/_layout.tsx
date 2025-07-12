@@ -49,16 +49,6 @@ export default function RootLayout() {
       // Initialize ProfileManager to start syncing profile data with auth state
       ProfileManager.getInstance();
       // Initialize OfflineStatusService to start monitoring network status
-      // Service is already initialized on import
-      // Initialize BatchOperationsService to start processing queued operations
-      // Service is already initialized on import
-      // Initialize RetryManagementService to start monitoring failed operations
-      // Service is already initialized on import
-      // Initialize CriticalOperationsService for offline-first critical operations
-      // Service is already initialized on import
-      // Initialize ConnectionQualityService to start monitoring connection quality
-      // Service is already initialized on import
-      // Initialize query persistence for critical data
       initializeQueryPersistence();
     }
   }, [loaded]);

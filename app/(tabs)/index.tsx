@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { QuickActionButton } from '@/components/QuickActionButton';
-import { Button, Card, OptimisticStatusBar, BatchProgressBar, RetryManagementPanel } from '@/components/ui';
+import { Button, Card, OptimisticStatusBar, BatchProgressBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
@@ -392,37 +391,5 @@ const styles = StyleSheet.create({
   },
   scheduleDetails: {
     ...typography.caption,
-  },
-  testSection: {
-    marginBottom: spacing.l,
-    ...spacing.helpers.padding('m'),
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: radius.m,
-  },
-  testTitle: {
-    ...typography.h4,
-    marginBottom: spacing.xs,
-  },
-  testSubtitle: {
-    ...typography.caption,
-    marginBottom: spacing.m,
-  },
-  testButtonContainer: {
-    flexDirection: 'row',
-    gap: spacing.s,
-    flexWrap: 'wrap',
-  },
-  testButton: {
-    flex: 1,
-    minWidth: 100,
-  },
-  infoSection: {
-    alignItems: 'center',
-    marginTop: spacing.l,
-  },
-  infoText: {
-    ...typography.caption,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
+  }
 });
