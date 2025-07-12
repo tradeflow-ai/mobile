@@ -48,6 +48,7 @@ interface UseDailyPlanReturn {
   saveUserModifications: (modifications: UserModifications) => Promise<void>;
   approvePlan: () => Promise<void>;
   resetPlan: () => void;
+  refreshPlan: () => Promise<void>;
   
   // Step-specific actions
   confirmDispatcherOutput: (modifications?: UserModifications) => Promise<void>;
@@ -99,6 +100,56 @@ export const useDailyPlan = (
   const retryCount = dailyPlan?.retry_count || 0;
 
   /**
+   * Set active job from approved daily plan
+   */
+  const setActiveJobFromApprovedPlan = useCallback(async (approvedPlan: DailyPlan) => {
+    if (approvedPlan.status !== 'approved') return;
+
+    // The dispatcher output contains the definitive, final order of jobs,
+    // including any hardware store runs. We just need to pick the first one.
+    if (approvedPlan.dispatcher_output?.prioritized_jobs?.length > 0) {
+      const firstJobId = approvedPlan.dispatcher_output.prioritized_jobs[0].job_id;
+      
+      try {
+        // Fetch the full job details from the cache or network
+        const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
+          queryKey: queryKeys.job(firstJobId),
+          queryFn: async (): Promise<JobLocation | null> => {
+            if (!user?.id) {
+              throw new Error('No authenticated user');
+            }
+
+            const { data, error } = await supabase
+              .from('job_locations')
+              .select('*')
+              .eq('id', firstJobId)
+              .eq('user_id', user.id)
+              .single();
+
+            if (error) {
+              if (error.code === 'PGRST116') {
+                return null; // Job not found
+              }
+              throw error;
+            }
+
+            return data;
+          },
+        });
+
+        if (jobDetails) {
+          setActiveJob(jobDetails);
+          console.log('✅ Active job set from approved daily plan:', jobDetails.title);
+        } else {
+          console.warn(`Could not fetch details for the first job (ID: ${firstJobId}).`);
+        }
+      } catch (err) {
+        console.error('Error fetching job details for active job:', err);
+      }
+    }
+  }, [queryClient, setActiveJob, user?.id]);
+
+  /**
    * Initialize and fetch current daily plan
    */
   const initializePlan = useCallback(async () => {
@@ -116,8 +167,19 @@ export const useDailyPlan = (
         return;
       }
 
-      setDailyPlan(data);
-      setLastUpdated(new Date());
+      // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+      if (data && data.status === 'cancelled') {
+        setDailyPlan(null);
+        setLastUpdated(new Date());
+      } else {
+        setDailyPlan(data);
+        setLastUpdated(new Date());
+
+        // 🔧 FIX: Set active job if daily plan is already approved
+        if (data && data.status === 'approved') {
+          await setActiveJobFromApprovedPlan(data);
+        }
+      }
 
       // Auto-start if requested and no plan exists
       if (!data && options.autoStart && options.initialJobIds?.length) {
@@ -129,7 +191,7 @@ export const useDailyPlan = (
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, planDate, options.autoStart, options.initialJobIds]);
+  }, [user?.id, planDate, options.autoStart, options.initialJobIds, setActiveJobFromApprovedPlan]);
 
   /**
    * Start the daily planning workflow - Step 1: Dispatcher
@@ -352,7 +414,7 @@ export const useDailyPlan = (
       console.error('Error approving plan:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve plan');
     }
-  }, [dailyPlan, setActiveJob, queryClient]);
+  }, [dailyPlan, setActiveJobFromApprovedPlan]);
 
   /**
    * Confirm dispatcher output and mark as ready for inventory
@@ -466,15 +528,33 @@ export const useDailyPlan = (
         subscription = DailyPlanService.subscribeToDailyPlan(
           user.id,
           planDate,
-          (payload) => {
+          async (payload) => {
             console.log('Daily plan real-time update:', payload);
             setIsConnected(true);
             setLastUpdated(new Date());
 
             if (payload.eventType === 'UPDATE') {
-              setDailyPlan(payload.new);
+              // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+              if (payload.new?.status === 'cancelled') {
+                setDailyPlan(null);
+              } else {
+                setDailyPlan(payload.new);
+                // 🔧 FIX: Set active job if plan was just approved
+                if (payload.new?.status === 'approved') {
+                  await setActiveJobFromApprovedPlan(payload.new);
+                }
+              }
             } else if (payload.eventType === 'INSERT') {
-              setDailyPlan(payload.new);
+              // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+              if (payload.new?.status === 'cancelled') {
+                setDailyPlan(null);
+              } else {
+                setDailyPlan(payload.new);
+                // 🔧 FIX: Set active job if new plan is already approved
+                if (payload.new?.status === 'approved') {
+                  await setActiveJobFromApprovedPlan(payload.new);
+                }
+              }
             } else if (payload.eventType === 'DELETE') {
               setDailyPlan(null);
             }
@@ -499,7 +579,7 @@ export const useDailyPlan = (
         console.log('Daily plan subscription cleaned up');
       }
     };
-  }, [user?.id, planDate]);
+  }, [user?.id, planDate, setActiveJobFromApprovedPlan]);
 
   /**
    * Reset the daily plan state completely
@@ -511,6 +591,14 @@ export const useDailyPlan = (
     setLastUpdated(null);
     console.log('🔄 Daily plan state reset');
   }, []);
+
+  /**
+   * Force refresh the daily plan from database
+   */
+  const refreshPlan = useCallback(async () => {
+    console.log('🔄 Force refreshing daily plan...');
+    await initializePlan();
+  }, [initializePlan]);
 
   /**
    * Initialize plan on mount and user change
@@ -536,6 +624,7 @@ export const useDailyPlan = (
     saveUserModifications,
     approvePlan,
     resetPlan, // 🔄 Add reset functionality
+    refreshPlan, // 🔄 Add refresh functionality
     
     // Step-specific actions
     confirmDispatcherOutput,

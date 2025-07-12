@@ -31,11 +31,15 @@ export const TextInput: React.FC<CustomTextInputProps> = ({
   const colors = Colors[colorScheme ?? 'light'];
 
   const getInputStyle = () => {
+    // Use card background for dark mode to blend better with cards,
+    // but keep pure background for light mode for clean contrast
+    const inputBackground = colorScheme === 'dark' ? colors.card : colors.background;
+    
     return [
       styles.input,
       {
         borderColor: error ? colors.error : isFocused ? colors.primary : colors.border,
-        backgroundColor: colors.background,
+        backgroundColor: inputBackground,
         color: colors.text,
       },
       props.style,
