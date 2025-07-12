@@ -88,6 +88,9 @@ class ConnectionQualityService {
   private isRunning = false;
   private qualityHistory: ConnectionQuality[] = [];
   private maxHistorySize = 20;
+  private reconnectionDebounceTimer: any = null;
+  private lastReconnectionTime = 0;
+  private reconnectionDebounceMs = 2000; // 2 seconds debounce
 
   private constructor() {
     this.initialize();
@@ -325,6 +328,12 @@ class ConnectionQualityService {
       // Stop monitoring when offline to save resources
       this.stopMonitoring();
       
+      // Clear any pending reconnection timer
+      if (this.reconnectionDebounceTimer) {
+        clearTimeout(this.reconnectionDebounceTimer);
+        this.reconnectionDebounceTimer = null;
+      }
+      
       // Update to offline quality immediately
       const offlineQuality: ConnectionQuality = {
         level: 'offline',
@@ -339,16 +348,32 @@ class ConnectionQualityService {
       };
       this.updateQuality(offlineQuality);
     } else if (wasOffline && isNowOnline) {
+      // Debounce reconnection attempts to prevent excessive operations
+      const now = Date.now();
+      if (now - this.lastReconnectionTime < this.reconnectionDebounceMs) {
+        // Too soon since last reconnection, skip this one
+        return;
+      }
+      
+      // Clear any existing reconnection timer
+      if (this.reconnectionDebounceTimer) {
+        clearTimeout(this.reconnectionDebounceTimer);
+      }
+      
       // Start monitoring when coming online
       this.startMonitoring();
       
-      // Only test quality immediately when coming online from offline
-      console.log('ConnectionQualityService: Coming online from offline, testing quality...');
-      this.testQuality().catch(error => {
-        console.error('ConnectionQualityService: Error testing quality on reconnect:', error);
-      });
+      // Debounce the quality test to prevent rapid-fire testing
+      this.reconnectionDebounceTimer = setTimeout(() => {
+        this.lastReconnectionTime = Date.now();
+        console.log('ConnectionQualityService: Coming online from offline, testing quality...');
+        this.testQuality().catch(error => {
+          console.error('ConnectionQualityService: Error testing quality on reconnect:', error);
+        });
+      }, 1000); // Wait 1 second before testing
     }
     // For other online status changes, let the scheduled timers handle testing
+    // Do NOT test quality for every status change - this causes excessive testing
   }
 
   private scheduleSpeedTest(): void {
@@ -405,6 +430,12 @@ class ConnectionQualityService {
     const startTime = Date.now();
     
     try {
+      // Check if we're online before attempting network requests
+      const offlineStatus = offlineStatusService.getStatus();
+      if (!offlineStatus.connection.isOnline) {
+        return 1000; // Return high latency when offline
+      }
+
       // Simple ping test using a small HTTP request
       const response = await fetch('https://www.google.com/favicon.ico', {
         method: 'HEAD',
@@ -417,7 +448,11 @@ class ConnectionQualityService {
       
       return 1000; // Default high latency if request fails
     } catch (error) {
-      console.error('ConnectionQualityService: Latency measurement failed:', error);
+      // Only log errors that aren't expected during offline/poor connectivity
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage !== 'Network request failed' && errorMessage !== 'TypeError: Network request failed') {
+        console.error('ConnectionQualityService: Latency measurement failed:', error);
+      }
       return 1000; // Default high latency
     }
   }
@@ -426,6 +461,12 @@ class ConnectionQualityService {
     const startTime = Date.now();
     
     try {
+      // Check if we're online before attempting network requests
+      const offlineStatus = offlineStatusService.getStatus();
+      if (!offlineStatus.connection.isOnline) {
+        return 1; // Return low speed when offline
+      }
+
       // Download a small file to measure speed
       const response = await fetch('https://www.google.com/images/branding/googlelogo/2x/googlelogo_light_color_272x92dp.png', {
         cache: 'no-cache',
@@ -441,7 +482,11 @@ class ConnectionQualityService {
       
       return 1; // Default speed if test fails
     } catch (error) {
-      console.error('ConnectionQualityService: Download speed measurement failed:', error);
+      // Only log errors that aren't expected during offline/poor connectivity
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage !== 'Network request failed' && errorMessage !== 'TypeError: Network request failed') {
+        console.error('ConnectionQualityService: Download speed measurement failed:', error);
+      }
       return 1; // Default speed
     }
   }
@@ -490,19 +535,58 @@ class ConnectionQualityService {
       score += 10;
     }
     
-    // Determine quality level
+    // Determine quality level with hysteresis to prevent rapid changes
     let level: ConnectionQuality['level'] = 'poor';
     let speed: ConnectionQuality['speed'] = 'slow';
     
-    if (score >= QUALITY_THRESHOLDS.excellent.minScore) {
-      level = 'excellent';
-      speed = 'fast';
-    } else if (score >= QUALITY_THRESHOLDS.good.minScore) {
-      level = 'good';
-      speed = 'medium';
-    } else if (score >= QUALITY_THRESHOLDS.poor.minScore) {
-      level = 'poor';
-      speed = 'slow';
+    const currentLevel = this.currentQuality?.level;
+    
+    // Add hysteresis: different thresholds when going up vs down
+    if (currentLevel === 'excellent') {
+      if (score >= 75) {
+        level = 'excellent';
+        speed = 'fast';
+      } else if (score >= 55) {
+        level = 'good';
+        speed = 'medium';
+      } else {
+        level = 'poor';
+        speed = 'slow';
+      }
+    } else if (currentLevel === 'good') {
+      if (score >= 85) {
+        level = 'excellent';
+        speed = 'fast';
+      } else if (score >= 55) {
+        level = 'good';
+        speed = 'medium';
+      } else {
+        level = 'poor';
+        speed = 'slow';
+      }
+    } else if (currentLevel === 'poor') {
+      if (score >= 80) {
+        level = 'excellent';
+        speed = 'fast';
+      } else if (score >= 65) {
+        level = 'good';
+        speed = 'medium';
+      } else {
+        level = 'poor';
+        speed = 'slow';
+      }
+    } else {
+      // Default thresholds for initial determination
+      if (score >= QUALITY_THRESHOLDS.excellent.minScore) {
+        level = 'excellent';
+        speed = 'fast';
+      } else if (score >= QUALITY_THRESHOLDS.good.minScore) {
+        level = 'good';
+        speed = 'medium';
+      } else if (score >= QUALITY_THRESHOLDS.poor.minScore) {
+        level = 'poor';
+        speed = 'slow';
+      }
     }
     
     return {
@@ -585,13 +669,22 @@ class ConnectionQualityService {
   // ==================== LIFECYCLE ====================
 
   public async destroy(): Promise<void> {
-    console.log('ConnectionQualityService: Destroying...');
-    
     this.stopMonitoring();
     this.listeners = [];
-    this.qualityHistory = [];
     this.currentQuality = null;
+    this.qualityHistory = [];
+    
+    // Clear debounce timer
+    if (this.reconnectionDebounceTimer) {
+      clearTimeout(this.reconnectionDebounceTimer);
+      this.reconnectionDebounceTimer = null;
+    }
+    
+    // Unsubscribe from offline status
+    // Note: OfflineStatusService doesn't provide unsubscribe method yet
+    
     this.isInitialized = false;
+    console.log('ConnectionQualityService: Destroyed');
   }
 }
 
