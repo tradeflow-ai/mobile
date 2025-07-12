@@ -20,6 +20,7 @@ import { typography, spacing, radius } from '@/constants/Theme';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { LoadingStepUI } from '../../components/LoadingStepUI';
 import { ErrorStepUI } from '../../components/ErrorStepUI';
+import { formatTimeString } from '@/utils/dateUtils';
 import type { RouteOutput } from '@/services/dailyPlanService';
 
 interface RouteWaypoint {
@@ -127,10 +128,7 @@ export default function MapViewScreen() {
    * Format time display
    */
   const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return formatTimeString(timeString);
   };
 
   /**

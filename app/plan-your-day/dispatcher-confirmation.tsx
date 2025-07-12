@@ -17,6 +17,7 @@ import { useJob } from '@/hooks/useJobs';
 import { Button } from '@/components/ui';
 import { FontAwesome } from '@expo/vector-icons';
 import { LoadingStepUI } from '@/components/LoadingStepUI';
+import { formatTimeString } from '@/utils/dateUtils';
 
 // Component to display individual job information
 const JobDisplayCard = ({ job, index, colors, colorScheme }: { 
@@ -26,18 +27,6 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
   colorScheme: string 
 }) => {
   const { data: jobDetails, isLoading: jobLoading } = useJob(job.job_id);
-  
-  // Format time display
-  const formatTime = (timeString: string) => {
-    try {
-      return new Date(timeString).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
-      return timeString;
-    }
-  };
 
   if (jobLoading) {
     return (
@@ -101,7 +90,7 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
             📍 {jobDetails.address}
           </Text>
           <Text style={[styles.jobTime, { color: colors.text }]}>
-            ⏰ {formatTime(job.estimated_start_time)} - {formatTime(job.estimated_end_time)}
+            ⏰ {formatTimeString(job.estimated_start_time)} - {formatTimeString(job.estimated_end_time)}
           </Text>
         </View>
         <View style={[styles.jobTypeBadge, { backgroundColor: getJobTypeColor(job.job_type, colors) }]}>
