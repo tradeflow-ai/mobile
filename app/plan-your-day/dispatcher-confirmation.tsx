@@ -69,6 +69,31 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
     );
   }
 
+  // Helper function to get priority level and colors
+  const getPriorityInfo = (priorityRank: number) => {
+    if (priorityRank <= 2) {
+      return { 
+        level: 'High', 
+        backgroundColor: colors.error + '30', // 30% opacity
+        borderColor: colors.error // Full opacity for border
+      };
+    } else if (priorityRank <= 4) {
+      return { 
+        level: 'Medium', 
+        backgroundColor: colors.warning + '30', // 30% opacity
+        borderColor: colors.warning // Full opacity for border
+      };
+    } else {
+      return { 
+        level: 'Low', 
+        backgroundColor: colors.success + '30', // 30% opacity
+        borderColor: colors.success // Full opacity for border
+      };
+    }
+  };
+
+  const priorityInfo = getPriorityInfo(job.priority_rank);
+
   return (
     <View style={styles.jobItem}>
       <View style={styles.jobHeader}>
@@ -78,9 +103,19 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
           </Text>
         </View>
         <View style={styles.jobInfo}>
-          <Text style={[styles.jobTitle, { color: colors.text }]}>
-            {jobDetails.title}
-          </Text>
+          <View style={styles.jobTitleRow}>
+            <Text style={[styles.jobTitle, { color: colors.text }]}>
+              {jobDetails.title}
+            </Text>
+            <View style={[styles.priorityBox, { 
+              backgroundColor: priorityInfo.backgroundColor,
+              borderColor: priorityInfo.borderColor 
+            }]}>
+              <Text style={[styles.priorityText, { color: colors.text }]}>
+                Priority Level: {priorityInfo.level}
+              </Text>
+            </View>
+          </View>
           {jobDetails.customer_name && (
             <Text style={[styles.jobCustomer, { color: colors.text }]}>
               👤 {jobDetails.customer_name}
@@ -92,24 +127,19 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
           <Text style={[styles.jobTime, { color: colors.text }]}>
             ⏰ {formatTimeString(job.estimated_start_time)} - {formatTimeString(job.estimated_end_time)}
           </Text>
+          
+          {/* Priority reasoning */}
+          <View style={styles.jobDetails}>
+            <Text style={[styles.jobReason, { color: colors.text }]}>
+              💡 {job.priority_reason}
+            </Text>
+            {job.geographic_reasoning && (
+              <Text style={[styles.jobGeographic, { color: colors.text }]}>
+                🗺️ {job.geographic_reasoning}
+              </Text>
+            )}
+          </View>
         </View>
-        <View style={[styles.jobTypeBadge, { backgroundColor: getJobTypeColor(job.job_type, colors) }]}>
-          <Text style={[styles.jobTypeText, { color: colors.background }]}>
-            {job.job_type}
-          </Text>
-        </View>
-      </View>
-      
-      {/* Priority reasoning */}
-      <View style={styles.jobDetails}>
-        <Text style={[styles.jobReason, { color: colors.text }]}>
-          💡 {job.priority_reason}
-        </Text>
-        {job.geographic_reasoning && (
-          <Text style={[styles.jobGeographic, { color: colors.text }]}>
-            🗺️ {job.geographic_reasoning}
-          </Text>
-        )}
       </View>
     </View>
   );
@@ -314,21 +344,6 @@ export default function DispatcherConfirmationScreen() {
   );
 }
 
-function getJobTypeColor(jobType: string, colors: any) {
-  switch (jobType) {
-    case 'emergency':
-      return colors.error;
-    case 'inspection':
-      return colors.primary;
-    case 'service':
-      return colors.success;
-    case 'hardware_store':
-      return colors.warning;
-    default:
-      return colors.text;
-  }
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -435,10 +450,17 @@ const styles = StyleSheet.create({
   jobInfo: {
     flex: 1,
   },
+  jobTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
   jobTitle: {
     ...typography.body1,
     fontWeight: '600',
-    marginBottom: spacing.xs,
+    flex: 1,
+    marginRight: spacing.s,
   },
   jobCustomer: {
     ...typography.caption,
@@ -452,19 +474,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     opacity: 0.8,
   },
-  jobTypeBadge: {
+  priorityBox: {
     paddingHorizontal: spacing.s,
     paddingVertical: spacing.xs,
     borderRadius: radius.s,
     alignSelf: 'flex-start',
+    minWidth: 120,
+    borderWidth: 1.5,
   },
-  jobTypeText: {
+  priorityText: {
     ...typography.caption,
+    fontSize: 11,
     fontWeight: '600',
-    textTransform: 'uppercase',
+    textAlign: 'center',
   },
   jobDetails: {
-    marginLeft: 44,
+    marginTop: spacing.s,
   },
   jobReason: {
     ...typography.body2,
