@@ -622,7 +622,8 @@ export class DailyPlanService {
             latitude: store.coordinates.latitude,
             longitude: store.coordinates.longitude,
             address: store.address,
-            scheduled_date: planDate,
+            scheduled_start: `${planDate}T09:00:00.000Z`,
+            scheduled_end: `${planDate}T17:00:00.000Z`,
             estimated_duration: store.estimated_visit_time,
             customer_name: store.store_name,
             instructions: `Items to pick up: ${store.items_available.join(', ')}`,
@@ -670,7 +671,7 @@ export class DailyPlanService {
         .from('job_locations')
         .select('*')
         .in('id', allJobIds)
-        .order('scheduled_date', { ascending: true });
+        .order('scheduled_start', { ascending: true });
 
       if (jobsError) throw jobsError;
 

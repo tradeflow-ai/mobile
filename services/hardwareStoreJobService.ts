@@ -50,7 +50,8 @@ export class HardwareStoreJobService {
           address: hardwareStoreJob.address,
           latitude: hardwareStoreJob.latitude,
           longitude: hardwareStoreJob.longitude,
-          scheduled_date: planned_date,
+          scheduled_start: `${planned_date}T09:00:00.000Z`,
+          scheduled_end: `${planned_date}T17:00:00.000Z`,
           estimated_duration: hardwareStoreJob.estimated_duration,
           priority: hardwareStoreJob.priority,
           job_type: hardwareStoreJob.job_type,
@@ -151,7 +152,8 @@ export class HardwareStoreJobService {
         .from('job_locations')
         .select('*')
         .eq('user_id', userId)
-        .eq('scheduled_date', plannedDate)
+        .gte('scheduled_start', `${plannedDate}T00:00:00.000Z`)
+        .lt('scheduled_start', `${plannedDate}T23:59:59.999Z`)
         .eq('job_type', 'hardware_store')
         .order('created_at', { ascending: true });
 

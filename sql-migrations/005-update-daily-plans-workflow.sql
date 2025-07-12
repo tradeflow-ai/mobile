@@ -54,7 +54,7 @@ CHECK (job_type IN (
 
 -- Add index for hardware store jobs for quick filtering
 CREATE INDEX IF NOT EXISTS idx_job_locations_hardware_store 
-ON job_locations(user_id, job_type, scheduled_date) 
+ON job_locations(user_id, job_type, scheduled_start) 
 WHERE job_type = 'hardware_store';
 
 -- Add index for daily_plans status for quick filtering
@@ -93,7 +93,8 @@ INSERT INTO job_locations (
     job_type,
     status,
     priority,
-    scheduled_date,
+    scheduled_start,
+    scheduled_end,
     estimated_duration,
     metadata,
     created_at,
@@ -109,7 +110,8 @@ INSERT INTO job_locations (
     'hardware_store',
     'scheduled',
     'high',
-    CURRENT_DATE,
+    CURRENT_DATE || ' 08:00:00+00',
+    CURRENT_DATE || ' 08:45:00+00',
     45,
     '{"shopping_list": [{"item_name": "Pipe fitting", "quantity": 2, "cost": 15.99}], "preferred_supplier": "lowes", "created_by_agent": true}'::jsonb,
     NOW(),

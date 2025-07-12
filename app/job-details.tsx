@@ -177,25 +177,30 @@ export default function JobDetailsScreen() {
           setCompletionNotesText(currentCompletionNotes);
           setOriginalCompletionNotes(currentCompletionNotes);
 
-          const currentScheduledStart = job.scheduled_start || '';
-          // Read AI scheduling preference from job data, defaulting to false for new jobs
+          // Initialize from scheduled_date (user preference) or fallback to scheduled_start (AI generated)  
+          const currentScheduledDate = job.scheduled_date || job.scheduled_start || '';
           const currentUseAITimes = job.use_ai_scheduling || false;
           
-          if (currentScheduledStart) {
-            const startDate = new Date(currentScheduledStart);
-            setScheduledDate(startDate);
-            setOriginalScheduledDate(new Date(startDate));
+          if (currentScheduledDate) {
+            const scheduledDateTime = new Date(currentScheduledDate);
+            setScheduledDate(scheduledDateTime);
+            setOriginalScheduledDate(new Date(scheduledDateTime));
             
-            // Format start time for display (12-hour format)
-            const hours = startDate.getHours();
-            const minutes = startDate.getMinutes();
-            const period = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-            const formattedStartTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-            setScheduledStartTime(formattedStartTime);
-            setOriginalScheduledStartTime(formattedStartTime);
+            // Extract time from the timestamp (only if not using AI scheduling or if time is not midnight)
+            if (!currentUseAITimes || (scheduledDateTime.getHours() !== 0 || scheduledDateTime.getMinutes() !== 0)) {
+              const hours = scheduledDateTime.getHours();
+              const minutes = scheduledDateTime.getMinutes();
+              const period = hours >= 12 ? 'PM' : 'AM';
+              const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+              const formattedTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+              setScheduledStartTime(formattedTime);
+              setOriginalScheduledStartTime(formattedTime);
+            } else {
+              // Default time when AI scheduling is enabled
+              setScheduledStartTime('8:00 AM');
+              setOriginalScheduledStartTime('8:00 AM');
+            }
             
-            // Set AI times flag from job data - always reload when job data changes
             setUseAITimes(currentUseAITimes);
             setOriginalUseAITimes(currentUseAITimes);
             setHasInitializedAITimes(true);
@@ -207,7 +212,6 @@ export default function JobDetailsScreen() {
             setScheduledStartTime('8:00 AM');
             setOriginalScheduledStartTime('8:00 AM');
             
-            // Set AI times flag from job data - always reload when job data changes
             setUseAITimes(currentUseAITimes);
             setOriginalUseAITimes(currentUseAITimes);
             setHasInitializedAITimes(true);
@@ -407,36 +411,31 @@ export default function JobDetailsScreen() {
     if (!job) return;
 
     try {
-      let scheduledStartDate: Date;
+      let scheduledDateTime = new Date(scheduledDate);
 
       if (useAITimes) {
-        // AI will select optimal times - just use the date with default business hours
-        scheduledStartDate = new Date(scheduledDate);
-        scheduledStartDate.setHours(9, 0, 0, 0); // 9:00 AM default for AI
+        // When using AI scheduling, set time to 00:00 (midnight) to let AI determine optimal time
+        scheduledDateTime.setHours(0, 0, 0, 0);
       } else {
-        // Manual time selection - convert user input to 24-hour format
+        // Manual time selection - include time in scheduled_date
         const startTimeMatch = scheduledStartTime.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
-        if (!startTimeMatch) {
-          Alert.alert('Error', 'Invalid start time format. Please select a valid time.');
-          return;
+        if (startTimeMatch) {
+          let startHours = parseInt(startTimeMatch[1], 10);
+          const startMinutes = parseInt(startTimeMatch[2], 10);
+          const startPeriod = startTimeMatch[3].toUpperCase();
+
+          // Convert start time to 24-hour format
+          if (startPeriod === 'PM' && startHours !== 12) startHours += 12;
+          if (startPeriod === 'AM' && startHours === 12) startHours = 0;
+
+          scheduledDateTime.setHours(startHours, startMinutes, 0, 0);
         }
-
-        let startHours = parseInt(startTimeMatch[1], 10);
-        const startMinutes = parseInt(startTimeMatch[2], 10);
-        const startPeriod = startTimeMatch[3].toUpperCase();
-
-        // Convert start time to 24-hour format
-        if (startPeriod === 'PM' && startHours !== 12) startHours += 12;
-        if (startPeriod === 'AM' && startHours === 12) startHours = 0;
-
-        scheduledStartDate = new Date(scheduledDate);
-        scheduledStartDate.setHours(startHours, startMinutes, 0, 0);
       }
 
       await updateJobMutation.mutateAsync({
         jobId: job.id,
         updates: { 
-          scheduled_start: scheduledStartDate.toISOString(),
+          scheduled_date: scheduledDateTime.toISOString(),
           use_ai_scheduling: useAITimes,
         },
       });

@@ -99,8 +99,10 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   const { startDate, endDate } = getDateRange();
   
-  // Get jobs for the calculated date range
-  const { data: allJobs = [] } = useJobsForDateRange(startDate, endDate);
+  // Get jobs for the calculated date range - only include jobs with scheduled_start and scheduled_end
+  const { data: rawJobs = [] } = useJobsForDateRange(startDate, endDate);
+  const allJobs = rawJobs.filter(job => job.scheduled_start && job.scheduled_end);
+
 
   // Constants for timeline layout
   const HOUR_HEIGHT = 60;
@@ -136,8 +138,8 @@ export const Calendar: React.FC<CalendarProps> = ({
       day.setDate(startOfWeek.getDate() + i);
       
       const dayJobs = allJobs.filter(job => {
-        if (!job.scheduled_start) return false;
-        const jobDate = new Date(job.scheduled_start);
+        const jobDate = getJobDate(job);
+        if (!jobDate) return false;
         return jobDate.toDateString() === day.toDateString();
       });
       
@@ -158,8 +160,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   useEffect(() => {
     if (view === 'day') {
       const dayJobs = allJobs.filter(job => {
-        if (!job.scheduled_start) return false;
-        const jobDate = new Date(job.scheduled_start);
+        const jobDate = getJobDate(job);
+        if (!jobDate) return false;
         return jobDate.toDateString() === selectedDate.toDateString();
       });
       
@@ -195,6 +197,14 @@ export const Calendar: React.FC<CalendarProps> = ({
     return { bg: colors.primary + '20', border: colors.primary }; // 20% opacity for all
   };
 
+  // Helper function to get the effective date for a job (only scheduled_start)
+  const getJobDate = (job: JobLocation): Date | null => {
+    if (job.scheduled_start) {
+      return new Date(job.scheduled_start);
+    }
+    return null;
+  };
+
   // Helper functions
   const isToday = (date: Date) => {
     const today = new Date();
@@ -219,6 +229,8 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   // Check if two events overlap
   const eventsOverlap = (event1: JobLocation, event2: JobLocation): boolean => {
+    // Since we filter to only include jobs with both scheduled_start and scheduled_end,
+    // this check is now redundant, but keeping for safety
     if (!event1.scheduled_start || !event1.scheduled_end || !event2.scheduled_start || !event2.scheduled_end) {
       return false;
     }
@@ -270,19 +282,13 @@ export const Calendar: React.FC<CalendarProps> = ({
 
   // Calculate single event position (helper function)
   const calculateSingleEventPosition = (job: JobLocation, dayWidth: number): EventPosition => {
-    if (!job.scheduled_start) {
+    // Only process jobs with both scheduled_start and scheduled_end
+    if (!job.scheduled_start || !job.scheduled_end) {
       return { job, top: 0, height: 40, left: 0, width: dayWidth - 20 };
     }
 
     const startTime = new Date(job.scheduled_start);
-    let endTime: Date;
-    
-    // If no scheduled_end, calculate it from start time + estimated duration
-    if (job.scheduled_end) {
-      endTime = new Date(job.scheduled_end);
-    } else {
-      endTime = new Date(startTime.getTime() + (job.estimated_duration || 60) * 60 * 1000);
-    }
+    const endTime = new Date(job.scheduled_end);
     
     // Calculate position relative to timeline
     const startHourFloat = startTime.getHours() + startTime.getMinutes() / 60;
@@ -405,8 +411,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   // Render Day View - Apple Timeline Style
   const renderDayView = () => {
     const dayJobs = allJobs.filter(job => {
-      if (!job.scheduled_start) return false;
-      const jobDate = new Date(job.scheduled_start);
+      const jobDate = getJobDate(job);
+      if (!jobDate) return false;
       return jobDate.toDateString() === selectedDate.toDateString();
     });
 
@@ -516,7 +522,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                    onPress={() => onJobPress?.(eventPos.job)}
                  >
                    <Text style={[styles.eventTime, { color: jobColors.border }]}>
-                     {formatTimeForDisplay(eventPos.job.scheduled_start || '')}
+                     {formatTimeForDisplay(eventPos.job.scheduled_start!)}
                    </Text>
                    <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={isNarrow ? 2 : 3}>
                      {eventPos.job.title}
@@ -545,8 +551,8 @@ export const Calendar: React.FC<CalendarProps> = ({
         day.setDate(weekStartDate.getDate() + i);
         
         const dayJobs = allJobs.filter(job => {
-          if (!job.scheduled_start) return false;
-          const jobDate = new Date(job.scheduled_start);
+          const jobDate = getJobDate(job);
+          if (!jobDate) return false;
           return jobDate.toDateString() === day.toDateString();
         });
         
@@ -755,7 +761,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                                 onPress={() => onJobPress?.(eventPos.job)}
                               >
                                                            <Text style={[styles.weekEventTime, { color: jobColors.border }]}>
-                             {formatTimeForDisplay(eventPos.job.scheduled_start || '')}
+                             {formatTimeForDisplay(eventPos.job.scheduled_start!)}
                            </Text>
                            <Text style={[styles.weekEventTitle, { color: colors.text }]} numberOfLines={isNarrow ? 2 : 1}>
                              {eventPos.job.title}
@@ -805,8 +811,8 @@ export const Calendar: React.FC<CalendarProps> = ({
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), day);
       const dayJobs = allJobs.filter(job => {
-        if (!job.scheduled_start) return false;
-        const jobDate = new Date(job.scheduled_start);
+        const jobDate = getJobDate(job);
+        if (!jobDate) return false;
         return jobDate.toDateString() === date.toDateString();
       });
       
@@ -983,8 +989,8 @@ export const Calendar: React.FC<CalendarProps> = ({
       day.setDate(today.getDate() + i);
       
       const dayJobs = allJobs.filter(job => {
-        if (!job.scheduled_start) return false;
-        const jobDate = new Date(job.scheduled_start);
+        const jobDate = getJobDate(job);
+        if (!jobDate) return false;
         return jobDate.toDateString() === day.toDateString();
       });
       
@@ -1043,9 +1049,7 @@ export const Calendar: React.FC<CalendarProps> = ({
                      {job.title}
                    </Text>
                    <Text style={[styles.agendaJobTime, { color: colors.placeholder }]}>
-                     {job.scheduled_start && job.scheduled_end 
-                       ? `${formatTimeForDisplay(job.scheduled_start)} - ${formatTimeForDisplay(job.scheduled_end)}`
-                       : 'Time not set'}
+                     {`${formatTimeForDisplay(job.scheduled_start!)} - ${formatTimeForDisplay(job.scheduled_end!)}`}
                    </Text>
                  </View>
                </TouchableOpacity>

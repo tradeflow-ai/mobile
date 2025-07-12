@@ -375,7 +375,7 @@ export class InventoryAgent {
 
       return {
         ...parsedResponse,
-        hardware_store_job: hardwareStoreJob,
+        hardware_store_job: hardwareStoreJob || undefined,
         // agent_reasoning is already included in parsedResponse, don't override it
       };
 
@@ -752,8 +752,8 @@ export class InventoryAgent {
         return {
           id: `hardware_store_${Date.now()}`,
           title: `Home Depot - SE Austin`,
-          job_type: 'hardware_store',
-          priority: 'high',
+          job_type: 'hardware_store' as const,
+          priority: 'high' as const,
           estimated_duration: estimatedDuration,
           address: '3600 Interstate Hwy 35 South, Austin, TX 78704',
           latitude: 30.2711,
@@ -774,8 +774,8 @@ export class InventoryAgent {
       return {
         id: `hardware_store_${Date.now()}`,
         title: `Home Depot - SE Austin`,
-        job_type: 'hardware_store',
-        priority: 'high',
+        job_type: 'hardware_store' as const,
+        priority: 'high' as const,
         estimated_duration: estimatedDuration,
         address: '3600 Interstate Hwy 35 South, Austin, TX 78704',
         latitude: 30.2711,

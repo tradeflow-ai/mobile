@@ -104,6 +104,19 @@ export class DispatcherAgent {
       // Core dispatch algorithm with AI reasoning
       const dispatchResult = await this.executeAIDispatch(effectiveJobs, preferences, context.planDate, learnedExamples);
 
+      // Validate AI scheduling results for all jobs
+      this.validateAllJobSchedulingResults(dispatchResult.prioritized_jobs, effectiveJobs);
+
+      // Check for and resolve schedule conflicts
+      const conflictValidation = this.validateScheduleConflicts(dispatchResult.prioritized_jobs);
+      if (conflictValidation.hasConflicts) {
+        console.warn(`⚠️ Found ${conflictValidation.conflicts.length} schedule conflicts - attempting to resolve...`);
+        dispatchResult.prioritized_jobs = this.resolveScheduleConflicts(dispatchResult.prioritized_jobs, effectiveJobs);
+      }
+
+      // Update scheduled_start and scheduled_end for ALL jobs in the database
+      await this.updateAllJobSchedules(supabase, dispatchResult.prioritized_jobs, effectiveJobs, context.planDate);
+
       console.log(`✅ Dispatcher complete: ${dispatchResult.prioritized_jobs.length} jobs prioritized in ${Date.now() - startTime}ms`);
       return dispatchResult;
 
@@ -130,7 +143,10 @@ export class DispatcherAgent {
         latitude: job.latitude,
         longitude: job.longitude,
         estimated_duration: job.estimated_duration || 60,
-        scheduled_date: job.scheduled_date,
+        scheduled_date: job.scheduled_date || null, // User's preferred date/time
+        scheduled_start: job.scheduled_start || null, // AI-generated start time
+        scheduled_end: job.scheduled_end || null, // AI-generated end time
+        use_ai_scheduling: job.use_ai_scheduling || false,
         customer_name: job.customer_name,
         description: job.description
       }));
@@ -154,6 +170,39 @@ export class DispatcherAgent {
         Please apply these learned preferences when prioritizing and scheduling jobs.
         ` : '';
 
+      // Identify jobs that need AI scheduling
+      const aiSchedulingJobs = jobData.filter(job => job.use_ai_scheduling === true);
+      const scheduledDateJobs = jobData.filter(job => job.scheduled_date);
+      
+      const schedulingNote = `
+        SCHEDULING REQUIREMENTS:
+        
+        1. FIXED-TIME JOBS (use_ai_scheduling: false): Jobs with specific time requirements
+           - Must use the exact time specified in their scheduled_date field
+           - These are immutable time slots that cannot be changed
+           - Work around these fixed appointments when scheduling flexible jobs
+        
+        2. FLEXIBLE JOBS (use_ai_scheduling: true): Jobs that can be optimized
+           ${aiSchedulingJobs.map(job => `   - Job ${job.job_id}: "${job.title}" scheduled for ${job.scheduled_date || 'TBD'}`).join('\n        ')}
+           - You have full flexibility to schedule these at optimal times within the same day
+           - Optimize these jobs for efficiency and geographic routing
+        
+        3. CRITICAL REQUIREMENTS:
+           - ALL jobs must receive both estimated_start_time and estimated_end_time
+           - estimated_end_time = estimated_start_time + estimated_duration
+           - Jobs can only be scheduled within the same day (never move to different dates)
+           - Use HH:MM format (24-hour format preferred) in Central Time
+           - Schedule all times in Central Time (UTC-5) - system will convert to UTC for database storage
+           - Both scheduled_start and scheduled_end will be updated in the database for ALL jobs
+        ` + (scheduledDateJobs.length > 0 ? `
+        
+        JOBS WITH USER-SPECIFIED DATES:
+        ${scheduledDateJobs.map(job => {
+          const dateInfo = job.scheduled_date ? new Date(job.scheduled_date) : null;
+          const hasTime = dateInfo && (dateInfo.getHours() !== 0 || dateInfo.getMinutes() !== 0);
+          return `   - Job ${job.job_id}: "${job.title}" - Date: ${job.scheduled_date}, ${hasTime ? 'Time specified' : 'Time flexible'}`;
+        }).join('\n        ')}` : '');
+
       const userPrompt = `
         Please analyze and optimize the following ${jobs.length} jobs for ${planDate}:
 
@@ -163,7 +212,7 @@ export class DispatcherAgent {
         USER CONSTRAINTS:
         ${JSON.stringify(constraintData, null, 2)}
 
-        ${adaptiveLearningSection}
+        ${adaptiveLearningSection}${schedulingNote}
 
         Please return a complete dispatch plan with:
         1. Jobs prioritized by business rules (Emergency → Inspection → Service)
@@ -171,10 +220,25 @@ export class DispatcherAgent {
         3. Complete scheduling with time estimates
         4. Clear reasoning for your decisions
         5. Apply learned user preferences from past corrections
+        6. MANDATORY: Provide exact start/end times for all jobs marked with use_ai_scheduling: true
 
         IMPORTANT: Return ONLY a valid JSON object matching the DispatchOutput interface. 
         Do not include any markdown formatting, explanations, or additional text. 
         Start your response with { and end with }.
+
+        CRITICAL NUMERIC FORMAT REQUIREMENTS:
+        - buffer_time_minutes: Use ONLY numbers (15, NOT "15 minutes")
+        - travel_time_to_next: Use ONLY numbers (20, NOT "20 minutes")
+        - priority_score: Use ONLY numbers (150, NOT "150 points")
+        - priority_rank: Use ONLY numbers (1, NOT "1st")
+        - All optimization_summary fields: Use ONLY numbers
+
+        SCHEDULE CONFLICT PREVENTION:
+        - NO overlapping job times - each job must have unique time slot
+        - Jobs must be scheduled sequentially (Job 1 ends before Job 2 starts)
+        - Add travel time between jobs to prevent overlaps
+        - Fixed-time jobs create immovable constraints - schedule flexible jobs around them
+        - Validate all times to ensure no two jobs happen simultaneously
 
         The JSON must include these exact fields:
         - prioritized_jobs (array)
@@ -195,8 +259,11 @@ export class DispatcherAgent {
       // Parse AI response and create structured output
       const parsedResponse = this.parseAIResponse(aiResponse, jobs, preferences);
       
+      // Sanitize numeric fields to ensure they're proper numbers
+      const sanitizedResponse = this.sanitizeNumericFields(parsedResponse);
+      
       return {
-        ...parsedResponse,
+        ...sanitizedResponse,
         execution_time_ms: Date.now() - startTime
       };
 
@@ -289,12 +356,14 @@ export class DispatcherAgent {
       
     } catch (error) {
       console.error('❌ JSON parsing error:', error);
-      console.error('❌ Error details:', error.message);
-      if (error.message.includes('position')) {
-        const position = error.message.match(/position (\d+)/)?.[1];
-        if (position) {
-          const pos = parseInt(position);
-          console.error('❌ Error context:', aiResponse.substring(Math.max(0, pos - 50), pos + 50));
+      if (error instanceof Error) {
+        console.error('❌ Error details:', error.message);
+        if (error.message.includes('position')) {
+          const position = error.message.match(/position (\d+)/)?.[1];
+          if (position) {
+            const pos = parseInt(position);
+            console.error('❌ Error context:', aiResponse.substring(Math.max(0, pos - 50), pos + 50));
+          }
         }
       }
     }
@@ -369,6 +438,380 @@ export class DispatcherAgent {
         route_efficiency: 0.8
       }
     };
+  }
+
+  /**
+   * Validate that AI provided scheduling times for ALL jobs
+   */
+  private validateAllJobSchedulingResults(prioritizedJobs: any[], originalJobs: any[]): void {
+    try {
+      console.log(`🔍 Validating scheduling for ALL ${originalJobs.length} jobs`);
+
+      // Check if AI provided times for all jobs
+      const missingSchedules: string[] = [];
+      const flexibleJobs = originalJobs.filter(job => job.use_ai_scheduling === true);
+      const fixedJobs = originalJobs.filter(job => job.use_ai_scheduling === false);
+      
+      console.log(`📋 Job breakdown: ${flexibleJobs.length} flexible, ${fixedJobs.length} fixed-time`);
+
+      for (const originalJob of originalJobs) {
+        const prioritizedJob = prioritizedJobs.find(pJob => pJob.job_id === originalJob.id);
+        
+        if (!prioritizedJob) {
+          missingSchedules.push(`Job ${originalJob.id} (${originalJob.title || 'Unknown'}) - Not found in prioritized jobs`);
+        } else if (!prioritizedJob.estimated_start_time || !prioritizedJob.estimated_end_time) {
+          missingSchedules.push(`Job ${originalJob.id} (${originalJob.title || 'Unknown'}) - Missing start/end times`);
+        } else {
+          const jobType = originalJob.use_ai_scheduling ? 'FLEXIBLE' : 'FIXED';
+          console.log(`✅ Job ${originalJob.id} (${jobType}) has scheduling: ${prioritizedJob.estimated_start_time} - ${prioritizedJob.estimated_end_time}`);
+        }
+      }
+
+      if (missingSchedules.length > 0) {
+        console.warn(`⚠️ Scheduling validation issues found:`);
+        missingSchedules.forEach(issue => console.warn(`   - ${issue}`));
+        console.warn(`⚠️ ${missingSchedules.length} out of ${originalJobs.length} jobs are missing proper scheduling`);
+      } else {
+        console.log(`✅ All ${originalJobs.length} jobs have proper start/end times`);
+      }
+    } catch (error) {
+      console.error('❌ Error validating scheduling results:', error);
+    }
+  }
+
+  /**
+   * Update scheduled_start and scheduled_end for ALL jobs in the database
+   */
+  private async updateAllJobSchedules(supabase: any, prioritizedJobs: any[], originalJobs: any[], planDate: string): Promise<void> {
+    try {
+      console.log('🔒 Updating scheduled_start and scheduled_end for ALL jobs...');
+      
+      // Create a map for quick lookup of original job data
+      const originalJobMap = new Map(originalJobs.map(job => [job.id, job]));
+      
+      // Get ALL jobs that need their schedules updated
+      const jobsToUpdate = prioritizedJobs.filter(job => {
+        return job.estimated_start_time && job.estimated_end_time;
+      });
+
+      console.log(`📋 Found ${jobsToUpdate.length} jobs to update out of ${prioritizedJobs.length} total jobs`);
+
+      if (jobsToUpdate.length === 0) {
+        console.log('📋 No jobs found that need schedule updates');
+        return;
+      }
+
+      // Log which jobs are being updated
+      jobsToUpdate.forEach(job => {
+        const originalJob = originalJobMap.get(job.job_id);
+        const jobType = originalJob?.use_ai_scheduling ? 'FLEXIBLE' : 'FIXED';
+        console.log(`🎯 Will update job ${job.job_id} (${originalJob?.title || 'Unknown'}) [${jobType}] with times: ${job.estimated_start_time} - ${job.estimated_end_time}`);
+      });
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Update each job with the scheduled times
+      for (const job of jobsToUpdate) {
+        try {
+          // Convert time strings to full datetime strings for the database
+          const startDateTime = this.convertTimeToDateTime(job.estimated_start_time, planDate);
+          const endDateTime = this.convertTimeToDateTime(job.estimated_end_time, planDate);
+
+          console.log(`🔒 Updating job ${job.job_id} with datetime: ${startDateTime} to ${endDateTime}`);
+
+          const { error } = await supabase
+            .from('job_locations')
+            .update({
+              scheduled_start: startDateTime,
+              scheduled_end: endDateTime,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', job.job_id);
+
+          if (error) {
+            console.error(`❌ Database error updating job ${job.job_id}:`, error);
+            errorCount++;
+          } else {
+            console.log(`✅ Successfully updated schedule for job ${job.job_id}`);
+            successCount++;
+          }
+        } catch (jobError) {
+          console.error(`❌ Error processing job ${job.job_id}:`, jobError);
+          errorCount++;
+        }
+      }
+
+      console.log(`🔒 Schedule update complete: ${successCount} successful, ${errorCount} errors out of ${jobsToUpdate.length} total`);
+      
+      if (errorCount > 0) {
+        console.warn(`⚠️ ${errorCount} jobs failed to update. Some jobs may not have updated scheduled times.`);
+      }
+    } catch (error) {
+      console.error('❌ Critical error in schedule update:', error);
+      // Don't throw the error to prevent the entire dispatch from failing
+    }
+  }
+
+  /**
+   * Convert time string (e.g., "09:30") from Central Time to UTC datetime string for database
+   */
+  private convertTimeToDateTime(timeStr: string, planDate: string): string {
+    try {
+      console.log(`🕐 Converting Central Time "${timeStr}" for date "${planDate}" to UTC`);
+      
+      // Handle different time formats
+      let hours = 0;
+      let minutes = 0;
+
+      // Clean the time string
+      const cleanTimeStr = timeStr.toString().trim();
+
+      if (cleanTimeStr.includes(':')) {
+        const [hourStr, minuteStr] = cleanTimeStr.split(':');
+        hours = parseInt(hourStr, 10);
+        minutes = parseInt(minuteStr, 10);
+      } else if (cleanTimeStr.includes('.')) {
+        // Handle decimal format like "9.5" (9:30)
+        const decimal = parseFloat(cleanTimeStr);
+        hours = Math.floor(decimal);
+        minutes = Math.round((decimal - hours) * 60);
+      } else {
+        // Handle integer format like "9" (9:00)
+        hours = parseInt(cleanTimeStr, 10);
+        minutes = 0;
+      }
+
+      // Validate hours and minutes
+      if (isNaN(hours) || hours < 0 || hours > 23) {
+        console.warn(`⚠️ Invalid hours: ${hours}, using 9 AM as fallback`);
+        hours = 9;
+      }
+      if (isNaN(minutes) || minutes < 0 || minutes > 59) {
+        console.warn(`⚠️ Invalid minutes: ${minutes}, using 0 as fallback`);
+        minutes = 0;
+      }
+
+      // Create datetime in Central Time (UTC-5)
+      // First create the date string in Central time
+      const centralTimeString = `${planDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000`;
+      
+      // Convert Central Time to UTC by adding 5 hours
+      const centralDateTime = new Date(centralTimeString);
+      
+      // Add 5 hours to convert from Central (UTC-5) to UTC
+      const utcDateTime = new Date(centralDateTime.getTime() + (5 * 60 * 60 * 1000));
+      
+      // Validate the created date
+      if (isNaN(utcDateTime.getTime())) {
+        console.error(`❌ Invalid date created from "${planDate}" and time "${timeStr}"`);
+        // Fallback: 9 AM Central = 2 PM UTC
+        const fallbackUtc = new Date(`${planDate}T09:00:00.000`);
+        fallbackUtc.setHours(fallbackUtc.getHours() + 5); // Convert to UTC
+        return fallbackUtc.toISOString();
+      }
+
+      const utcIsoString = utcDateTime.toISOString();
+      console.log(`✅ Converted Central Time "${timeStr}" to UTC "${utcIsoString}"`);
+      return utcIsoString;
+    } catch (error) {
+      console.error(`❌ Error converting Central Time "${timeStr}" to UTC:`, error);
+      // Fallback to 9 AM Central = 2 PM UTC
+      const fallbackUtc = new Date(`${planDate}T14:00:00.000Z`);
+      const fallbackString = fallbackUtc.toISOString();
+      console.log(`🔄 Using fallback UTC datetime: ${fallbackString}`);
+      return fallbackString;
+    }
+  }
+
+  /**
+   * Validate schedule conflicts - check for overlapping job times
+   */
+  private validateScheduleConflicts(prioritizedJobs: any[]): { hasConflicts: boolean; conflicts: any[] } {
+    try {
+      console.log('🔍 Checking for schedule conflicts...');
+      
+      const conflicts: any[] = [];
+      
+      // Convert time strings to minutes for easier comparison
+      const timeToMinutes = (timeStr: string): number => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      // Sort jobs by start time for easier conflict detection
+      const sortedJobs = [...prioritizedJobs].sort((a, b) => {
+        const aStart = timeToMinutes(a.estimated_start_time);
+        const bStart = timeToMinutes(b.estimated_start_time);
+        return aStart - bStart;
+      });
+      
+      // Check for overlapping times
+      for (let i = 0; i < sortedJobs.length - 1; i++) {
+        const currentJob = sortedJobs[i];
+        const nextJob = sortedJobs[i + 1];
+        
+        const currentEnd = timeToMinutes(currentJob.estimated_end_time);
+        const nextStart = timeToMinutes(nextJob.estimated_start_time);
+        
+        // Check if next job starts before current job ends
+        if (nextStart < currentEnd) {
+          conflicts.push({
+            job1: currentJob,
+            job2: nextJob,
+            conflict: `Job ${currentJob.job_id} ends at ${currentJob.estimated_end_time} but Job ${nextJob.job_id} starts at ${nextJob.estimated_start_time}`,
+            overlapMinutes: currentEnd - nextStart
+          });
+        }
+      }
+      
+      if (conflicts.length > 0) {
+        console.warn(`❌ Found ${conflicts.length} schedule conflicts:`);
+        conflicts.forEach(conflict => {
+          console.warn(`   - ${conflict.conflict} (${conflict.overlapMinutes} min overlap)`);
+        });
+      } else {
+        console.log('✅ No schedule conflicts found');
+      }
+      
+      return {
+        hasConflicts: conflicts.length > 0,
+        conflicts
+      };
+    } catch (error) {
+      console.error('❌ Error validating schedule conflicts:', error);
+      return { hasConflicts: false, conflicts: [] };
+    }
+  }
+
+  /**
+   * Resolve schedule conflicts by adjusting flexible job times
+   */
+  private resolveScheduleConflicts(prioritizedJobs: any[], originalJobs: any[]): any[] {
+    try {
+      console.log('🔧 Resolving schedule conflicts...');
+      
+      // Create a map for quick lookup of original job data
+      const originalJobMap = new Map(originalJobs.map(job => [job.id, job]));
+      
+      // Helper function to convert time strings to minutes
+      const timeToMinutes = (timeStr: string): number => {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+      
+      // Helper function to convert minutes back to time string
+      const minutesToTime = (minutes: number): string => {
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+      };
+      
+      // Sort jobs by start time and priority
+      const sortedJobs = [...prioritizedJobs].sort((a, b) => {
+        const aStart = timeToMinutes(a.estimated_start_time);
+        const bStart = timeToMinutes(b.estimated_start_time);
+        return aStart - bStart;
+      });
+      
+      // Resolve conflicts by adjusting flexible job times
+      for (let i = 0; i < sortedJobs.length - 1; i++) {
+        const currentJob = sortedJobs[i];
+        const nextJob = sortedJobs[i + 1];
+        
+        const currentEnd = timeToMinutes(currentJob.estimated_end_time);
+        const nextStart = timeToMinutes(nextJob.estimated_start_time);
+        
+        // Check if there's a conflict
+        if (nextStart < currentEnd) {
+          const nextOriginalJob = originalJobMap.get(nextJob.job_id);
+          
+          // Only adjust flexible jobs (use_ai_scheduling: true)
+          if (nextOriginalJob?.use_ai_scheduling === true) {
+            // Calculate new start time with buffer
+            const bufferMinutes = nextJob.travel_time_to_next || 15;
+            const newStartTime = currentEnd + bufferMinutes;
+            const duration = timeToMinutes(nextJob.estimated_end_time) - timeToMinutes(nextJob.estimated_start_time);
+            const newEndTime = newStartTime + duration;
+            
+            // Update the job times
+            nextJob.estimated_start_time = minutesToTime(newStartTime);
+            nextJob.estimated_end_time = minutesToTime(newEndTime);
+            
+            console.log(`🔧 Resolved conflict: Moved Job ${nextJob.job_id} to ${nextJob.estimated_start_time} - ${nextJob.estimated_end_time}`);
+          } else {
+            // If it's a fixed-time job, we need to move the current job instead
+            console.warn(`⚠️ Cannot resolve conflict with fixed-time job ${nextJob.job_id} - this requires manual intervention`);
+          }
+        }
+      }
+      
+      console.log('✅ Schedule conflict resolution completed');
+      return sortedJobs;
+    } catch (error) {
+      console.error('❌ Error resolving schedule conflicts:', error);
+      return prioritizedJobs; // Return original if resolution fails
+    }
+  }
+
+  /**
+   * Sanitize numeric fields to ensure they contain only numbers
+   */
+  private sanitizeNumericFields(response: Omit<DispatchOutput, 'execution_time_ms'>): Omit<DispatchOutput, 'execution_time_ms'> {
+    try {
+      console.log('🧹 Sanitizing numeric fields to ensure proper number format...');
+      
+      // Helper function to extract number from text
+      const extractNumber = (value: any): number => {
+        if (typeof value === 'number') {
+          return value;
+        }
+        if (typeof value === 'string') {
+          // Extract first number from string like "75 minutes" -> 75
+          const match = value.match(/(\d+(?:\.\d+)?)/);
+          return match ? parseFloat(match[1]) : 0;
+        }
+        return 0;
+      };
+
+      // Sanitize prioritized jobs
+      const sanitizedJobs = response.prioritized_jobs.map(job => ({
+        ...job,
+        priority_rank: extractNumber(job.priority_rank),
+        buffer_time_minutes: extractNumber(job.buffer_time_minutes),
+        priority_score: extractNumber(job.priority_score),
+        travel_time_to_next: extractNumber(job.travel_time_to_next)
+      }));
+
+      // Sanitize optimization summary
+      const sanitizedSummary = {
+        ...response.optimization_summary,
+        emergency_jobs: extractNumber(response.optimization_summary.emergency_jobs),
+        inspection_jobs: extractNumber(response.optimization_summary.inspection_jobs),
+        service_jobs: extractNumber(response.optimization_summary.service_jobs),
+        total_travel_time: extractNumber(response.optimization_summary.total_travel_time),
+        route_efficiency: extractNumber(response.optimization_summary.route_efficiency)
+      };
+
+      // Sanitize scheduling constraints
+      const sanitizedConstraints = {
+        ...response.scheduling_constraints,
+        total_work_hours: extractNumber(response.scheduling_constraints.total_work_hours),
+        total_jobs_scheduled: extractNumber(response.scheduling_constraints.total_jobs_scheduled)
+      };
+
+      console.log(`✅ Sanitized ${sanitizedJobs.length} jobs and summary fields`);
+
+      return {
+        ...response,
+        prioritized_jobs: sanitizedJobs,
+        optimization_summary: sanitizedSummary,
+        scheduling_constraints: sanitizedConstraints
+      };
+    } catch (error) {
+      console.error('❌ Error sanitizing numeric fields:', error);
+      return response; // Return original if sanitization fails
+    }
   }
 
   /**

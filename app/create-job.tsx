@@ -6,8 +6,9 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, radius, touchTargets } from '@/constants/Theme';
-import { FormProvider, FormTextInput, FormSelect, FormQuantitySelector, FormActions, FormTimeInput, FormCheckbox, SelectOption, FormValidationRules } from '@/components/forms';
-import { Card, SearchBar, NativeDatePicker } from '@/components/ui';
+import { FormProvider, FormTextInput, FormSelect, FormQuantitySelector, FormActions, FormTimeInput, FormCheckbox, FormLocationPicker, SelectOption, FormValidationRules } from '@/components/forms';
+import { Label, LocationData } from '@/components/ui';
+import { SearchBar, NativeDatePicker } from '@/components/ui';
 import { useCreateJob, CreateJobData } from '@/hooks/useJobs';
 import { useInventory, useCreateInventoryItem, CreateInventoryData } from '@/hooks/useInventory';
 
@@ -18,10 +19,9 @@ interface JobFormData {
   description?: string;
   job_type: 'service' | 'inspection' | 'emergency' | 'maintenance' | 'delivery' | 'pickup' | 'hardware_store';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  address: string;
-  scheduled_date: Date;
-  scheduled_start_time: string;
-  scheduled_end_time: string;
+  location: LocationData;
+  scheduled_date: Date; // Timestamp including date and time
+  scheduled_date_time?: string; // Timestamp including date and time
   use_ai_scheduling: boolean;
   required_items: string[];
   estimated_duration?: number;
@@ -41,10 +41,12 @@ const defaultFormValues: JobFormData = {
   description: '',
   job_type: 'service',
   priority: 'medium',
-  address: '',
+  location: {
+    latitude: 0,
+    longitude: 0,
+    address: '',
+  },
   scheduled_date: new Date(),
-  scheduled_start_time: '9:00 AM',
-  scheduled_end_time: '5:00 PM',
   use_ai_scheduling: false,
   required_items: [],
   estimated_duration: 60,
@@ -114,8 +116,14 @@ export default function CreateJobScreen() {
     maxLength: { value: 100, message: 'Title must be less than 100 characters' },
   };
 
-  const addressRules: FormValidationRules = {
-    minLength: { value: 5, message: 'Address must be at least 5 characters' },
+  const locationRules: FormValidationRules = {
+    required: 'Location is required',
+    validate: (value: LocationData) => {
+      if (!value?.address || value.address.length < 5) {
+        return 'Please select a valid location';
+      }
+      return true;
+    },
   };
 
 
@@ -184,20 +192,16 @@ export default function CreateJobScreen() {
 
   const onSubmit = async (data: JobFormData) => {
     try {
-      // Convert time strings to Date objects
-      let scheduledStartDate: Date;
-      let scheduledEndDate: Date | undefined = undefined;
-
+      // Create scheduled_date timestamp
+      let scheduledDate = new Date(data.scheduled_date);
+      
+      // If using AI scheduling, set time to 00:00 (midnight) to let AI determine optimal time
       if (data.use_ai_scheduling) {
-        // AI will select optimal times - use date with default business hours
-        scheduledStartDate = new Date(data.scheduled_date);
-        scheduledStartDate.setHours(9, 0, 0, 0);
-
-        scheduledEndDate = new Date(data.scheduled_date);
-        scheduledEndDate.setHours(17, 0, 0, 0);
-      } else {
-        // Manual time selection
-        const startTimeMatch = data.scheduled_start_time.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+        scheduledDate.setHours(0, 0, 0, 0);
+      }
+      else if (data.scheduled_date_time) {
+        console.log('Scheduled date time:', data.scheduled_date_time);
+        const startTimeMatch = data.scheduled_date_time.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
         if (!startTimeMatch) {
           Alert.alert('Error', 'Invalid start time format. Please select a valid time.');
           return;
@@ -210,38 +214,21 @@ export default function CreateJobScreen() {
         if (startPeriod === 'PM' && startHours !== 12) startHours += 12;
         if (startPeriod === 'AM' && startHours === 12) startHours = 0;
 
-        scheduledStartDate = new Date(data.scheduled_date);
-        scheduledStartDate.setHours(startHours, startMinutes, 0, 0);
-
-        const endTimeMatch = data.scheduled_end_time.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
-        if (endTimeMatch) {
-          let endHours = parseInt(endTimeMatch[1], 10);
-          const endMinutes = parseInt(endTimeMatch[2], 10);
-          const endPeriod = endTimeMatch[3].toUpperCase();
-
-          if (endPeriod === 'PM' && endHours !== 12) endHours += 12;
-          if (endPeriod === 'AM' && endHours === 12) endHours = 0;
-
-          scheduledEndDate = new Date(data.scheduled_date);
-          scheduledEndDate.setHours(endHours, endMinutes, 0, 0);
-
-          if (scheduledEndDate <= scheduledStartDate) {
-            scheduledEndDate.setDate(scheduledEndDate.getDate() + 1);
-          }
-        }
+        scheduledDate = new Date(data.scheduled_date);
+        scheduledDate.setHours(startHours, startMinutes, 0, 0);
       }
+      // If not using AI scheduling, use the user-selected date and time from the picker
 
       // Convert form data to CreateJobData format
       const createData: CreateJobData = {
         title: data.title.trim(),
         description: data.description?.trim(),
-        address: data.address.trim(),
-        latitude: 0, // Will be set by geocoding service
-        longitude: 0, // Will be set by geocoding service
+        address: data.location.address,
+        latitude: data.location.latitude,
+        longitude: data.location.longitude,
         job_type: data.job_type,
         priority: data.priority,
-        scheduled_start: scheduledStartDate.toISOString(),
-        scheduled_end: scheduledEndDate?.toISOString(),
+        scheduled_date: scheduledDate.toISOString(), // Store user-selected date/time
         estimated_duration: data.estimated_duration || 60,
         required_items: data.required_items.length > 0 ? data.required_items : undefined,
         notes: data.notes?.trim() || undefined,
@@ -312,20 +299,16 @@ export default function CreateJobScreen() {
               />
 
               {/* Location */}
-              <FormTextInput
-                name="address"
+              <FormLocationPicker
+                name="location"
                 label="Location"
-                placeholder="Enter job location address"
+                placeholder="Search for a location..."
                 required
-                rules={addressRules}
+                rules={locationRules}
               />
-
-              {/* Scheduling Section */}
-              <Text style={[styles.sectionTitle, { color: colors.text, marginTop: spacing.l }]}>Scheduling</Text>
-
               {/* Date Selection */}
               <View style={styles.dateContainer}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>Scheduled Date *</Text>
+                <Label text="Scheduled Date" required />
                 <View style={styles.miniCalendarContainer}>
                   <NativeDatePicker
                     selectedDate={watch('scheduled_date')}
@@ -342,24 +325,18 @@ export default function CreateJobScreen() {
                 containerStyle={styles.aiCheckbox}
               />
 
-              {!useAIScheduling && (
-                <>
-                  <FormTimeInput
-                    name="scheduled_start_time"
+              {useAIScheduling ? (
+                <Text style={[styles.helpText, { color: colors.placeholder }]}>
+                  Time will be set to 12:00 AM - AI will determine optimal scheduling
+                </Text>
+              ) : (
+                <FormTimeInput
+                    name="scheduled_date_time"
                     label="Start Time"
                     placeholder="Select start time"
                     format24Hour={false}
                     required
                   />
-                  
-                  <FormTimeInput
-                    name="scheduled_end_time"
-                    label="End Time"
-                    placeholder="Select end time"
-                    format24Hour={false}
-                    required
-                  />
-                </>
               )}
 
               {/* Estimated Duration */}
@@ -750,6 +727,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
     textAlign: 'center',
     marginTop: spacing.m,
+    fontStyle: 'italic',
+  },
+  helpText: {
+    ...typography.caption,
+    textAlign: 'center',
+    marginTop: spacing.s,
     fontStyle: 'italic',
   },
 }); 

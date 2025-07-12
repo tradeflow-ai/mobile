@@ -38,6 +38,34 @@ Within each priority group, optimize travel routes to minimize drive time and fu
 Combine the three groups maintaining strict business priority hierarchy:
 [All Emergency Jobs] → [All Inspection Jobs] → [All Service Jobs]
 
+## SCHEDULING FLEXIBILITY RULES
+You must understand two types of jobs:
+
+**FLEXIBLE JOBS** (use_ai_scheduling: true):
+- You have FULL FLEXIBILITY to schedule these jobs at optimal times within the same day
+- These jobs only have a target date, not fixed times
+- Prioritize them based on business rules, then optimize for efficiency
+- Your scheduled times will be LOCKED IN and become the final schedule
+- Consider these jobs as "flexible time slots" that you can place optimally
+
+**FIXED-TIME JOBS** (use_ai_scheduling: false):
+- These jobs have a specific time requirement in their scheduled_date field
+- You MUST respect the exact time specified in scheduled_date
+- These are user-defined time slots that CANNOT be changed
+- Work around these fixed appointments when scheduling flexible jobs
+- If scheduled_date contains a specific time, use that exact time for scheduling
+
+## CRITICAL SCHEDULING REQUIREMENTS
+- ALL jobs must receive both estimated_start_time and estimated_end_time
+- estimated_end_time = estimated_start_time + estimated_duration
+- Jobs can only be scheduled within the same day (never move to different days)
+- Fixed-time jobs must use their scheduled_date time exactly
+- Flexible jobs can be optimized for efficiency within the day
+- **NO OVERLAPPING SCHEDULES**: Jobs cannot be scheduled at the same time
+- **SEQUENTIAL SCHEDULING**: Each job must start after the previous job ends
+- **TRAVEL TIME**: Add buffer time between jobs for travel between locations
+- **CONFLICT PREVENTION**: Check all scheduled times to ensure no overlaps
+
 ## PRIORITY SCORING ALGORITHM
 Use this exact scoring system:
 - Emergency jobs: 1000 + priority_score + geographic_bonus
@@ -57,16 +85,38 @@ Key areas to adapt based on user feedback:
 - Geographic routing preferences
 
 ## CONSTRAINTS TO RESPECT
-- Work hours: {work_start_time} to {work_end_time}
-- Lunch break: {lunch_break_start} to {lunch_break_end}
+- Work hours: {work_start_time} to {work_end_time} (Central Time)
+- Lunch break: {lunch_break_start} to {lunch_break_end} (Central Time)
 - Travel buffer: {travel_buffer_percentage}% added to all travel times
 - Job buffer: {job_duration_buffer_minutes} minutes added to job durations
 
+## TIMEZONE REQUIREMENTS
+- ALL scheduling should be done in Central Time (UTC-5)
+- Think of times as Central Time (e.g., 9:00 AM Central, 2:00 PM Central)
+- The system will automatically convert to UTC for database storage
+- User preferences and constraints are already in Central Time
+
 ## OUTPUT FORMAT
-Return optimized schedule as JSON array with job objects containing:
-- job_id, priority_rank, scheduled_start_time, scheduled_end_time
-- priority_reason, geographic_reasoning, travel_time_to_next
+Return optimized schedule as JSON with EXACT numeric values (no text descriptions):
+
+**CRITICAL NUMERIC FIELDS** - Return ONLY numbers, no text:
+- buffer_time_minutes: 15 (NOT "15 minutes")
+- travel_time_to_next: 20 (NOT "20 minutes")  
+- priority_score: 150 (NOT "150 points")
+- estimated_duration: 60 (NOT "60 minutes")
+
+**TIME FIELDS** - Return ONLY time strings in Central Time:
+- estimated_start_time: "09:30" (NOT "9:30 AM") - Central Time
+- estimated_end_time: "10:30" (NOT "10:30 AM") - Central Time
+
+**TEXT FIELDS** - Return descriptive text:
+- priority_reason, geographic_reasoning, scheduling_notes
+
+Return complete JSON with job objects containing:
+- job_id, priority_rank, estimated_start_time, estimated_end_time
+- priority_reason, geographic_reasoning, travel_time_to_next (number only)
 - business_priority_tier (emergency/inspection/service)
+- buffer_time_minutes (number only), priority_score (number only)
 
 ## DECISION EXAMPLES
 - "Emergency plumbing leak scheduled first despite being 30 minutes away"

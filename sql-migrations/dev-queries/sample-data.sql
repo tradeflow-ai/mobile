@@ -63,21 +63,22 @@ BEGIN
               city,
               state,
               zip_code,
-              scheduled_date,
+              scheduled_start,
+  scheduled_end,
               estimated_duration,
               customer_name,
               customer_phone,
               instructions
             ) VALUES
-              (first_user_id, 'Downtown Office Building', 'HVAC maintenance and filter replacement', 'service', 'high', 'scheduled', 37.7749, -122.4194, '123 Market Street', 'San Francisco', 'CA', '94103', '2024-02-15 09:00:00+00', 120, 'John Smith', '(555) 123-4567', 'Check all units on floors 3-5, replace filters'),
+              (first_user_id, 'Downtown Office Building', 'HVAC maintenance and filter replacement', 'service', 'high', 'scheduled', 37.7749, -122.4194, '123 Market Street', 'San Francisco', 'CA', '94103', '2024-02-15 09:00:00+00', '2024-02-15 11:00:00+00', 120, 'John Smith', '(555) 123-4567', 'Check all units on floors 3-5, replace filters'),
               
-              (first_user_id, 'Residential Complex', 'Plumbing repair - leaky faucet in unit 4B', 'service', 'medium', 'pending', 37.7849, -122.4094, '456 Oak Avenue', 'San Francisco', 'CA', '94102', '2024-02-15 11:30:00+00', 90, 'Maria Garcia', '(555) 234-5678', 'Tenant reports dripping kitchen faucet'),
+              (first_user_id, 'Residential Complex', 'Plumbing repair - leaky faucet in unit 4B', 'service', 'medium', 'pending', 37.7849, -122.4094, '456 Oak Avenue', 'San Francisco', 'CA', '94102', '2024-02-15 11:30:00+00', '2024-02-15 13:00:00+00', 90, 'Maria Garcia', '(555) 234-5678', 'Tenant reports dripping kitchen faucet'),
               
-              (first_user_id, 'Industrial Warehouse', 'Electrical inspection and outlet installation', 'inspection', 'high', 'pending', 37.7649, -122.4294, '789 Industrial Drive', 'San Francisco', 'CA', '94107', '2024-02-15 14:00:00+00', 180, 'Bob Wilson', '(555) 345-6789', 'Need to install GFCI outlets in wet areas'),
+              (first_user_id, 'Industrial Warehouse', 'Electrical inspection and outlet installation', 'inspection', 'high', 'pending', 37.7649, -122.4294, '789 Industrial Drive', 'San Francisco', 'CA', '94107', '2024-02-15 14:00:00+00', '2024-02-15 17:00:00+00', 180, 'Bob Wilson', '(555) 345-6789', 'Need to install GFCI outlets in wet areas'),
               
-              (first_user_id, 'Tech Startup Office', 'Equipment pickup and disposal', 'pickup', 'low', 'pending', 37.7549, -122.4394, '321 Mission Street', 'San Francisco', 'CA', '94105', '2024-02-15 16:00:00+00', 60, 'Sarah Johnson', '(555) 456-7890', 'Old server equipment for recycling'),
+              (first_user_id, 'Tech Startup Office', 'Equipment pickup and disposal', 'pickup', 'low', 'pending', 37.7549, -122.4394, '321 Mission Street', 'San Francisco', 'CA', '94105', '2024-02-15 16:00:00+00', '2024-02-15 17:00:00+00', 60, 'Sarah Johnson', '(555) 456-7890', 'Old server equipment for recycling'),
               
-              (first_user_id, 'Coffee Shop', 'Emergency plumbing - burst pipe', 'emergency', 'urgent', 'in_progress', 37.7449, -122.4194, '555 Valencia Street', 'San Francisco', 'CA', '94110', '2024-02-14 08:00:00+00', 240, 'Mike Chen', '(555) 567-8901', 'Water main break in basement, urgent!');
+              (first_user_id, 'Coffee Shop', 'Emergency plumbing - burst pipe', 'emergency', 'urgent', 'in_progress', 37.7449, -122.4194, '555 Valencia Street', 'San Francisco', 'CA', '94110', '2024-02-14 08:00:00+00', '2024-02-14 12:00:00+00', 240, 'Mike Chen', '(555) 567-8901', 'Water main break in basement, urgent!');
 
         RAISE NOTICE 'Sample data inserted successfully for user: %', first_user_id;
         

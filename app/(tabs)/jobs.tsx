@@ -144,12 +144,24 @@ export default function JobsScreen() {
           />
           <View style={styles.timeContainer}>
             <Text style={[styles.scheduledTime, { color: colors.placeholder }]}>
-              {item.use_ai_scheduling 
-                ? formatDateOnly(item.scheduled_start, 'Not scheduled')
-                : formatDate(item.scheduled_start, 'Not scheduled')
-              }
+              {(() => {
+                // Display scheduled_start if available (AI-generated or finalized times)
+                if (item.scheduled_start) {
+                  return item.use_ai_scheduling 
+                    ? formatDateOnly(item.scheduled_start, 'Not scheduled')
+                    : formatDate(item.scheduled_start, 'Not scheduled');
+                }
+                // Fall back to scheduled_date if available (user's preferred date)
+                else if (item.scheduled_date) {
+                  return formatDateOnly(item.scheduled_date, 'Not scheduled');
+                }
+                // Default fallback
+                else {
+                  return 'Not scheduled';
+                }
+              })()}
             </Text>
-            {item.use_ai_scheduling && (
+            {item.use_ai_scheduling && !item.scheduled_start && (
               <Text style={[
                 styles.aiSchedulingIndicator, 
                 { 
