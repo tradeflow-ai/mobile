@@ -42,6 +42,18 @@ export default function MapScreen() {
   const activeJob = useAtomValue(activeJobAtom);
   const [selectedJobLocation, setSelectedJobLocation] = useState<JobLocation | null>(null);
   
+  // Sort jobs by scheduled_start if it exists, otherwise by created_at
+  const sortedJobLocations = React.useMemo(() => {
+    return [...jobLocations].sort((a, b) => {
+      // Get the effective sorting date for each job
+      const dateA = a.scheduled_start || a.created_at;
+      const dateB = b.scheduled_start || b.created_at;
+      
+      // Sort in ascending order (earliest first)
+      return new Date(dateA).getTime() - new Date(dateB).getTime();
+    });
+  }, [jobLocations]);
+  
   // Local state
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isJobModalVisible, setIsJobModalVisible] = useState(false);
@@ -129,7 +141,7 @@ export default function MapScreen() {
     // Scroll to selected job in modal
     setTimeout(() => {
       if (scrollViewRef) {
-        const jobIndex = jobLocations.findIndex(job => job.id === jobLocation.id);
+        const jobIndex = sortedJobLocations.findIndex(job => job.id === jobLocation.id);
         if (jobIndex !== -1) {
           // Each job item is approximately 140px tall, scroll to position
           scrollViewRef.scrollTo({
@@ -139,7 +151,7 @@ export default function MapScreen() {
         }
       }
     }, 400); // Wait for modal animation to complete
-  }, [setSelectedJobLocation, isJobModalVisible, modalAnimation, scrollViewRef, jobLocations, activeJob]);
+  }, [setSelectedJobLocation, isJobModalVisible, modalAnimation, scrollViewRef, sortedJobLocations, activeJob]);
 
 
 
@@ -193,7 +205,7 @@ export default function MapScreen() {
         onRegionChangeComplete={setMapRegion}
       >
         {/* Job Location Markers with Stop Numbers */}
-        {jobLocations.map((job, index) => (
+        {sortedJobLocations.map((job, index) => (
           <Marker
             key={job.id}
             coordinate={{
@@ -242,7 +254,7 @@ export default function MapScreen() {
             >
               <View style={styles.jobToggleContent}>
                 <Text style={[styles.jobCountText, { color: colors.background }]}>
-                  {jobLocations.length} Jobs
+                  {sortedJobLocations.length} Jobs
                 </Text>
                 <FontAwesome 
                   name="chevron-up" 
@@ -309,7 +321,7 @@ export default function MapScreen() {
               showsVerticalScrollIndicator={false}
               ref={setScrollViewRef}
             >
-              {jobLocations.map((job, index) => (
+              {sortedJobLocations.map((job, index) => (
                 <View
                   key={job.id}
                   style={[
