@@ -74,20 +74,30 @@ export default function ModifyPlanScreen() {
   const JobCard = React.memo(({ job, isDragging }: { job: ModifiableJob; isDragging: boolean }) => {
     const { data: jobDetails } = useJob(job.job_id);
 
-    const getJobTypeColor = (jobType: string) => {
-      switch (jobType) {
-        case 'emergency':
-          return colors.error;
-        case 'inspection':
-          return colors.primary;
-        case 'service':
-          return colors.success;
-        case 'hardware_store':
-          return colors.warning;
-        default:
-          return colors.text;
+    // Helper function to get priority level and colors
+    const getPriorityInfo = (priorityRank: number) => {
+      if (priorityRank <= 2) {
+        return { 
+          level: 'High', 
+          backgroundColor: colors.error + '30', // 30% opacity
+          borderColor: colors.error // Full opacity for border
+        };
+      } else if (priorityRank <= 4) {
+        return { 
+          level: 'Medium', 
+          backgroundColor: colors.warning + '30', // 30% opacity
+          borderColor: colors.warning // Full opacity for border
+        };
+      } else {
+        return { 
+          level: 'Low', 
+          backgroundColor: colors.success + '30', // 30% opacity
+          borderColor: colors.success // Full opacity for border
+        };
       }
     };
+
+    const priorityInfo = getPriorityInfo(job.priority_rank);
 
          const cardStyle = StyleSheet.flatten([
        styles.jobCard,
@@ -107,9 +117,19 @@ export default function ModifyPlanScreen() {
               </Text>
             </View>
             <View style={styles.jobDetails}>
-              <Text style={[styles.jobTitle, { color: colors.text }]}>
-                {jobDetails?.title || `Job ${job.job_id.substring(0, 8)}...`}
-              </Text>
+              <View style={styles.jobTitleRow}>
+                <Text style={[styles.jobTitle, { color: colors.text }]}>
+                  {jobDetails?.title || `Job ${job.job_id.substring(0, 8)}...`}
+                </Text>
+                <View style={[styles.priorityBox, { 
+                  backgroundColor: priorityInfo.backgroundColor,
+                  borderColor: priorityInfo.borderColor 
+                }]}>
+                  <Text style={[styles.priorityText, { color: colors.text }]}>
+                    Priority Level: {priorityInfo.level}
+                  </Text>
+                </View>
+              </View>
               {jobDetails?.customer_name && (
                 <Text style={[styles.jobCustomer, { color: colors.text }]}>
                   👤 {jobDetails.customer_name}
@@ -124,11 +144,6 @@ export default function ModifyPlanScreen() {
             </View>
           </View>
           <View style={styles.jobMeta}>
-            <View style={[styles.jobTypeBadge, { backgroundColor: getJobTypeColor(job.job_type) }]}>
-              <Text style={[styles.jobTypeText, { color: colors.background }]}>
-                {job.job_type}
-              </Text>
-            </View>
             <FontAwesome 
               name="bars" 
               size={20} 
@@ -137,31 +152,6 @@ export default function ModifyPlanScreen() {
             />
           </View>
         </View>
-        
-        <View style={styles.jobMetrics}>
-          <View style={styles.metric}>
-            <Text style={[styles.metricLabel, { color: colors.text }]}>Duration</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>
-              {job.estimated_duration}m
-            </Text>
-          </View>
-          <View style={styles.metric}>
-            <Text style={[styles.metricLabel, { color: colors.text }]}>Travel</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>
-              {job.travel_time_to_next}m
-            </Text>
-          </View>
-          <View style={styles.metric}>
-            <Text style={[styles.metricLabel, { color: colors.text }]}>Buffer</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>
-              {job.buffer_time_minutes}m
-            </Text>
-          </View>
-        </View>
-        
-        <Text style={[styles.jobReason, { color: colors.text }]}>
-          💡 {job.priority_reason}
-        </Text>
       </Card>
     );
   });
@@ -566,10 +556,31 @@ const styles = StyleSheet.create({
   jobDetails: {
     flex: 1,
   },
+  jobTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
   jobTitle: {
     ...typography.body1,
     fontWeight: '600',
-    marginBottom: spacing.xs,
+    flex: 1,
+    marginRight: spacing.s,
+  },
+  priorityBox: {
+    paddingHorizontal: spacing.s,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.s,
+    alignSelf: 'flex-start',
+    minWidth: 120,
+    borderWidth: 1.5,
+  },
+  priorityText: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   jobCustomer: {
     ...typography.caption,
@@ -584,44 +595,12 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   jobMeta: {
-    alignItems: 'flex-end',
-  },
-  jobTypeBadge: {
-    paddingHorizontal: spacing.s,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.s,
-    marginBottom: spacing.s,
-  },
-  jobTypeText: {
-    ...typography.caption,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   dragHandle: {
     padding: spacing.s,
-  },
-  jobMetrics: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.m,
-    paddingTop: spacing.m,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  metric: {
-    alignItems: 'center',
-  },
-  metricLabel: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-  },
-  metricValue: {
-    ...typography.body2,
-    fontWeight: '600',
-  },
-  jobReason: {
-    ...typography.body2,
-    opacity: 0.8,
   },
   actions: {
     flexDirection: 'row',
