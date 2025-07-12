@@ -263,11 +263,12 @@ export class BatchOperationsService {
 
   /**
    * Create optimal batches based on priority and entity type
+   * ENHANCED: Better prioritization for critical operations
    */
   private createOptimalBatches(): BatchOperation[][] {
     const operations = Array.from(this.pendingOperations.values());
     
-    // Sort by priority (critical first) and timestamp
+    // Enhanced sorting with critical operation sub-prioritization
     operations.sort((a, b) => {
       const priorityOrder = { critical: 0, normal: 1, low: 2 };
       const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -276,6 +277,25 @@ export class BatchOperationsService {
         return priorityDiff;
       }
       
+      // Within same priority, prioritize critical operations by entity importance
+      if (a.priority === 'critical' && b.priority === 'critical') {
+        const entityOrder = { 
+          job: 0,       // Job status changes are most critical
+          inventory: 1, // Inventory updates are second priority
+          route: 2,     // Route progress is third
+          client: 3     // Client updates are lowest critical priority
+        };
+        
+        const entityDiff = (entityOrder[a.entity] || 99) - (entityOrder[b.entity] || 99);
+        if (entityDiff !== 0) {
+          return entityDiff;
+        }
+        
+        // For same entity type, prioritize newer operations (more likely to be user-initiated)
+        return b.timestamp.getTime() - a.timestamp.getTime();
+      }
+      
+      // For non-critical operations, maintain chronological order
       return a.timestamp.getTime() - b.timestamp.getTime();
     });
 
@@ -300,11 +320,26 @@ export class BatchOperationsService {
         break;
     }
 
-    // Create batches
-    for (let i = 0; i < operations.length; i += maxBatchSize) {
-      batches.push(operations.slice(i, i + maxBatchSize));
+    // Create batches with enhanced critical operation grouping
+    const criticalOperations = operations.filter(op => op.priority === 'critical');
+    const normalOperations = operations.filter(op => op.priority === 'normal');
+    const lowOperations = operations.filter(op => op.priority === 'low');
+
+    // Process critical operations in smaller, focused batches for faster processing
+    const criticalBatchSize = Math.min(maxBatchSize, 5); // Smaller batches for critical ops
+    
+    // Add critical operation batches first
+    for (let i = 0; i < criticalOperations.length; i += criticalBatchSize) {
+      batches.push(criticalOperations.slice(i, i + criticalBatchSize));
+    }
+    
+    // Add normal and low priority operations in regular batches
+    const remainingOperations = [...normalOperations, ...lowOperations];
+    for (let i = 0; i < remainingOperations.length; i += maxBatchSize) {
+      batches.push(remainingOperations.slice(i, i + maxBatchSize));
     }
 
+    console.log(`BatchOperationsService: Created ${batches.length} batches (${criticalOperations.length} critical, ${normalOperations.length} normal, ${lowOperations.length} low priority)`);
     return batches;
   }
 
@@ -737,6 +772,71 @@ export class BatchOperationsService {
   clearPendingOperations(): void {
     console.warn('BatchOperationsService: Clearing all pending operations');
     this.pendingOperations.clear();
+  }
+
+  /**
+   * Promote operation to critical priority
+   * Used by critical operations service to elevate important operations
+   */
+  promoteToCritical(operationId: string): boolean {
+    const operation = this.pendingOperations.get(operationId);
+    if (!operation) {
+      console.warn(`BatchOperationsService: Cannot promote operation ${operationId} - not found`);
+      return false;
+    }
+
+    if (operation.priority === 'critical') {
+      return true; // Already critical
+    }
+
+    operation.priority = 'critical';
+    console.log(`BatchOperationsService: Promoted operation ${operationId} to critical priority`);
+    
+    // Trigger immediate processing if we're not already processing and we're online
+    if (!this.isProcessing && offlineStatusService.isOnline()) {
+      this.scheduleProcessing();
+    }
+    
+    return true;
+  }
+
+  /**
+   * Get operations by priority level
+   * Useful for monitoring and debugging
+   */
+  getOperationsByPriority(priority: 'critical' | 'normal' | 'low'): BatchOperation[] {
+    return Array.from(this.pendingOperations.values())
+      .filter(op => op.priority === priority);
+  }
+
+  /**
+   * Force immediate processing of critical operations only
+   * Used for urgent operations that need immediate sync
+   */
+  async forceProcessCriticalOperations(): Promise<void> {
+    if (this.isProcessing) {
+      console.log('BatchOperationsService: Already processing, cannot force critical operations');
+      return;
+    }
+
+    const criticalOperations = this.getOperationsByPriority('critical');
+    
+    if (criticalOperations.length === 0) {
+      console.log('BatchOperationsService: No critical operations to process');
+      return;
+    }
+
+    console.log(`BatchOperationsService: Force processing ${criticalOperations.length} critical operations`);
+    
+    this.isProcessing = true;
+    try {
+      // Create a single batch with only critical operations
+      await this.processBatch(criticalOperations);
+    } catch (error) {
+      console.error('BatchOperationsService: Error force processing critical operations:', error);
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   /**

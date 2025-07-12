@@ -18,8 +18,9 @@ import { ProfileManager } from '@/services/profileManager';
 import { offlineStatusService } from '@/services/offlineStatusService';
 import { batchOperationsService } from '@/services/batchOperationsService';
 import { retryManagementService } from '@/services/retryManagementService';
+import { criticalOperationsService } from '@/services/criticalOperationsService';
 
-import { queryClient } from '@/services/queryClient';
+import { queryClient, initializeQueryPersistence } from '@/services/queryClient';
 
 import { typography, spacing, touchTargets } from '@/constants/Theme';
 
@@ -58,6 +59,10 @@ export default function RootLayout() {
       // Service is already initialized on import
       // Initialize RetryManagementService to start monitoring failed operations
       // Service is already initialized on import
+      // Initialize CriticalOperationsService for offline-first critical operations
+      // Service is already initialized on import
+      // Initialize query persistence for critical data
+      initializeQueryPersistence();
     }
   }, [loaded]);
 

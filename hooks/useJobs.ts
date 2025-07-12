@@ -23,7 +23,7 @@ export interface JobLocation {
   longitude: number;
   job_type: 'service' | 'inspection' | 'emergency';
   business_category?: 'Demand' | 'Maintenance';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   scheduled_start?: string;
   scheduled_end?: string;
@@ -438,22 +438,40 @@ export const useDeleteJob = () => {
 /**
  * Mark job as completed
  * Special mutation for completing jobs with completion notes
+ * ENHANCED: Uses critical operations service for offline-first updates
  */
 export const useCompleteJob = () => {
   const updateJobMutation = useUpdateJob();
 
   return useMutation({
-    mutationFn: async ({ jobId, completionNotes, actualEnd }: { 
+    mutationFn: async ({ jobId, completionNotes, actualEnd, location }: { 
       jobId: string; 
       completionNotes?: string;
       actualEnd?: string;
+      location?: { latitude: number; longitude: number };
     }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'completed',
+        previousStatus: 'in_progress', // Assume it was in progress
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation for additional fields
       return updateJobMutation.mutateAsync({
         jobId,
         updates: {
           status: 'completed',
           completion_notes: completionNotes,
           actual_end: actualEnd || new Date().toISOString(),
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
         },
       });
     },
@@ -463,20 +481,76 @@ export const useCompleteJob = () => {
 /**
  * Start job (mark as in_progress)
  * Special mutation for starting jobs
+ * ENHANCED: Uses critical operations service for offline-first updates
  */
 export const useStartJob = () => {
   const updateJobMutation = useUpdateJob();
 
   return useMutation({
-    mutationFn: async ({ jobId, actualStart }: { 
+    mutationFn: async ({ jobId, actualStart, location }: { 
       jobId: string; 
       actualStart?: string;
+      location?: { latitude: number; longitude: number };
     }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'in_progress',
+        previousStatus: 'pending', // Assume it was pending
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation for additional fields
       return updateJobMutation.mutateAsync({
         jobId,
         updates: {
           status: 'in_progress',
           actual_start: actualStart || new Date().toISOString(),
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
+        },
+      });
+    },
+  });
+};
+
+/**
+ * Pause job (mark as paused)
+ * Special mutation for pausing jobs with offline-first support
+ */
+export const usePauseJob = () => {
+  const updateJobMutation = useUpdateJob();
+
+  return useMutation({
+    mutationFn: async ({ jobId, location }: { 
+      jobId: string; 
+      location?: { latitude: number; longitude: number };
+    }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'paused',
+        previousStatus: 'in_progress', // Assume it was in progress
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation
+      return updateJobMutation.mutateAsync({
+        jobId,
+        updates: {
+          status: 'paused',
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
         },
       });
     },

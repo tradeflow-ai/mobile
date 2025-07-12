@@ -1,9 +1,109 @@
 /**
  * TanStack Query Client Configuration
  * Centralized configuration for all data fetching and caching
+ * ENHANCED: Includes persistence for critical data
  */
 
 import { QueryClient } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ==================== PERSISTENCE CONFIGURATION ====================
+
+/**
+ * Critical data that should be persisted for offline access
+ * These are high-priority queries that users need access to offline
+ */
+const CRITICAL_QUERY_PATTERNS = [
+  'jobs',          // All job data
+  'inventory',     // Inventory items and quantities
+  'routes',        // Route information
+  'daily-plan',    // Daily plans
+  'profile',       // User profile data
+];
+
+/**
+ * Check if a query should be persisted based on its key
+ */
+const shouldPersistQuery = (queryKey: readonly unknown[]): boolean => {
+  const keyString = queryKey.join('.');
+  return CRITICAL_QUERY_PATTERNS.some(pattern => keyString.includes(pattern));
+};
+
+/**
+ * Custom persister for critical TanStack Query data
+ * Stores only essential data offline using AsyncStorage
+ */
+const queryPersister = {
+  persistClient: async (client: any) => {
+    try {
+      const criticalData = {
+        clientState: {
+          queries: Array.from(client.queries.entries())
+            .filter((entry: any) => shouldPersistQuery(entry[0]))
+            .map((entry: any) => {
+              const [queryKey, query] = entry;
+              return {
+                queryKey,
+                queryHash: query.queryHash,
+                data: query.state.data,
+                dataUpdatedAt: query.state.dataUpdatedAt,
+                isStale: query.isStale(),
+              };
+            })
+            .slice(0, 50), // Limit to 50 most important queries
+          timestamp: Date.now(),
+        },
+      };
+
+      await AsyncStorage.setItem(
+        'tanstack-query-offline-cache', 
+        JSON.stringify(criticalData)
+      );
+      
+      console.log(`QueryClient: Persisted ${criticalData.clientState.queries.length} critical queries`);
+    } catch (error) {
+      console.error('QueryClient: Error persisting critical data:', error);
+    }
+  },
+
+  restoreClient: async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('tanstack-query-offline-cache');
+      
+      if (!storedData) {
+        console.log('QueryClient: No persisted data found');
+        return undefined;
+      }
+
+      const parsedData = JSON.parse(storedData);
+      const age = Date.now() - parsedData.clientState.timestamp;
+      
+      // Only restore data that's less than 24 hours old
+      if (age > 24 * 60 * 60 * 1000) {
+        console.log('QueryClient: Persisted data too old, ignoring');
+        await AsyncStorage.removeItem('tanstack-query-offline-cache');
+        return undefined;
+      }
+
+      console.log(`QueryClient: Restored ${parsedData.clientState.queries.length} critical queries`);
+      return parsedData.clientState;
+    } catch (error) {
+      console.error('QueryClient: Error restoring critical data:', error);
+      return undefined;
+    }
+  },
+
+  removeClient: async () => {
+    try {
+      await AsyncStorage.removeItem('tanstack-query-offline-cache');
+      console.log('QueryClient: Cleared persisted cache');
+    } catch (error) {
+      console.error('QueryClient: Error clearing persisted cache:', error);
+    }
+  },
+};
+
+// ==================== QUERY CLIENT CONFIGURATION ====================
 
 // Create a query client with optimized defaults
 export const queryClient = new QueryClient({
@@ -745,6 +845,129 @@ export const cacheWarming = {
     );
     
     await Promise.all(promises);
+  },
+};
+
+// ==================== ENHANCED PERSISTENCE UTILITIES ====================
+
+/**
+ * Initialize query persistence on app startup
+ * Call this when the app starts to restore persisted critical data
+ */
+export const initializeQueryPersistence = async () => {
+  try {
+    const restoredState = await queryPersister.restoreClient();
+    
+    if (restoredState?.queries) {
+      // Restore critical queries to the cache
+      restoredState.queries.forEach((queryData: any) => {
+        if (queryData.data) {
+          queryClient.setQueryData(queryData.queryKey, queryData.data);
+        }
+      });
+      
+      console.log(`QueryClient: Initialized with ${restoredState.queries.length} persisted queries`);
+    }
+  } catch (error) {
+    console.error('QueryClient: Error initializing persistence:', error);
+  }
+};
+
+/**
+ * Manually persist current critical data
+ * Useful for explicit save points or before app backgrounding
+ */
+export const persistCriticalData = async () => {
+  try {
+    await queryPersister.persistClient(queryClient);
+  } catch (error) {
+    console.error('QueryClient: Error persisting critical data:', error);
+  }
+};
+
+/**
+ * Clear all persisted query data
+ * Useful for logout or data reset scenarios
+ */
+export const clearPersistedData = async () => {
+  try {
+    await queryPersister.removeClient();
+  } catch (error) {
+    console.error('QueryClient: Error clearing persisted data:', error);
+  }
+};
+
+/**
+ * Enhanced cache utilities for critical operations
+ */
+export const criticalCacheUtils = {
+  /**
+   * Ensure critical data is available offline
+   * Prefetches and pins critical queries to cache
+   */
+  prefetchCriticalData: async (userId: string) => {
+    const criticalQueries = [
+      // User's jobs
+      { queryKey: queryKeys.jobs(), enabled: true },
+      // Today's jobs specifically
+      { queryKey: ['jobs', 'today'], enabled: true },
+      // User inventory
+      { queryKey: queryKeys.inventory(), enabled: true },
+      // Active route
+      { queryKey: queryKeys.activeRoute(), enabled: true },
+      // User profile
+      { queryKey: queryKeys.profile(userId), enabled: true },
+    ];
+
+    const prefetchPromises = criticalQueries.map(({ queryKey }) =>
+      queryClient.prefetchQuery({
+        queryKey,
+        staleTime: 1000 * 60 * 30, // 30 minutes
+        gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      }).catch(error => {
+        console.warn(`Failed to prefetch ${queryKey.join('.')}:`, error);
+      })
+    );
+
+    await Promise.allSettled(prefetchPromises);
+    console.log('QueryClient: Critical data prefetch completed');
+  },
+
+  /**
+   * Get offline-available data for critical operations
+   * Returns cached data even if stale for offline scenarios
+   */
+  getOfflineData: <T>(queryKey: readonly unknown[]): T | undefined => {
+    const query = queryClient.getQueryCache().find({ queryKey });
+    return query?.state.data as T;
+  },
+
+  /**
+   * Mark data as critical and persist immediately
+   */
+  setCriticalData: async <T>(queryKey: readonly unknown[], data: T) => {
+    queryClient.setQueryData(queryKey, data);
+    
+    // If this is critical data, persist immediately
+    if (shouldPersistQuery(queryKey)) {
+      await persistCriticalData();
+    }
+  },
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  getCacheStats: () => {
+    const queries = queryClient.getQueryCache().getAll();
+    const criticalQueries = queries.filter(q => shouldPersistQuery(q.queryKey));
+    
+    return {
+      totalQueries: queries.length,
+      criticalQueries: criticalQueries.length,
+      cachedData: queries.filter(q => q.state.data !== undefined).length,
+      staleQueries: queries.filter(q => q.isStale()).length,
+      errorQueries: queries.filter(q => q.state.error !== null).length,
+    };
   },
 };
 
