@@ -50,21 +50,35 @@ export default function PlanYourDayIndex() {
    * Handle automatic navigation based on daily plan status - New 2-step workflow
    */
   useEffect(() => {
-    if (!dailyPlan || isProcessing) return;
+    console.log('🔍 NAVIGATION EFFECT: Checking navigation conditions');
+    console.log('🔍 dailyPlan exists:', !!dailyPlan);
+    console.log('🔍 isProcessing:', isProcessing);
+    console.log('🔍 dailyPlan.status:', dailyPlan?.status);
+    console.log('🔍 currentStep:', currentStep);
+    
+    if (!dailyPlan || isProcessing) {
+      console.log('🔍 NAVIGATION: Skipping navigation - no plan or still processing');
+      return;
+    }
+
+    console.log('🔍 NAVIGATION: Determining route for status:', dailyPlan.status);
 
     // Navigate to appropriate step based on current status
     switch (dailyPlan.status) {
       case 'dispatcher_complete':
       case 'awaiting_confirmation':
+        console.log('🔍 NAVIGATION: Navigating to dispatcher-confirmation');
         // Show dispatcher results for user confirmation
         router.push('/plan-your-day/dispatcher-confirmation');
         break;
       case 'ready_for_execution':
       case 'hardware_store_added':
+        console.log('🔍 NAVIGATION: Navigating to inventory-results (NOT inventory-checklist)');
         // Show inventory results and final plan
         router.push('/plan-your-day/inventory-results');
         break;
       case 'approved':
+        console.log('🔍 NAVIGATION: Planning complete, showing success alert');
         // Planning complete - show success and navigate to execution
         Alert.alert(
           'Planning Complete!',
@@ -75,6 +89,8 @@ export default function PlanYourDayIndex() {
           ]
         );
         break;
+      default:
+        console.log('🔍 NAVIGATION: No navigation rule for status:', dailyPlan.status);
     }
   }, [dailyPlan?.status, currentStep, isProcessing, router, hasHardwareStoreJob]);
 

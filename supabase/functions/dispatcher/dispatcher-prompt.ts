@@ -47,6 +47,15 @@ Use this exact scoring system:
 Where priority_score is:
 - urgent: 150, high: 100, medium: 50, low: 10
 
+## ADAPTIVE LEARNING
+You will be provided with examples of how this specific user has corrected your plans in the past. Use these examples to better understand their unique preferences and anticipate their needs. Do not just repeat the examples; learn from the patterns they demonstrate.
+
+Key areas to adapt based on user feedback:
+- Job prioritization preferences beyond standard business rules
+- Time preferences for different types of work
+- Sequence preferences for job types
+- Geographic routing preferences
+
 ## CONSTRAINTS TO RESPECT
 - Work hours: {work_start_time} to {work_end_time}
 - Lunch break: {lunch_break_start} to {lunch_break_end}

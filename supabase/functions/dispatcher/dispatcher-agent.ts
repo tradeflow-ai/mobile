@@ -67,7 +67,7 @@ export class DispatcherAgent {
     this.openai = new OpenAIClient();
   }
 
-  async execute(context: AgentContext): Promise<DispatchOutput> {
+  async execute(context: AgentContext, learnedExamples: string[] = []): Promise<DispatchOutput> {
     const startTime = Date.now();
     
     try {
@@ -102,7 +102,7 @@ export class DispatcherAgent {
       const preferences = profile?.preferences || {};
 
       // Core dispatch algorithm with AI reasoning
-      const dispatchResult = await this.executeAIDispatch(effectiveJobs, preferences, context.planDate);
+      const dispatchResult = await this.executeAIDispatch(effectiveJobs, preferences, context.planDate, learnedExamples);
 
       console.log(`✅ Dispatcher complete: ${dispatchResult.prioritized_jobs.length} jobs prioritized in ${Date.now() - startTime}ms`);
       return dispatchResult;
@@ -116,7 +116,7 @@ export class DispatcherAgent {
   /**
    * Execute AI-powered dispatch with unified prompt
    */
-  private async executeAIDispatch(jobs: any[], preferences: any, planDate: string): Promise<DispatchOutput> {
+  private async executeAIDispatch(jobs: any[], preferences: any, planDate: string, learnedExamples: string[] = []): Promise<DispatchOutput> {
     const startTime = Date.now();
 
     try {
@@ -146,6 +146,14 @@ export class DispatcherAgent {
       };
 
       // Create user prompt with explicit JSON formatting instructions
+      const adaptiveLearningSection = learnedExamples.length > 0 ? `
+        ADAPTIVE LEARNING - USER PREFERENCES:
+        Based on your past corrections, I've learned these patterns about your preferences:
+        ${learnedExamples.map((example, index) => `${index + 1}. ${example}`).join('\n        ')}
+        
+        Please apply these learned preferences when prioritizing and scheduling jobs.
+        ` : '';
+
       const userPrompt = `
         Please analyze and optimize the following ${jobs.length} jobs for ${planDate}:
 
@@ -155,11 +163,14 @@ export class DispatcherAgent {
         USER CONSTRAINTS:
         ${JSON.stringify(constraintData, null, 2)}
 
+        ${adaptiveLearningSection}
+
         Please return a complete dispatch plan with:
         1. Jobs prioritized by business rules (Emergency → Inspection → Service)
         2. Geographic optimization within each priority tier
         3. Complete scheduling with time estimates
         4. Clear reasoning for your decisions
+        5. Apply learned user preferences from past corrections
 
         IMPORTANT: Return ONLY a valid JSON object matching the DispatchOutput interface. 
         Do not include any markdown formatting, explanations, or additional text. 

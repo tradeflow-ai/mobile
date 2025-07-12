@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { InventoryAgent } from './inventory-agent.ts'
+// TODO: Re-add agent learning service when available in edge function context
+// import { agentLearningService } from '../../../services/agentLearningService.ts'
 
 interface AnalyzeInventoryRequest {
   userId: string;
@@ -81,6 +83,11 @@ serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Get learned examples for adaptive learning
+    console.log('🧠 Inventory: Getting learned examples for user:', userId)
+    // const learnedExamples = await agentLearningService.getLearnedExamples(userId)
+    // console.log('🧠 Inventory: Found', learnedExamples.inventory.length, 'learned examples')
+
     console.log('🔍 Inventory Function: Creating inventory agent...');
     // Execute inventory agent
     const inventoryAgent = new InventoryAgent()
@@ -90,7 +97,7 @@ serve(async (req: Request) => {
       userId,
       jobIds,
       dispatchOutput
-    })
+    }, []) // Pass an empty array as learnedExamples is removed
 
     console.log('🔍 Inventory Function: Agent execution completed, preparing response...');
     const response: AnalyzeInventoryResponse = {

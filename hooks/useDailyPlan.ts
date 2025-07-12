@@ -15,6 +15,7 @@ import { AgentService } from '@/services/agentService';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/queryClient';
 import { JobLocation } from './useJobs';
+import { supabase } from '@/services/supabase';
 
 interface UseDailyPlanOptions {
   /**
@@ -315,6 +316,27 @@ export const useDailyPlan = (
           // Fetch the full job details from the cache or network
           const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
             queryKey: queryKeys.job(firstJobId),
+            queryFn: async (): Promise<JobLocation | null> => {
+              if (!user?.id) {
+                throw new Error('No authenticated user');
+              }
+
+              const { data, error } = await supabase
+                .from('job_locations')
+                .select('*')
+                .eq('id', firstJobId)
+                .eq('user_id', user.id)
+                .single();
+
+              if (error) {
+                if (error.code === 'PGRST116') {
+                  return null; // Job not found
+                }
+                throw error;
+              }
+
+              return data;
+            },
           });
 
           if (jobDetails) {

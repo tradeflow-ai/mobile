@@ -61,6 +61,17 @@ export default function InventoryChecklistScreen() {
     isConnected,
   } = useTodaysPlan();
   
+  // 🔍 DEBUG: Component render state
+  console.log('🔍 INVENTORY CHECKLIST RENDER:', {
+    hasDaily: !!dailyPlan,
+    isLoading,
+    error,
+    status: dailyPlan?.status,
+    step: dailyPlan?.current_step,
+    hasInventoryOutput: !!dailyPlan?.inventory_output,
+    inventoryOutputKeys: dailyPlan?.inventory_output ? Object.keys(dailyPlan.inventory_output) : null,
+  });
+  
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -71,40 +82,92 @@ export default function InventoryChecklistScreen() {
    */
   useEffect(() => {
     if (dailyPlan?.inventory_output) {
+      console.log('🔍 INVENTORY USEEFFECT: Starting data transformation');
+      console.log('🔍 Raw inventory_output:', JSON.stringify(dailyPlan.inventory_output, null, 2));
+      
       const inventoryOutput = dailyPlan.inventory_output as InventoryOutput;
       
-      // Convert parts manifest to inventory items
+      // Check if the structure exists
+      if (!inventoryOutput.inventory_analysis) {
+        console.log('❌ INVENTORY USEEFFECT: No inventory_analysis found in output');
+        console.log('🔍 Available keys:', Object.keys(inventoryOutput));
+        return;
+      }
+      
+      console.log('✅ INVENTORY USEEFFECT: Found inventory_analysis');
+      console.log('🔍 inventory_analysis keys:', Object.keys(inventoryOutput.inventory_analysis));
+      console.log('🔍 parts_needed length:', inventoryOutput.inventory_analysis.parts_needed?.length || 0);
+      console.log('🔍 shopping_list length:', inventoryOutput.inventory_analysis.shopping_list?.length || 0);
+      console.log('🔍 current_stock length:', inventoryOutput.inventory_analysis.current_stock?.length || 0);
+      
+      // FIXED: Access the actual data structure from the agent
+      // Agent returns: inventory_analysis.parts_needed and inventory_analysis.shopping_list
+      // UI was expecting: parts_manifest and shopping_list at top level
+      
+      // Convert parts_needed to inventory items (simulating parts_manifest structure)
       const items: InventoryItem[] = [];
-      inventoryOutput.parts_manifest.forEach(jobParts => {
-        jobParts.required_parts.forEach(part => {
-          items.push({
-            id: part.inventory_item_id,
-            jobId: jobParts.job_id,
+      
+      // Group parts by job_id to create the parts_manifest structure
+      const partsByJob = inventoryOutput.inventory_analysis.parts_needed.reduce((acc, part) => {
+        part.job_ids.forEach(jobId => {
+          if (!acc[jobId]) {
+            acc[jobId] = [];
+          }
+          acc[jobId].push(part);
+        });
+        return acc;
+      }, {} as Record<string, typeof inventoryOutput.inventory_analysis.parts_needed>);
+      
+      console.log('🔍 INVENTORY USEEFFECT: Parts grouped by job:', Object.keys(partsByJob));
+      
+      // Convert to inventory items format
+      Object.entries(partsByJob).forEach(([jobId, parts]) => {
+        console.log(`🔍 Processing job ${jobId} with ${parts.length} parts`);
+        parts.forEach((part, index) => {
+          // Find matching current_stock item
+          const stockItem = inventoryOutput.inventory_analysis.current_stock.find(
+            stock => stock.item_name === part.item_name
+          );
+          
+          const inventoryItem = {
+            id: `${jobId}-${index}`, // Generate unique ID
+            jobId: jobId,
             name: part.item_name,
-            quantityNeeded: part.quantity_needed,
-            quantityAvailable: part.quantity_available,
-            unit: part.unit,
+            quantityNeeded: part.quantity,
+            quantityAvailable: stockItem?.quantity_available || 0,
+            unit: 'pcs', // Default unit since not in parts_needed
             category: part.category,
-            isAvailable: part.quantity_available >= part.quantity_needed,
-            isChecked: part.quantity_available >= part.quantity_needed,
-          });
+            isAvailable: stockItem ? stockItem.sufficient : false,
+            isChecked: stockItem ? stockItem.sufficient : false,
+          };
+          
+          items.push(inventoryItem);
+          console.log(`🔍 Added inventory item: ${inventoryItem.name}`);
         });
       });
+      
+      console.log(`🔍 INVENTORY USEEFFECT: Created ${items.length} inventory items`);
       setInventoryItems(items);
       
-      // Convert shopping list to shopping items
-      const shopping: ShoppingItem[] = inventoryOutput.shopping_list.map((item, index) => ({
+      // FIXED: Access shopping_list from inventory_analysis
+      const shopping: ShoppingItem[] = inventoryOutput.inventory_analysis.shopping_list.map((item, index) => ({
         id: `shopping-${index}`,
         name: item.item_name,
-        quantityNeeded: item.quantity_needed,
-        unit: item.unit,
-        category: item.category,
+        quantityNeeded: item.quantity_to_buy,
+        unit: 'pcs', // Default unit since not in shopping_list
+        category: 'general', // Default category since not in shopping_list
         preferredSupplier: item.preferred_supplier,
         estimatedCost: item.estimated_cost,
         priority: item.priority,
         isChecked: false,
       }));
+      
+      console.log(`🔍 INVENTORY USEEFFECT: Created ${shopping.length} shopping items`);
       setShoppingItems(shopping);
+      
+      console.log('✅ INVENTORY USEEFFECT: Data transformation completed successfully');
+    } else {
+      console.log('❌ INVENTORY USEEFFECT: No inventory_output found, skipping transformation');
     }
   }, [dailyPlan?.inventory_output]);
 
@@ -286,10 +349,25 @@ export default function InventoryChecklistScreen() {
 
   // No inventory output available
   if (!dailyPlan?.inventory_output) {
+    // 🔍 DEBUG: Add comprehensive logging to understand the issue
+    console.log('🔍 INVENTORY CHECKLIST DEBUG: No inventory_output found');
+    console.log('🔍 dailyPlan exists:', !!dailyPlan);
+    console.log('🔍 dailyPlan.id:', dailyPlan?.id);
+    console.log('🔍 dailyPlan.status:', dailyPlan?.status);
+    console.log('🔍 dailyPlan.current_step:', dailyPlan?.current_step);
+    console.log('🔍 dailyPlan.inventory_output:', dailyPlan?.inventory_output);
+    console.log('🔍 dailyPlan keys:', dailyPlan ? Object.keys(dailyPlan) : 'null');
+    
+    // Check if we have ANY inventory data at all
+    if (dailyPlan?.inventory_output) {
+      console.log('🔍 inventory_output keys:', Object.keys(dailyPlan.inventory_output));
+      console.log('🔍 inventory_output.inventory_analysis:', dailyPlan.inventory_output.inventory_analysis);
+    }
+    
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <ErrorStepUI 
-          error="No inventory data available to review"
+          error={`No inventory data available to review. Status: ${dailyPlan?.status || 'unknown'}, Step: ${dailyPlan?.current_step || 'unknown'}`}
           onRetry={() => router.back()}
           retryText="Go Back"
         />
@@ -297,6 +375,10 @@ export default function InventoryChecklistScreen() {
     );
   }
 
+  // 🔍 DEBUG: Log the actual inventory output structure
+  console.log('🔍 INVENTORY CHECKLIST SUCCESS: Found inventory_output');
+  console.log('🔍 inventory_output structure:', JSON.stringify(dailyPlan.inventory_output, null, 2));
+  
   const inventoryOutput = dailyPlan.inventory_output as InventoryOutput;
 
   return (

@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { DispatcherAgent } from './dispatcher-agent.ts'
+// TODO: Re-add agent learning service when available in edge function context
+// import { agentLearningService } from '../../../services/agentLearningService.ts'
 
 interface DispatchJobsRequest {
   userId: string;
@@ -12,6 +14,11 @@ interface DispatchJobsResponse {
   success: boolean;
   dispatch_output?: any;
   error?: string;
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req: Request) => {
@@ -59,13 +66,18 @@ serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Execute dispatcher agent
+    // Get learned examples for adaptive learning
+    console.log('🧠 Dispatcher: Getting learned examples for user:', userId)
+    // const learnedExamples = await agentLearningService.getLearnedExamples(userId)
+    // console.log('🧠 Dispatcher: Found', learnedExamples.dispatcher.length, 'learned examples')
+
+    // Execute dispatcher agent with learned examples
     const dispatcher = new DispatcherAgent()
     const dispatchResult = await dispatcher.execute({
       userId,
       jobIds,
       planDate
-    })
+    }, []) // Pass an empty array as learnedExamples is removed
 
     const response: DispatchJobsResponse = {
       success: true,
