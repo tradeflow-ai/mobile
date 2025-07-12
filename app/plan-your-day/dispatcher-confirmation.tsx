@@ -309,7 +309,7 @@ export default function DispatcherConfirmationScreen() {
         <View style={styles.actions}>
           <Button
             title="Modify Schedule"
-            onPress={() => Alert.alert('Feature Coming Soon', 'Schedule modification will be available in a future update.')}
+            onPress={() => router.push('/plan-your-day/modify-plan')}
             variant="outline"
             style={styles.modifyButton}
           />

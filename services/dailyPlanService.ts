@@ -426,12 +426,13 @@ export class DailyPlanService {
     planId: string, 
     dispatcherOutput: DispatcherOutput
   ): Promise<{ data: DailyPlan | null; error: any }> {
+    const totalDuration = this.calculateTotalDuration(dispatcherOutput);
     return await this.updateDailyPlan({
       id: planId,
       status: 'dispatcher_complete',
       current_step: 'confirmation',
       dispatcher_output: dispatcherOutput,
-      total_estimated_duration: this.calculateTotalDuration(dispatcherOutput)
+      total_estimated_duration: totalDuration !== null ? totalDuration : undefined
     });
   }
 
@@ -676,6 +677,140 @@ export class DailyPlanService {
       return { data: jobs, error: null };
     } catch (error) {
       console.error('Error getting all jobs for plan:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Update dispatcher output with user modifications
+   */
+  static async updateDispatcherOutputWithModifications(
+    planId: string,
+    jobReordering: Array<{
+      job_id: string;
+      new_priority_rank: number;
+      new_estimated_start_time: string;
+      new_estimated_end_time: string;
+      new_travel_time_to_next: number;
+      timestamp: string;
+    }>,
+    routeRecalculation: {
+      total_duration: number;
+      total_travel_time: number;
+      recalculated_at: string;
+    }
+  ): Promise<{ data: DailyPlan | null; error: any }> {
+    try {
+      const { data: plan, error: planError } = await this.getDailyPlanById(planId);
+      if (planError) throw planError;
+
+      if (!plan) {
+        throw new Error('Daily plan not found');
+      }
+
+      // Update the dispatcher output with new job order
+      const updatedDispatcherOutput = { ...plan.dispatcher_output };
+      
+      if (updatedDispatcherOutput.prioritized_jobs) {
+        // Create a map of job reordering for quick lookup
+        const reorderingMap = new Map(
+          jobReordering.map(item => [item.job_id, item])
+        );
+
+        // Update the prioritized jobs with new order and times
+        updatedDispatcherOutput.prioritized_jobs = updatedDispatcherOutput.prioritized_jobs
+          .map(job => {
+            const reorderInfo = reorderingMap.get(job.job_id);
+            if (reorderInfo) {
+              return {
+                ...job,
+                priority_rank: reorderInfo.new_priority_rank,
+                estimated_start_time: reorderInfo.new_estimated_start_time,
+                estimated_end_time: reorderInfo.new_estimated_end_time,
+                travel_time_to_next: reorderInfo.new_travel_time_to_next,
+              };
+            }
+            return job;
+          })
+          .sort((a, b) => a.priority_rank - b.priority_rank);
+
+        // Update optimization summary with new totals
+        if (updatedDispatcherOutput.optimization_summary) {
+          updatedDispatcherOutput.optimization_summary.total_travel_time = routeRecalculation.total_travel_time;
+        }
+      }
+
+             // Save the updated plan
+       const { data: updatedPlan, error: updateError } = await this.updateDailyPlan({
+         id: planId,
+         dispatcher_output: updatedDispatcherOutput,
+         total_estimated_duration: routeRecalculation.total_duration || undefined,
+         total_distance: (routeRecalculation.total_travel_time / 60 * 50) || undefined, // Rough distance estimation
+       });
+
+      if (updateError) throw updateError;
+
+      return { data: updatedPlan, error: null };
+    } catch (error) {
+      console.error('Error updating dispatcher output with modifications:', error);
+      return { data: null, error };
+    }
+  }
+
+     /**
+    * Recalculate total estimated duration with modifications
+    */
+   static calculateTotalDurationWithModifications(
+     dispatcherOutput: DispatcherOutput,
+     modifications?: {
+       total_duration: number;
+       total_travel_time: number;
+     }
+   ): number | undefined {
+     try {
+       // If modifications are provided, use them
+       if (modifications) {
+         return modifications.total_duration + modifications.total_travel_time;
+       }
+
+       // Otherwise, calculate from dispatcher output
+       const result = this.calculateTotalDuration(dispatcherOutput);
+       return result !== null ? result : undefined;
+     } catch (error) {
+       console.warn('Error calculating total duration with modifications:', error);
+       return undefined;
+     }
+   }
+
+  /**
+   * Get job location data for route calculation
+   */
+  static async getJobLocationsForPlan(planId: string): Promise<{ data: Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+    estimated_duration: number;
+  }> | null; error: any }> {
+    try {
+      const { data: jobs, error: jobsError } = await this.getAllJobsForPlan(planId);
+      if (jobsError) throw jobsError;
+
+      if (!jobs) {
+        return { data: [], error: null };
+      }
+
+      const jobLocations = jobs.map(job => ({
+        id: job.id,
+        latitude: job.latitude,
+        longitude: job.longitude,
+        address: job.address,
+        estimated_duration: job.estimated_duration || 60, // Default 1 hour
+      }));
+
+      return { data: jobLocations, error: null };
+    } catch (error) {
+      console.error('Error getting job locations for plan:', error);
       return { data: null, error };
     }
   }

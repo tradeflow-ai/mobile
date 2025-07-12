@@ -42,7 +42,20 @@ export default function InventoryResultsScreen() {
       // Confirm final inventory and approve plan
       await confirmInventory();
       
-      // Navigation will be handled by the main screen
+      // Show success message and navigate to home
+      Alert.alert(
+        'Planning Complete! 🎉',
+        `Your daily plan is ready${hasHardwareStoreJob ? ' with hardware store stop' : ''}. Time to start your day!`,
+        [
+          {
+            text: 'Start Working',
+            onPress: () => {
+              // Replace the entire navigation stack to go to home tab
+              router.replace('/(tabs)');
+            },
+          },
+        ]
+      );
     } catch (err) {
       Alert.alert(
         'Error',
@@ -263,7 +276,7 @@ export default function InventoryResultsScreen() {
         <View style={styles.actions}>
           <Button
             title="Modify Plan"
-            onPress={() => Alert.alert('Feature Coming Soon', 'Plan modification will be available in a future update.')}
+            onPress={() => router.push('/plan-your-day/modify-plan')}
             variant="outline"
             style={styles.modifyButton}
           />

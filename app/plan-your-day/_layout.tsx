@@ -118,6 +118,31 @@ export default function PlanYourDayLayout() {
             ),
           })}
         />
+        
+        <Stack.Screen 
+          name="modify-plan"
+          options={({ navigation }) => ({
+            presentation: 'modal',
+            title: 'Modify Plan',
+            headerBackTitle: '',
+            headerLeft: () => (
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                style={{
+                  ...touchTargets.styles.minimum,
+                  ...spacing.helpers.paddingHorizontal('s'),
+                  justifyContent: 'center',
+                }}
+              >
+                <FontAwesome 
+                  name="arrow-left" 
+                  size={20} 
+                  color={colors.primary} 
+                />
+              </TouchableOpacity>
+            ),
+          })}
+        />
       </Stack>
     </ErrorBoundary>
   );
