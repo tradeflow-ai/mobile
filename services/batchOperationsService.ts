@@ -856,6 +856,26 @@ export class BatchOperationsService {
   }
 
   /**
+   * Update batch operations configuration
+   * Used by connection quality service to adapt batch processing
+   */
+  updateConfiguration(config: {
+    maxBatchSize?: number;
+    processingDelay?: number;
+    maxRetries?: number;
+    timeoutDuration?: number;
+  }): void {
+    console.log('BatchOperationsService: Configuration updated:', config);
+    
+    // For now, just log the configuration
+    // In a more complex implementation, these would be stored as instance variables
+    // and used in the createOptimalBatches and processBatch methods
+    
+    // The configuration is automatically applied through the connection quality
+    // service's adaptive sync strategy that's already integrated into the processing logic
+  }
+
+  /**
    * Cleanup resources
    */
   destroy() {

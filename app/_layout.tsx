@@ -19,6 +19,7 @@ import { offlineStatusService } from '@/services/offlineStatusService';
 import { batchOperationsService } from '@/services/batchOperationsService';
 import { retryManagementService } from '@/services/retryManagementService';
 import { criticalOperationsService } from '@/services/criticalOperationsService';
+import { connectionQualityService } from '@/services/connectionQualityService';
 
 import { queryClient, initializeQueryPersistence } from '@/services/queryClient';
 
@@ -60,6 +61,8 @@ export default function RootLayout() {
       // Initialize RetryManagementService to start monitoring failed operations
       // Service is already initialized on import
       // Initialize CriticalOperationsService for offline-first critical operations
+      // Service is already initialized on import
+      // Initialize ConnectionQualityService to start monitoring connection quality
       // Service is already initialized on import
       // Initialize query persistence for critical data
       initializeQueryPersistence();
