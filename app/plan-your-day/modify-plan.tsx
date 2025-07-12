@@ -22,6 +22,7 @@ import { useJob } from '@/hooks/useJobs';
 import { LoadingStepUI } from '@/components/LoadingStepUI';
 import { ErrorStepUI } from '@/components/ErrorStepUI';
 import { CoordinateService } from '@/services/routing';
+import { formatTimeString } from '@/utils/dateUtils';
 import type { DispatcherOutput } from '@/services/dailyPlanService';
 
 interface ModifiableJob {
@@ -72,17 +73,6 @@ export default function ModifyPlanScreen() {
    */
   const JobCard = React.memo(({ job, isDragging }: { job: ModifiableJob; isDragging: boolean }) => {
     const { data: jobDetails } = useJob(job.job_id);
-    
-    const formatTime = (timeString: string) => {
-      try {
-        return new Date(timeString).toLocaleTimeString([], { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        });
-      } catch {
-        return timeString;
-      }
-    };
 
     const getJobTypeColor = (jobType: string) => {
       switch (jobType) {
@@ -129,7 +119,7 @@ export default function ModifyPlanScreen() {
                 📍 {jobDetails?.address || job.address}
               </Text>
               <Text style={[styles.jobTime, { color: colors.text }]}>
-                ⏰ {formatTime(job.estimated_start_time)} - {formatTime(job.estimated_end_time)}
+                ⏰ {formatTimeString(job.estimated_start_time)} - {formatTimeString(job.estimated_end_time)}
               </Text>
             </View>
           </View>

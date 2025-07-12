@@ -16,6 +16,7 @@ import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
 import { Button, Card, OptimisticStatusBar, BatchProgressBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
+import { TodaysCalendarJobList } from '@/components/TodaysCalendarJobList';
 
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 
@@ -169,18 +170,20 @@ export default function HomeScreen() {
 
            {/* Today's Calendar */}
            <View style={styles.scheduleSection}>
-                        <TouchableOpacity 
-             style={styles.scheduleHeader}
-             onPress={() => navigate('/calendar')}
-             activeOpacity={0.7}
-           >
-             <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-               Today's Calendar
-             </Text>
-           </TouchableOpacity>
+             <TouchableOpacity 
+               style={styles.scheduleHeader}
+               onPress={() => navigate('/calendar')}
+               activeOpacity={0.7}
+             >
+               <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+                 Today's Calendar
+               </Text>
+             </TouchableOpacity>
              
-             <Card style={styles.scheduleCard}>
-               {dailyPlan?.job_ids?.length ? (
+             {dailyPlan?.status === 'approved' && dailyPlan?.dispatcher_output?.prioritized_jobs?.length ? (
+               <TodaysCalendarJobList dailyPlan={dailyPlan} />
+             ) : dailyPlan?.job_ids?.length ? (
+               <Card style={styles.scheduleCard}>
                  <View style={styles.scheduleWithJobs}>
                    <Text style={[styles.scheduleStatus, { color: colors.success }]}>
                      {dailyPlan.status === 'approved' ? 
@@ -192,26 +195,39 @@ export default function HomeScreen() {
                      {dailyPlan.job_ids.length} jobs • {dailyPlan.total_estimated_duration ? `${Math.round(dailyPlan.total_estimated_duration / 60)}h` : 'Calculating'} estimated
                    </Text>
                  </View>
-               ) : (
-               <View style={styles.emptySchedule}>
-                 <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
-                 <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
-                   No jobs scheduled for today
-                 </Text>
-               </View>
-               )}
-               <TouchableOpacity 
-                 onPress={() => navigate('/calendar')} 
-                 style={[
-                   styles.viewFullSchedule,
-                   { borderTopColor: colors.border }
-                 ]}
-               >
-                 <Text style={[styles.viewFullScheduleText, { color: colors.primary }]}>
-                   View Full Calendar
-                 </Text>
-               </TouchableOpacity>
-             </Card>
+                 <TouchableOpacity 
+                   onPress={() => navigate('/calendar')} 
+                   style={[
+                     styles.viewFullSchedule,
+                     { borderTopColor: colors.border }
+                   ]}
+                 >
+                   <Text style={[styles.viewFullScheduleText, { color: colors.primary }]}>
+                     View Full Calendar
+                   </Text>
+                 </TouchableOpacity>
+               </Card>
+             ) : (
+               <Card style={styles.scheduleCard}>
+                 <View style={styles.emptySchedule}>
+                   <FontAwesome name="calendar-o" size={24} color={colors.placeholder} />
+                   <Text style={[styles.emptyScheduleText, { color: colors.placeholder }]}>
+                     No jobs scheduled for today
+                   </Text>
+                 </View>
+                 <TouchableOpacity 
+                   onPress={() => navigate('/calendar')} 
+                   style={[
+                     styles.viewFullSchedule,
+                     { borderTopColor: colors.border }
+                   ]}
+                 >
+                   <Text style={[styles.viewFullScheduleText, { color: colors.primary }]}>
+                     View Full Calendar
+                   </Text>
+                 </TouchableOpacity>
+               </Card>
+             )}
            </View>
 
           {/* Quick Actions */}

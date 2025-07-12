@@ -20,6 +20,7 @@ import { typography, spacing, radius } from '@/constants/Theme';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { LoadingStepUI } from '../../components/LoadingStepUI';
 import { ErrorStepUI } from '../../components/ErrorStepUI';
+import { formatTimeString } from '@/utils/dateUtils';
 import type { DispatchOutput } from '@/services/dailyPlanService';
 
 interface JobItem {
@@ -321,10 +322,7 @@ export default function CalendarReviewScreen() {
    * Format time display
    */
   const formatTime = (timeString: string) => {
-    return new Date(timeString).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return formatTimeString(timeString);
   };
 
   /**
