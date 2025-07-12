@@ -80,16 +80,18 @@ npx tsx test-complete-workflow.ts
 - Check OpenAI API key in environment variables
 - Verify Supabase connection is working
 - Review agent logs in mobile app console
-- Check LangGraph state transitions
+- Check edge function state transitions
+- Review agent execution flow 
+- Review prompt templates in `supabase/functions/`
 
 **Invalid Agent Responses:**
-- Review prompt templates in `agent/prompts/`
+- Review prompt templates in `supabase/functions/`
 - Check LLM temperature settings (should be ~0.1)
 - Verify agent output validation logic
 - Test with different input scenarios
 
 **State Transitions Fail:**
-- Check LangGraph state machine definition
+- Check edge function workflow orchestration
 - Verify Supabase real-time subscriptions
 - Review state validation logic
 - Check for race conditions in state updates

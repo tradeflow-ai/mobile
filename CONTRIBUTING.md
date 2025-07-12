@@ -81,14 +81,13 @@ Our team is organized into four distinct domains:
 | :--- | :--- | :--- |
 | **Frontend & UX Lead** | React Native, UI/UX, Expo Router, component development | Building Experiences |
 | **Backend & Data Lead** | TanStack Query, Supabase, database, API integration | Managing Data |
-| **AI & Systems Lead** | Agents, LLM prompts, LangGraph, AI-powered route optimization | The Brain |
+| **AI & Systems Lead** | Edge functions, LLM prompts, AI-powered route optimization | The Brain |
 
 ### Project Structure
 
 ```
 mobile/
 ├── _docs/           # All project documentation
-├── agent/           # LangGraph agentic crew logic
 ├── app/             # Screens and navigation (Expo Router)
 ├── assets/          # Static assets (fonts, images)
 ├── components/      # Reusable React components
@@ -97,6 +96,9 @@ mobile/
 ├── hooks/           # Custom React hooks
 ├── services/        # External service abstractions
 ├── store/           # Global state management (Jotai)
+├── supabase/        # Supabase configuration and edge functions
+│   ├── functions/   # Edge functions (dispatcher, inventory)
+│   └── migrations/  # Database migrations
 └── utils/           # Pure utility functions
 ```
 

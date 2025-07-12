@@ -292,10 +292,10 @@ export const useDailyPlan = (planDate: string) => {
 ### 1. Plan Initialization
 - User triggers "Plan Your Day"
 - Frontend creates new `daily_plans` record with `status: 'pending'`
-- LangGraph agent begins execution
+- Edge function workflow begins execution
 
-### 2. Agent State Updates
-- Each agent completion updates the database record
+### 2. Function State Updates
+- Each function completion updates the database record
 - Frontend receives real-time updates via subscription
 - UI transitions to next approval step
 
@@ -334,7 +334,7 @@ export const useDailyPlan = (planDate: string) => {
 - Validate UUIDs and foreign key references
 
 ### Backend Validation
-- LangGraph agents validate all outputs before saving
+- Edge functions validate all outputs before saving modifications
 - Database constraints enforce data integrity
 - RLS policies ensure user data security
 
@@ -355,19 +355,4 @@ export const useDailyPlan = (planDate: string) => {
 - Implement soft deletion for user data
 - Regular cleanup of error states
 
-## Testing Requirements
-
-### Unit Tests
-- Test each data structure parsing
-- Validate subscription handling
-- Test error state recovery
-
-### Integration Tests
-- Test agent state transitions
-- Verify real-time updates
-- Test user modification handling
-
-### E2E Tests
-- Full workflow from start to approval
-- Test error scenarios and recovery
-- Verify data persistence across sessions 
+ 

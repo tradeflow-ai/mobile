@@ -1,8 +1,8 @@
 /**
- * Daily Plan Service - LangGraph State Persistence
+ * Daily Plan Service - 2-Step Workflow State Management
  * 
  * This service handles all database operations for the daily_plans table,
- * providing state persistence for the LangGraph agent workflow.
+ * providing state persistence for the 2-step edge function workflow.
  */
 
 import { supabase } from './supabase';
@@ -12,10 +12,9 @@ import type { User } from '@supabase/supabase-js';
 export interface DailyPlan {
   id: string;
   user_id: string;
-  status: 'pending' | 'dispatch_complete' | 'route_complete' | 'inventory_complete' | 'approved' | 'cancelled' | 'error';
-  current_step: 'dispatch' | 'route' | 'inventory' | 'complete';
-  dispatch_output: DispatchOutput;
-  route_output: RouteOutput;
+  status: 'pending' | 'dispatcher_complete' | 'awaiting_confirmation' | 'inventory_analyzing' | 'inventory_complete' | 'hardware_store_added' | 'ready_for_execution' | 'approved' | 'cancelled' | 'error';
+  current_step: 'dispatcher' | 'confirmation' | 'inventory' | 'complete';
+  dispatcher_output: DispatcherOutput;
   inventory_output: InventoryOutput;
   user_modifications: UserModifications;
   preferences_snapshot: Record<string, any>;
@@ -32,15 +31,20 @@ export interface DailyPlan {
   completed_at: string | null;
 }
 
-export interface DispatchOutput {
+export interface DispatcherOutput {
   prioritized_jobs: Array<{
     job_id: string;
     priority_rank: number;
     estimated_start_time: string;
     estimated_end_time: string;
     priority_reason: string;
-    job_type: 'service' | 'inspection' | 'emergency';
+    job_type: 'emergency' | 'inspection' | 'service' | 'hardware_store';
     buffer_time_minutes: number;
+    priority_score: number;
+    scheduling_notes: string;
+    business_priority_tier: string;
+    geographic_reasoning: string;
+    travel_time_to_next: number;
   }>;
   scheduling_constraints: {
     work_start_time: string;
@@ -48,90 +52,77 @@ export interface DispatchOutput {
     lunch_break_start: string;
     lunch_break_end: string;
     total_work_hours: number;
+    total_jobs_scheduled: number;
+    schedule_conflicts: string[];
   };
   recommendations: string[];
   agent_reasoning: string;
   execution_time_ms: number;
+  optimization_summary: {
+    emergency_jobs: number;
+    inspection_jobs: number;
+    service_jobs: number;
+    total_travel_time: number;
+    route_efficiency: number;
+  };
 }
 
-export interface RouteOutput {
-  optimized_route: {
-    waypoints: Array<{
-      job_id: string;
-      sequence_number: number;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-      arrival_time: string;
-      departure_time: string;
-      duration_at_location: number;
-      travel_time_to_next: number;
-      distance_to_next: number;
-    }>;
-    route_geometry: string;
-    total_distance: number;
-    total_travel_time: number;
-    total_work_time: number;
-  };
-  alternative_routes?: Array<{
-    route_id: string;
-    total_distance: number;
-    total_time: number;
-    route_geometry: string;
-  }>;
-  agent_reasoning: string;
-  execution_time_ms: number;
-}
+
 
 export interface InventoryOutput {
-  parts_manifest: Array<{
-    job_id: string;
-    required_parts: Array<{
-      inventory_item_id: string;
+  inventory_analysis: {
+    parts_needed: Array<{
       item_name: string;
-      quantity_needed: number;
-      quantity_available: number;
-      unit: string;
+      quantity: number;
       category: string;
+      priority: 'critical' | 'important' | 'optional';
+      reason: string;
+      job_ids: string[];
     }>;
-  }>;
-  shopping_list: Array<{
-    item_name: string;
-    quantity_needed: number;
-    unit: string;
-    category: string;
+    current_stock: Array<{
+      item_name: string;
+      quantity_available: number;
+      quantity_needed: number;
+      sufficient: boolean;
+    }>;
+    shopping_list: Array<{
+      item_name: string;
+      quantity_to_buy: number;
+      estimated_cost: number;
+      preferred_supplier: string;
+      priority: 'critical' | 'important' | 'optional';
+      alternative_suppliers: string[];
+    }>;
+    total_shopping_cost: number;
+    supplier_breakdown: Array<{
+      supplier: string;
+      items: string[];
+      estimated_cost: number;
+      store_location: string;
+    }>;
+  };
+  hardware_store_job?: {
+    id: string;
+    title: string;
+    job_type: 'hardware_store';
+    priority: 'high';
+    estimated_duration: number;
+    address: string;
+    latitude: number;
+    longitude: number;
+    description: string;
+    shopping_list: any[];
     preferred_supplier: string;
     estimated_cost: number;
-    priority: 'high' | 'medium' | 'low';
-  }>;
-  hardware_store_run?: {
-    store_locations: Array<{
-      store_name: string;
-      address: string;
-      coordinates: {
-        latitude: number;
-        longitude: number;
-      };
-      estimated_visit_time: number;
-      items_available: string[];
-    }>;
-    total_estimated_cost: number;
-    estimated_shopping_time: number;
+    scheduling_notes: string;
   };
-  // CRITICAL: Track dynamically created hardware store run jobs
-  created_hardware_store_jobs: string[]; // Array of job_location IDs created by this agent
-  inventory_alerts: Array<{
-    item_name: string;
-    alert_type: 'low_stock' | 'out_of_stock' | 'reorder_needed';
-    message: string;
-  }>;
   agent_reasoning: string;
   execution_time_ms: number;
+  recommendations: string[];
 }
 
 export interface UserModifications {
-  dispatch_changes?: {
+  dispatcher_changes?: {
     job_reordering?: Array<{
       job_id: string;
       new_priority_rank: number;
@@ -140,13 +131,6 @@ export interface UserModifications {
     job_removals?: Array<{
       job_id: string;
       reason: string;
-      timestamp: string;
-    }>;
-  };
-  route_changes?: {
-    waypoint_modifications?: Array<{
-      job_id: string;
-      new_sequence_number: number;
       timestamp: string;
     }>;
   };
@@ -168,7 +152,7 @@ export interface UserModifications {
 export interface ErrorState {
   error_type: 'agent_failure' | 'validation_error' | 'timeout' | 'external_api_error';
   error_message: string;
-  failed_step: 'dispatch' | 'route' | 'inventory';
+  failed_step: 'dispatcher' | 'inventory';
   timestamp: string;
   retry_suggested: boolean;
   diagnostic_info: Record<string, any>;
@@ -185,8 +169,7 @@ export interface UpdateDailyPlanInput {
   id: string;
   status?: DailyPlan['status'];
   current_step?: DailyPlan['current_step'];
-  dispatch_output?: DispatchOutput;
-  route_output?: RouteOutput;
+  dispatcher_output?: DispatcherOutput;
   inventory_output?: InventoryOutput;
   user_modifications?: UserModifications;
   error_state?: ErrorState;
@@ -211,7 +194,7 @@ export class DailyPlanService {
           job_ids: input.job_ids,
           preferences_snapshot: input.preferences_snapshot,
           status: 'pending',
-          current_step: 'dispatch',
+          current_step: 'dispatcher',
           started_at: new Date().toISOString(),
         }])
         .select()
@@ -226,7 +209,7 @@ export class DailyPlanService {
   }
 
   /**
-   * Update a daily plan record - Used by LangGraph agents
+   * Update a daily plan record - Used by edge functions
    */
   static async updateDailyPlan(input: UpdateDailyPlanInput): Promise<{ data: DailyPlan | null; error: any }> {
     try {
@@ -234,8 +217,7 @@ export class DailyPlanService {
       
       if (input.status) updateData.status = input.status;
       if (input.current_step) updateData.current_step = input.current_step;
-      if (input.dispatch_output) updateData.dispatch_output = input.dispatch_output;
-      if (input.route_output) updateData.route_output = input.route_output;
+      if (input.dispatcher_output) updateData.dispatcher_output = input.dispatcher_output;
       if (input.inventory_output) updateData.inventory_output = input.inventory_output;
       if (input.user_modifications) updateData.user_modifications = input.user_modifications;
       if (input.error_state) updateData.error_state = input.error_state;
@@ -402,59 +384,90 @@ export class DailyPlanService {
   }
 
   /**
-   * LangGraph Agent State Persistence Methods
+   * Edge Function State Persistence Methods
    */
 
   /**
-   * Update daily plan after dispatch agent completion
+   * Calculate total estimated duration from dispatcher output
    */
-  static async completeDispatchStep(
+  private static calculateTotalDuration(dispatcherOutput: DispatcherOutput): number | null {
+    try {
+      // Try to get from scheduling_constraints first
+      if (dispatcherOutput.scheduling_constraints?.total_work_hours) {
+        return dispatcherOutput.scheduling_constraints.total_work_hours * 60;
+      }
+      
+      // Fallback: Calculate from optimization_summary
+      if (dispatcherOutput.optimization_summary?.total_travel_time) {
+        return dispatcherOutput.optimization_summary.total_travel_time;
+      }
+      
+      // Fallback: Calculate from prioritized jobs
+      if (dispatcherOutput.prioritized_jobs?.length) {
+        const totalMinutes = dispatcherOutput.prioritized_jobs.reduce((total, job) => {
+          const duration = job.buffer_time_minutes || 60; // Default 1 hour
+          return total + duration;
+        }, 0);
+        return totalMinutes;
+      }
+      
+      // No duration data available
+      return null;
+    } catch (error) {
+      console.warn('Error calculating total duration:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update daily plan after dispatcher function completion
+   */
+  static async completeDispatcherStep(
     planId: string, 
-    dispatchOutput: DispatchOutput
+    dispatcherOutput: DispatcherOutput
   ): Promise<{ data: DailyPlan | null; error: any }> {
     return await this.updateDailyPlan({
       id: planId,
-      status: 'dispatch_complete',
-      current_step: 'route',
-      dispatch_output: dispatchOutput,
-      total_estimated_duration: dispatchOutput.scheduling_constraints.total_work_hours * 60
+      status: 'dispatcher_complete',
+      current_step: 'confirmation',
+      dispatcher_output: dispatcherOutput,
+      total_estimated_duration: this.calculateTotalDuration(dispatcherOutput)
     });
   }
 
   /**
-   * Update daily plan after route agent completion
+   * Update daily plan after user confirmation
    */
-  static async completeRouteStep(
-    planId: string, 
-    routeOutput: RouteOutput
+  static async markAwaitingInventoryAnalysis(
+    planId: string
   ): Promise<{ data: DailyPlan | null; error: any }> {
     return await this.updateDailyPlan({
       id: planId,
-      status: 'route_complete',
-      current_step: 'inventory',
-      route_output: routeOutput,
-      total_distance: routeOutput.optimized_route.total_distance,
-      total_estimated_duration: routeOutput.optimized_route.total_travel_time + routeOutput.optimized_route.total_work_time
+      status: 'inventory_analyzing',
+      current_step: 'inventory'
     });
   }
 
   /**
-   * Update daily plan after inventory agent completion
+   * Update daily plan after inventory function completion
    */
   static async completeInventoryStep(
     planId: string, 
     inventoryOutput: InventoryOutput
   ): Promise<{ data: DailyPlan | null; error: any }> {
-    // Update the plan with inventory output and any created hardware store jobs
+    // Determine next status based on whether hardware store job was created
+    const hasHardwareStoreJob = inventoryOutput.hardware_store_job != null;
+    const status = hasHardwareStoreJob ? 'hardware_store_added' : 'ready_for_execution';
+    
     const updateData: any = {
       id: planId,
-      status: 'inventory_complete',
+      status: status,
       current_step: 'complete',
       inventory_output: inventoryOutput
     };
 
-    // If hardware store jobs were created, add them to created_job_ids
-    if (inventoryOutput.created_hardware_store_jobs.length > 0) {
+    // If hardware store job was created, add it to created_job_ids
+    if (hasHardwareStoreJob) {
       // First get the current plan to merge with existing created jobs
       const { data: currentPlan, error: fetchError } = await this.getDailyPlanById(planId);
       if (fetchError) {
@@ -463,7 +476,7 @@ export class DailyPlanService {
       }
 
       const existingCreatedJobs = currentPlan?.created_job_ids || [];
-      updateData.created_job_ids = [...existingCreatedJobs, ...inventoryOutput.created_hardware_store_jobs];
+      updateData.created_job_ids = [...existingCreatedJobs, inventoryOutput.hardware_store_job!.id];
     }
 
     return await this.updateDailyPlan(updateData);
@@ -483,13 +496,13 @@ export class DailyPlanService {
           error_state: {
             error_type: 'timeout',
             error_message: 'Plan execution timed out after 30 minutes',
-            failed_step: 'dispatch',
+            failed_step: 'dispatcher',
             timestamp: new Date().toISOString(),
             retry_suggested: true,
             diagnostic_info: { reason: 'stale_plan_cleanup' }
           }
         })
-        .in('status', ['pending', 'dispatch_complete', 'route_complete'])
+        .in('status', ['pending', 'dispatcher_complete', 'awaiting_confirmation', 'inventory_analyzing'])
         .lt('started_at', thirtyMinutesAgo)
         .select();
 

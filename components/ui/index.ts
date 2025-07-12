@@ -22,5 +22,7 @@ export { OfflineStatusIndicator } from './OfflineStatusIndicator';
 export { OptimisticStatusBar } from './OptimisticStatusBar';
 export { OfflineExperienceBar } from './OfflineExperienceBar';
 export { OfflineOperationIndicator } from './OfflineOperationIndicator';
+export { NativeDatePicker } from './NativeDatePicker';
+export { LocationMapView } from './LocationMapView';
 export { Header } from '../Header';
 export { Avatar } from '../Avatar'; 

@@ -72,7 +72,7 @@ Using Karpathy's insights, your agent should:
 
 - **MVP:** Research industry + define agent capabilities
 - **CORE:** Build core agent functionality
-- **POLISH:** Integration, testing, and documentation
+- **POLISH:** Integration and documentation
 
 ### Team Collaboration
 

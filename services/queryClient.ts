@@ -162,9 +162,7 @@ export const queryKeys = {
   route: (routeId: string) => ['routes', routeId] as const,
   activeRoute: () => ['routes', 'active'] as const,
   
-  // Client queries
-  clients: () => ['clients'] as const,
-  client: (clientId: string) => ['clients', clientId] as const,
+
   
   // Job Types & BoM queries
   jobTypes: () => ['job-types'] as const,
@@ -226,17 +224,7 @@ export const invalidateQueries = {
     queryClient.invalidateQueries({ queryKey: queryKeys.activeRoute() });
   },
   
-  // Invalidate all client data
-  allClients: () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.clients() });
-  },
-  
-  // Invalidate client and related job data
-  client: (clientId: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.client(clientId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.clients() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.jobs() });
-  },
+
   
   // Invalidate BoM-related data
   allJobTypes: () => {
@@ -326,10 +314,6 @@ export const prefetchStrategies = {
         staleTime: 1000 * 60 * 2, // 2 minutes
       }),
       queryClient.prefetchQuery({
-        queryKey: queryKeys.clients(),
-        staleTime: 1000 * 60 * 5, // 5 minutes
-      }),
-      queryClient.prefetchQuery({
         queryKey: queryKeys.routes(),
         staleTime: 1000 * 60 * 3, // 3 minutes
       }),
@@ -360,10 +344,6 @@ export const prefetchStrategies = {
       queryClient.prefetchQuery({
         queryKey: queryKeys.jobTypes(),
         staleTime: 1000 * 60 * 10, // 10 minutes
-      }),
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.clients(),
-        staleTime: 1000 * 60 * 5, // 5 minutes
       }),
       queryClient.prefetchQuery({
         queryKey: queryKeys.partTemplates(),

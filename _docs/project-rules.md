@@ -10,7 +10,7 @@ The project follows a strict, feature-based directory structure. Adhering to thi
 
 - `/_docs`: All project documentation (`.md` files).
 - `/app`: All screens, routes, and navigation logic (powered by Expo Router).
-- `/agent`: All logic related to the LangGraph agentic crew. Prompts, graph definitions, and tool integrations live here.
+- `/supabase`: All logic related to the edge function implementation. Specialized functions, prompts, and tool integrations live here.
 - `/assets`: Static assets like fonts, icons, and images.
 - `/components`: Reusable, high-level React components (e.g., `Header`, `InventoryList`). These often compose smaller `ui` components.
 - `/components/ui`: Primitive, "dumb" UI building blocks (e.g., `Button`, `Card`, `TextInput`). These should be pure and highly reusable.

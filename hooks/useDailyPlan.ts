@@ -2,17 +2,20 @@
  * Daily Plan Hook - Real-time subscription to AI agent workflow
  * 
  * This hook manages the daily planning workflow state, providing real-time updates
- * as the LangGraph agents complete their tasks. It handles the three-step process:
- * 1. Dispatch Strategist - Job prioritization
- * 2. Route Optimizer - Travel route optimization  
- * 3. Inventory Specialist - Parts preparation and shopping lists
+ * as the Edge Functions complete their tasks. It handles the two-step process:
+ * 1. Dispatcher - Job prioritization and route optimization
+ * 2. Inventory - Parts preparation and hardware store jobs
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAtom } from 'jotai';
-import { userAtom } from '@/store/atoms';
+import { useAtom, useSetAtom } from 'jotai';
+import { userAtom, activeJobAtom } from '@/store/atoms';
 import { DailyPlanService, type DailyPlan, type UserModifications } from '@/services/dailyPlanService';
 import { AgentService } from '@/services/agentService';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/services/queryClient';
+import { JobLocation } from './useJobs';
+import { supabase } from '@/services/supabase';
 
 interface UseDailyPlanOptions {
   /**
@@ -35,7 +38,7 @@ interface UseDailyPlanReturn {
   error: string | null;
   
   // Agent status
-  currentStep: 'dispatch' | 'route' | 'inventory' | 'complete' | null;
+  currentStep: 'dispatcher' | 'confirmation' | 'inventory' | 'complete' | null;
   isProcessing: boolean;
   
   // Actions
@@ -44,11 +47,17 @@ interface UseDailyPlanReturn {
   cancelPlanning: () => Promise<void>;
   saveUserModifications: (modifications: UserModifications) => Promise<void>;
   approvePlan: () => Promise<void>;
+  resetPlan: () => void;
+  refreshPlan: () => Promise<void>;
   
   // Step-specific actions
-  confirmDispatch: (modifications?: UserModifications) => Promise<void>;
-  confirmRoute: (modifications?: UserModifications) => Promise<void>;
+  confirmDispatcherOutput: (modifications?: UserModifications) => Promise<void>;
+  proceedToInventory: () => Promise<void>;
   confirmInventory: (modifications?: UserModifications) => Promise<void>;
+  
+  // New workflow support
+  isAwaitingConfirmation: boolean;
+  hasHardwareStoreJob: boolean;
   
   // Utility
   canRetry: boolean;
@@ -68,6 +77,8 @@ export const useDailyPlan = (
   options: UseDailyPlanOptions = {}
 ): UseDailyPlanReturn => {
   const [user] = useAtom(userAtom);
+  const setActiveJob = useSetAtom(activeJobAtom);
+  const queryClient = useQueryClient();
   const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,13 +88,66 @@ export const useDailyPlan = (
   // Derived state
   const currentStep = dailyPlan?.current_step || null;
   const isProcessing = dailyPlan?.status === 'pending' || 
-                       dailyPlan?.current_step === 'dispatch' ||
-                       dailyPlan?.current_step === 'route' ||
+                       dailyPlan?.current_step === 'dispatcher' ||
                        dailyPlan?.current_step === 'inventory';
+  const isAwaitingConfirmation = dailyPlan?.status === 'dispatcher_complete' ||
+                                dailyPlan?.status === 'awaiting_confirmation';
+  const hasHardwareStoreJob = dailyPlan?.status === 'hardware_store_added' ||
+                             dailyPlan?.inventory_output?.hardware_store_job != null;
   const canRetry = dailyPlan?.status === 'error' && 
                    (dailyPlan?.error_state?.retry_suggested || false) &&
                    (dailyPlan?.retry_count || 0) < 3;
   const retryCount = dailyPlan?.retry_count || 0;
+
+  /**
+   * Set active job from approved daily plan
+   */
+  const setActiveJobFromApprovedPlan = useCallback(async (approvedPlan: DailyPlan) => {
+    if (approvedPlan.status !== 'approved') return;
+
+    // The dispatcher output contains the definitive, final order of jobs,
+    // including any hardware store runs. We just need to pick the first one.
+    if (approvedPlan.dispatcher_output?.prioritized_jobs?.length > 0) {
+      const firstJobId = approvedPlan.dispatcher_output.prioritized_jobs[0].job_id;
+      
+      try {
+        // Fetch the full job details from the cache or network
+        const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
+          queryKey: queryKeys.job(firstJobId),
+          queryFn: async (): Promise<JobLocation | null> => {
+            if (!user?.id) {
+              throw new Error('No authenticated user');
+            }
+
+            const { data, error } = await supabase
+              .from('job_locations')
+              .select('*')
+              .eq('id', firstJobId)
+              .eq('user_id', user.id)
+              .single();
+
+            if (error) {
+              if (error.code === 'PGRST116') {
+                return null; // Job not found
+              }
+              throw error;
+            }
+
+            return data;
+          },
+        });
+
+        if (jobDetails) {
+          setActiveJob(jobDetails);
+          console.log('✅ Active job set from approved daily plan:', jobDetails.title);
+        } else {
+          console.warn(`Could not fetch details for the first job (ID: ${firstJobId}).`);
+        }
+      } catch (err) {
+        console.error('Error fetching job details for active job:', err);
+      }
+    }
+  }, [queryClient, setActiveJob, user?.id]);
 
   /**
    * Initialize and fetch current daily plan
@@ -103,8 +167,19 @@ export const useDailyPlan = (
         return;
       }
 
-      setDailyPlan(data);
-      setLastUpdated(new Date());
+      // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+      if (data && data.status === 'cancelled') {
+        setDailyPlan(null);
+        setLastUpdated(new Date());
+      } else {
+        setDailyPlan(data);
+        setLastUpdated(new Date());
+
+        // 🔧 FIX: Set active job if daily plan is already approved
+        if (data && data.status === 'approved') {
+          await setActiveJobFromApprovedPlan(data);
+        }
+      }
 
       // Auto-start if requested and no plan exists
       if (!data && options.autoStart && options.initialJobIds?.length) {
@@ -116,10 +191,10 @@ export const useDailyPlan = (
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, planDate, options.autoStart, options.initialJobIds]);
+  }, [user?.id, planDate, options.autoStart, options.initialJobIds, setActiveJobFromApprovedPlan]);
 
   /**
-   * Start the daily planning workflow
+   * Start the daily planning workflow - Step 1: Dispatcher
    */
   const startPlanning = useCallback(async (jobIds: string[]) => {
     if (!user?.id) {
@@ -130,21 +205,64 @@ export const useDailyPlan = (
     try {
       setIsLoading(true);
       setError(null);
+      setDailyPlan(null); // 🔄 Clear existing plan state
 
-      // Use AgentService to start the workflow
-      const result = await AgentService.planDay(user.id, jobIds, planDate);
+      // 🔧 FIX: Clean up any existing daily plan for today first
+      console.log('🧹 Checking for existing daily plan to clean up...');
+      const { data: existingPlan } = await DailyPlanService.getCurrentDailyPlan(user.id, planDate);
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to start planning');
+      if (existingPlan) {
+        console.log('🗑️ Found existing plan, cancelling it first:', existingPlan.id);
+        await DailyPlanService.cancelDailyPlan(existingPlan.id);
+        console.log('✅ Existing plan cancelled, creating fresh plan');
+      } else {
+        console.log('🆕 No existing plan found, proceeding with fresh creation');
       }
 
-      // The real-time subscription will update the state as the workflow progresses
-      console.log('Daily planning started:', result.planId);
+      // Create daily plan record
+      const preferences = {}; // TODO: Get user preferences
+      const { data: plan, error: createError } = await DailyPlanService.createDailyPlan({
+        user_id: user.id,
+        planned_date: planDate,
+        job_ids: jobIds,
+        preferences_snapshot: preferences
+      });
+
+      if (createError || !plan) {
+        throw new Error(createError?.message || 'Failed to create daily plan');
+      }
+
+      setDailyPlan(plan);
+      console.log('🆕 Fresh daily plan created:', plan.id);
+
+      // Step 1: Call dispatcher edge function
+      console.log('🎯 Starting dispatcher edge function...');
+      const dispatchResult = await AgentService.dispatchJobs(user.id, jobIds, planDate);
+      
+      if (!dispatchResult.success) {
+        throw new Error(dispatchResult.error || 'Failed to dispatch jobs');
+      }
+
+      // Update plan with dispatcher output
+      console.log('📝 Updating daily plan with dispatcher output...');
+      const { data: updatedPlan, error: updateError } = await DailyPlanService.completeDispatcherStep(plan.id, dispatchResult.dispatch_output);
+
+      if (updateError) {
+        console.error('❌ Failed to update daily plan:', updateError);
+        throw new Error(`Failed to save dispatcher results: ${updateError.message || updateError}`);
+      }
+
+      console.log('🎯 Dispatcher completed successfully');
+      console.log('✅ Daily plan updated:', updatedPlan?.id, 'Status:', updatedPlan?.status);
+      
+      // 🔧 CRITICAL FIX: Update local React state immediately
+      setDailyPlan(updatedPlan);
     } catch (err) {
       console.error('Error starting planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to start planning');
+      setDailyPlan(null); // 🔄 Clear plan state on error
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // 🔄 Ensure it's always called
     }
   }, [user?.id, planDate]);
 
@@ -158,14 +276,32 @@ export const useDailyPlan = (
       setIsLoading(true);
       setError(null);
 
-      // Use AgentService to retry the workflow
-      const result = await AgentService.planDay(user!.id, dailyPlan.job_ids, planDate);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to retry planning');
-      }
+      // Retry from the failed step
+      if (dailyPlan.error_state?.failed_step === 'dispatcher') {
+        // Retry dispatcher step
+        const dispatchResult = await AgentService.dispatchJobs(user!.id, dailyPlan.job_ids, planDate);
+        
+        if (!dispatchResult.success) {
+          throw new Error(dispatchResult.error || 'Failed to retry dispatcher');
+        }
 
-      console.log('Daily planning retried:', result.planId);
+        await DailyPlanService.completeDispatcherStep(dailyPlan.id, dispatchResult.dispatch_output);
+        console.log('🎯 Dispatcher retried successfully');
+      } else if (dailyPlan.error_state?.failed_step === 'inventory') {
+        // Retry inventory step
+        const inventoryResult = await AgentService.analyzeInventory(
+          user!.id, 
+          dailyPlan.job_ids, 
+          dailyPlan.dispatcher_output
+        );
+        
+        if (!inventoryResult.success) {
+          throw new Error(inventoryResult.error || 'Failed to retry inventory');
+        }
+
+        await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+        console.log('📦 Inventory retried successfully');
+      }
     } catch (err) {
       console.error('Error retrying planning:', err);
       setError(err instanceof Error ? err.message : 'Failed to retry planning');
@@ -227,10 +363,50 @@ export const useDailyPlan = (
     try {
       setError(null);
       
-      const { error: approveError } = await DailyPlanService.approveDailyPlan(dailyPlan.id);
+      const { data: approvedPlan, error: approveError } = await DailyPlanService.approveDailyPlan(dailyPlan.id);
       
       if (approveError) {
         throw approveError;
+      }
+
+      if (approvedPlan) {
+        // The dispatcher output contains the definitive, final order of jobs,
+        // including any hardware store runs. We just need to pick the first one.
+        if (approvedPlan.dispatcher_output?.prioritized_jobs?.length > 0) {
+          const firstJobId = approvedPlan.dispatcher_output.prioritized_jobs[0].job_id;
+          
+          // Fetch the full job details from the cache or network
+          const jobDetails = await queryClient.fetchQuery<JobLocation | null>({
+            queryKey: queryKeys.job(firstJobId),
+            queryFn: async (): Promise<JobLocation | null> => {
+              if (!user?.id) {
+                throw new Error('No authenticated user');
+              }
+
+              const { data, error } = await supabase
+                .from('job_locations')
+                .select('*')
+                .eq('id', firstJobId)
+                .eq('user_id', user.id)
+                .single();
+
+              if (error) {
+                if (error.code === 'PGRST116') {
+                  return null; // Job not found
+                }
+                throw error;
+              }
+
+              return data;
+            },
+          });
+
+          if (jobDetails) {
+            setActiveJob(jobDetails);
+          } else {
+            console.warn(`Could not fetch details for the first job (ID: ${firstJobId}).`);
+          }
+        }
       }
 
       console.log('Daily plan approved:', dailyPlan.id);
@@ -238,13 +414,13 @@ export const useDailyPlan = (
       console.error('Error approving plan:', err);
       setError(err instanceof Error ? err.message : 'Failed to approve plan');
     }
-  }, [dailyPlan]);
+  }, [dailyPlan, setActiveJobFromApprovedPlan]);
 
   /**
-   * Confirm dispatch step and proceed to route
+   * Confirm dispatcher output and mark as ready for inventory
    */
-  const confirmDispatch = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'dispatch_complete') return;
+  const confirmDispatcherOutput = useCallback(async (modifications?: UserModifications) => {
+    if (!dailyPlan || dailyPlan.status !== 'dispatcher_complete') return;
 
     try {
       setError(null);
@@ -254,42 +430,69 @@ export const useDailyPlan = (
         await saveUserModifications(modifications);
       }
 
-      // Continue to route step by triggering the agent
-      // The agent will automatically proceed to the next step
-      console.log('Dispatch confirmed, proceeding to route optimization');
+      // Mark as awaiting inventory analysis
+      await DailyPlanService.markAwaitingInventoryAnalysis(dailyPlan.id);
+      console.log('✅ Dispatcher output confirmed, ready for inventory analysis');
     } catch (err) {
-      console.error('Error confirming dispatch:', err);
-      setError(err instanceof Error ? err.message : 'Failed to confirm dispatch');
+      console.error('Error confirming dispatcher output:', err);
+      setError(err instanceof Error ? err.message : 'Failed to confirm dispatcher output');
     }
   }, [dailyPlan, saveUserModifications]);
 
   /**
-   * Confirm route step and proceed to inventory
+   * Proceed to inventory analysis step
    */
-  const confirmRoute = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'route_complete') return;
+  const proceedToInventory = useCallback(async () => {
+    if (!dailyPlan || !dailyPlan.dispatcher_output) return;
 
     try {
+      setIsLoading(true);
       setError(null);
+
+      // ‼️ FIX: Use the prioritized job IDs from the dispatcher output
+      const prioritizedJobIds = dailyPlan.dispatcher_output.prioritized_jobs.map(j => j.job_id);
+
+      // Step 2: Call inventory edge function
+      const inventoryResult = await AgentService.analyzeInventory(
+        user!.id, 
+        prioritizedJobIds, 
+        dailyPlan.dispatcher_output
+      );
       
-      // Save modifications if provided
-      if (modifications) {
-        await saveUserModifications(modifications);
+      if (!inventoryResult.success) {
+        throw new Error(inventoryResult.error || 'Failed to analyze inventory');
       }
 
-      // Continue to inventory step
-      console.log('Route confirmed, proceeding to inventory check');
+      // Update plan with inventory output
+      const { data: updatedPlan, error: updateError } = await DailyPlanService.completeInventoryStep(dailyPlan.id, inventoryResult.inventory_output);
+
+      if (updateError) {
+        console.error('❌ Failed to update daily plan with inventory:', updateError);
+        throw new Error(`Failed to save inventory results: ${updateError.message || updateError}`);
+      }
+
+      console.log('📦 Inventory analysis completed successfully');
+      console.log('✅ Daily plan updated:', updatedPlan?.id, 'Status:', updatedPlan?.status);
+      
+      // 🔧 CRITICAL FIX: Update local React state immediately
+      setDailyPlan(updatedPlan);
+      
+      if (inventoryResult.hardware_store_job) {
+        console.log('🛒 Hardware store job created');
+      }
     } catch (err) {
-      console.error('Error confirming route:', err);
-      setError(err instanceof Error ? err.message : 'Failed to confirm route');
+      console.error('Error proceeding to inventory:', err);
+      setError(err instanceof Error ? err.message : 'Failed to proceed to inventory');
+    } finally {
+      setIsLoading(false);
     }
-  }, [dailyPlan, saveUserModifications]);
+  }, [dailyPlan, user]);
 
   /**
    * Confirm inventory step and complete planning
    */
   const confirmInventory = useCallback(async (modifications?: UserModifications) => {
-    if (!dailyPlan || dailyPlan.status !== 'inventory_complete') return;
+    if (!dailyPlan || (dailyPlan.status !== 'ready_for_execution' && dailyPlan.status !== 'hardware_store_added')) return;
 
     try {
       setError(null);
@@ -301,12 +504,16 @@ export const useDailyPlan = (
 
       // Complete the planning process
       await approvePlan();
-      console.log('Inventory confirmed, planning complete');
+      console.log('✅ Inventory confirmed, planning complete');
+      
+      if (hasHardwareStoreJob) {
+        console.log('🛒 Hardware store job included in final plan');
+      }
     } catch (err) {
       console.error('Error confirming inventory:', err);
       setError(err instanceof Error ? err.message : 'Failed to confirm inventory');
     }
-  }, [dailyPlan, saveUserModifications, approvePlan]);
+  }, [dailyPlan, saveUserModifications, approvePlan, hasHardwareStoreJob]);
 
   /**
    * Set up real-time subscription to daily plan changes
@@ -321,15 +528,33 @@ export const useDailyPlan = (
         subscription = DailyPlanService.subscribeToDailyPlan(
           user.id,
           planDate,
-          (payload) => {
+          async (payload) => {
             console.log('Daily plan real-time update:', payload);
             setIsConnected(true);
             setLastUpdated(new Date());
 
             if (payload.eventType === 'UPDATE') {
-              setDailyPlan(payload.new);
+              // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+              if (payload.new?.status === 'cancelled') {
+                setDailyPlan(null);
+              } else {
+                setDailyPlan(payload.new);
+                // 🔧 FIX: Set active job if plan was just approved
+                if (payload.new?.status === 'approved') {
+                  await setActiveJobFromApprovedPlan(payload.new);
+                }
+              }
             } else if (payload.eventType === 'INSERT') {
-              setDailyPlan(payload.new);
+              // 🔧 FIX: Ignore cancelled plans - treat them as if there's no plan
+              if (payload.new?.status === 'cancelled') {
+                setDailyPlan(null);
+              } else {
+                setDailyPlan(payload.new);
+                // 🔧 FIX: Set active job if new plan is already approved
+                if (payload.new?.status === 'approved') {
+                  await setActiveJobFromApprovedPlan(payload.new);
+                }
+              }
             } else if (payload.eventType === 'DELETE') {
               setDailyPlan(null);
             }
@@ -345,17 +570,35 @@ export const useDailyPlan = (
       }
     };
 
-    // Set up subscription after initial load
-    const timer = setTimeout(setupSubscription, 1000);
+    // Set up subscription immediately - no delay
+    setupSubscription();
 
     return () => {
-      clearTimeout(timer);
       if (subscription) {
         subscription.unsubscribe();
         console.log('Daily plan subscription cleaned up');
       }
     };
-  }, [user?.id, planDate]);
+  }, [user?.id, planDate, setActiveJobFromApprovedPlan]);
+
+  /**
+   * Reset the daily plan state completely
+   */
+  const resetPlan = useCallback(() => {
+    setDailyPlan(null);
+    setError(null);
+    setIsLoading(false);
+    setLastUpdated(null);
+    console.log('🔄 Daily plan state reset');
+  }, []);
+
+  /**
+   * Force refresh the daily plan from database
+   */
+  const refreshPlan = useCallback(async () => {
+    console.log('🔄 Force refreshing daily plan...');
+    await initializePlan();
+  }, [initializePlan]);
 
   /**
    * Initialize plan on mount and user change
@@ -380,11 +623,17 @@ export const useDailyPlan = (
     cancelPlanning,
     saveUserModifications,
     approvePlan,
+    resetPlan, // 🔄 Add reset functionality
+    refreshPlan, // 🔄 Add refresh functionality
     
     // Step-specific actions
-    confirmDispatch,
-    confirmRoute,
+    confirmDispatcherOutput,
+    proceedToInventory,
     confirmInventory,
+    
+    // New workflow support
+    isAwaitingConfirmation,
+    hasHardwareStoreJob,
     
     // Utility
     canRetry,

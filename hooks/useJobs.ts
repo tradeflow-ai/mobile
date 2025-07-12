@@ -15,13 +15,12 @@ import { queryKeys, invalidateQueries } from '@/services/queryClient';
 export interface JobLocation {
   id: string;
   user_id: string;
-  client_id?: string;
   title: string;
   description?: string;
   address: string;
   latitude: number;
   longitude: number;
-  job_type: 'service' | 'inspection' | 'emergency';
+  job_type: 'delivery' | 'pickup' | 'service' | 'inspection' | 'maintenance' | 'emergency' | 'hardware_store';
   business_category?: 'Demand' | 'Maintenance';
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -33,7 +32,8 @@ export interface JobLocation {
   required_items?: string[]; // inventory item IDs
   notes?: string;
   completion_notes?: string;
-  // Legacy customer fields (use client_id instead)
+  use_ai_scheduling?: boolean; // Whether AI should select optimal scheduling times
+  // Customer fields
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
@@ -42,7 +42,6 @@ export interface JobLocation {
 }
 
 export interface CreateJobData {
-  client_id?: string;
   title: string;
   description?: string;
   address: string;
@@ -56,10 +55,14 @@ export interface CreateJobData {
   estimated_duration?: number;
   required_items?: string[];
   notes?: string;
+  use_ai_scheduling?: boolean;
+  // Customer fields
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
 }
 
 export interface UpdateJobData {
-  client_id?: string;
   title?: string;
   description?: string;
   address?: string;
@@ -77,6 +80,11 @@ export interface UpdateJobData {
   required_items?: string[];
   notes?: string;
   completion_notes?: string;
+  use_ai_scheduling?: boolean; // Whether AI should select optimal scheduling times
+  // Customer fields
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
 }
 
 // ==================== QUERY HOOKS ====================
@@ -194,37 +202,7 @@ export const useJobsByBusinessCategory = (business_category: JobLocation['busine
   return useJobs({ business_category });
 };
 
-/**
- * Get jobs by client
- * MVP Feature: View all jobs for a specific client
- */
-export const useJobsByClient = (clientId: string) => {
-  const [user] = useAtom(userAtom);
 
-  return useQuery({
-    queryKey: ['jobs', 'client', clientId],
-    queryFn: async (): Promise<JobLocation[]> => {
-      if (!user?.id) {
-        throw new Error('No authenticated user');
-      }
-
-      const { data, error } = await supabase
-        .from('job_locations')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      return data || [];
-    },
-    enabled: !!user?.id && !!clientId,
-    staleTime: 1000 * 60 * 3, // 3 minutes
-  });
-};
 
 // ==================== MUTATION HOOKS ====================
 
@@ -579,26 +557,41 @@ export const useJobsCount = () => {
 };
 
 /**
- * Get today's jobs
- * Useful for daily planning
+ * Get jobs for a specific date range
+ * Useful for calendar views that show multiple days
  */
-export const useTodaysJobs = () => {
+export const useJobsForDateRange = (startDate: Date, endDate: Date) => {
   const [user] = useAtom(userAtom);
-  const today = new Date().toISOString().split('T')[0];
+  
+  // Convert local dates to UTC for database query
+  // Get the local date string first, then convert to UTC
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const startDateStr = getLocalDateString(startDate);
+  const endDateStr = getLocalDateString(endDate);
 
   return useQuery({
-    queryKey: ['jobs', 'today', today],
+    queryKey: ['jobs', 'date-range', startDateStr, endDateStr],
     queryFn: async (): Promise<JobLocation[]> => {
       if (!user?.id) {
         throw new Error('No authenticated user');
       }
 
+      // Convert local date strings to UTC timestamps for database query
+      const startUTC = new Date(`${startDateStr}T00:00:00`).toISOString();
+      const endUTC = new Date(`${endDateStr}T00:00:00`).toISOString();
+
       const { data, error } = await supabase
         .from('job_locations')
         .select('*')
         .eq('user_id', user.id)
-        .gte('scheduled_start', `${today}T00:00:00`)
-        .lt('scheduled_start', `${today}T23:59:59`)
+        .gte('scheduled_start', startUTC)
+        .lt('scheduled_start', endUTC)
         .order('scheduled_start', { ascending: true });
 
       if (error) {
@@ -607,9 +600,21 @@ export const useTodaysJobs = () => {
 
       return data || [];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!startDate && !!endDate,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+};
+
+/**
+ * Get today's jobs
+ * Useful for daily planning
+ */
+export const useTodaysJobs = () => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return useJobsForDateRange(today, tomorrow);
 };
 
 /**

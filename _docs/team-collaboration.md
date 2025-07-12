@@ -16,7 +16,7 @@ This project is divided into four distinct domains, with a clear owner for each.
 | :--- | :--- | :--- | :--- |
 | **Frontend & UX Lead** | Josh | React Native, UI/UX, Expo Router, Auth flows | The User Experience |
 | **Full-Stack & Data Lead** | Trevor | TanStack Query, Supabase, API integrations, data layer | The Foundation |
-| **AI & Systems Lead** | Jeremiah | Agents, LLM prompts, LangGraph, AI-powered route optimization | The Brain |
+| **AI & Systems Lead** | Jeremiah | Edge functions, LLM prompts, AI-powered route optimization | The Brain |
 
 ---
 
@@ -37,7 +37,7 @@ The following tables outline the specific package of work owned by each lead for
 
 | Package & Features | Domain | Owner | Rationale |
 | :--- | :--- | :--- | :--- |
-| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Routing Engine (Deployment) | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the LangGraph agents to deploying the Dockerized routing engine and architecting the real-time communication layer. |
+| **The AI Core & Engine** <br/> • F3: AI Agent Crew <br/> • F4: Routing Engine (Deployment) | AI & Backend | **Jeremiah** | This is a highly specialized work package. Jeremiah will own the "brain" of the app, from creating the edge function agents to deploying the specialized AI functions and architecting the real-time communication layer. |
 | **The Backend Data Layer** <br/> • F2: TanStack Query <br/> • F4: Routing Engine (Client Service) <br/> • F8: Client Management <br/> • F10: BoM Management | Backend & Data | **Trevor** | This package is focused on providing the application with its data. Trevor will own the entire data access layer, including building the `routing.ts` client and all TanStack Query hooks needed for the frontend to manage jobs, clients, and bills of materials. |
 | **The Core User Experience UI** <br/> • F1: Auth & Onboarding <br/> • F5: Plan Your Day UI <br/> • F9: In-Field Execution UI | Frontend & UI/UX | **Josh** | This package covers the primary, sequential user journey. Josh will own the complete "happy path" UI, from logging in and setting preferences, to stepping through the AI plan, to executing the first job of the day. He will consume the services provided by Trevor and Jeremiah. |
 | **Data Management & Dynamic UI** <br/> • F6: CRUD UIs <br/> • F7: Dynamic Replanning | Frontend & UI/UX | **Jack** | This package focuses on all the "management" and "reactive" parts of the UI. Jack will own the screens for manually managing jobs and inventory, as well as the UI triggers and modals required for the dynamic re-planning flow, ensuring a robust data management experience. |

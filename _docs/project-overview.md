@@ -70,7 +70,7 @@ Instead of a single monolithic AI, we will implement a collaborative crew of spe
 ### Technical Architecture
 Our technical architecture is designed to be robust, scalable, and powerful, reflecting a polish-level vision from the start.
 
-- **Agentic Framework:** The core logic will be orchestrated using **LangGraph**, with agents powered by **OpenAI's GPT-4o** model. This framework is specifically chosen for its first-class support for stateful, cyclical workflows and its ability to natively handle Human-in-the-Loop (HITL) verification, which is essential for our three-step approval process.
+- **AI Framework:** The core logic will be orchestrated using **2-step Edge Functions**, with functions powered by **OpenAI's GPT-4o** model. This framework is specifically chosen for its simplicity, user control, and ability to handle specialized reasoning with clear separation of concerns.
 
 - **Backend & Routing Engine:** We use AI agent reasoning for intelligent route optimization without external dependencies. The agent leverages GPT-4o's spatial reasoning capabilities to solve Vehicle Routing Problems (VRP) through coordinate analysis. This lightweight approach provides intelligent features while eliminating infrastructure complexity, such as:
     - Honoring time windows and technician breaks.
@@ -106,18 +106,20 @@ To foster a welcoming and collaborative open source community, we will prioritiz
 Our development will follow the `MVP -> CORE -> POLISH` structure outlined in the project brief, with the goal of building towards our full "v3" architecture.
 1.  **MVP: Research & Foundational Setup**
     *   Architect the Supabase database schema for users, jobs, parts, and inventory.
-    *   Define the agentic workflow as a formal LangGraph graph structure.
+    *   Define the AI workflow as a formal 2-step process with user confirmation.
+    *   Implement specialized edge functions for dispatch prioritization and inventory analysis.
+    *   Implement the `Dispatcher Function` and `Inventory Function` using GPT-4o.
     *   Set up the basic React Native (Expo) application shell and Supabase client.
     *   Build the user onboarding flow for setting preferences.
 2.  **CORE: Build the Agentic Loop & Backend**
-    *   Implement the `Dispatch Strategist`, `Route Optimizer`, and `Inventory & Prep Specialist` agents in LangGraph using GPT-4o.
+    *   Implement the `Dispatcher Function` and `Inventory Function` edge functions using GPT-4o.
     *   Develop AI-powered spatial reasoning for route optimization using coordinate analysis and GPT-4o intelligence.
     *   Integrate coordinate formatting tools for the `Route Optimizer` agent to enable spatial reasoning.
     *   Develop the core UI components for visualizing the outputs of each agent and handling the HITL approval steps (drag-and-drop list, view-only map, and checklist).
 3.  **POLISH: Integration & Documentation**
     *   Refine the UI/UX into a polished, intuitive experience.
     *   Integrate third-party hardware store APIs for real-time inventory lookups.
-    *   Conduct end-to-end testing of the full application and agentic workflow.
+
     *   Finalize all user and developer documentation (`README.md`, `CONTRIBUTING.md`).
 
 ## 💡 Success Tips
