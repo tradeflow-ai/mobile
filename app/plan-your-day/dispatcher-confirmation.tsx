@@ -69,30 +69,33 @@ const JobDisplayCard = ({ job, index, colors, colorScheme }: {
     );
   }
 
-  // Helper function to get priority level and colors
-  const getPriorityInfo = (priorityRank: number) => {
-    if (priorityRank <= 2) {
-      return { 
-        level: 'High', 
-        backgroundColor: colors.error + '30', // 30% opacity
-        borderColor: colors.error // Full opacity for border
-      };
-    } else if (priorityRank <= 4) {
-      return { 
-        level: 'Medium', 
-        backgroundColor: colors.warning + '30', // 30% opacity
-        borderColor: colors.warning // Full opacity for border
-      };
-    } else {
-      return { 
-        level: 'Low', 
-        backgroundColor: colors.success + '30', // 30% opacity
-        borderColor: colors.success // Full opacity for border
-      };
+  // Helper function to get priority level and colors based on actual job priority
+  const getPriorityInfo = (jobPriority: string) => {
+    switch (jobPriority) {
+      case 'urgent':
+      case 'high':
+        return { 
+          level: 'High', 
+          backgroundColor: colors.error + '30', // 30% opacity
+          borderColor: colors.error // Full opacity for border
+        };
+      case 'medium':
+        return { 
+          level: 'Medium', 
+          backgroundColor: colors.warning + '30', // 30% opacity
+          borderColor: colors.warning // Full opacity for border
+        };
+      case 'low':
+      default:
+        return { 
+          level: 'Low', 
+          backgroundColor: colors.success + '30', // 30% opacity
+          borderColor: colors.success // Full opacity for border
+        };
     }
   };
 
-  const priorityInfo = getPriorityInfo(job.priority_rank);
+  const priorityInfo = getPriorityInfo(jobDetails.priority);
 
   return (
     <View style={styles.jobItem}>
@@ -243,43 +246,6 @@ export default function DispatcherConfirmationScreen() {
             </Text>
           </View>
 
-          {/* Optimization Summary */}
-          {optimizationSummary && (
-            <View style={[styles.summaryCard, { backgroundColor: colors.card }, shadows.subtle(colorScheme)]}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                Optimization Summary
-              </Text>
-              <View style={styles.summaryGrid}>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.text }]}>Emergency Jobs</Text>
-                  <Text style={[styles.summaryValue, { color: colors.error }]}>
-                    {optimizationSummary.emergency_jobs || 0}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.text }]}>Inspection Jobs</Text>
-                  <Text style={[styles.summaryValue, { color: colors.primary }]}>
-                    {optimizationSummary.inspection_jobs || 0}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.text }]}>Service Jobs</Text>
-                  <Text style={[styles.summaryValue, { color: colors.text }]}>
-                    {optimizationSummary.service_jobs || 0}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.text }]}>Route Efficiency</Text>
-                  <Text style={[styles.summaryValue, { color: colors.success }]}>
-                    {optimizationSummary.route_efficiency != null
-                      ? `${Math.round(optimizationSummary.route_efficiency * 100)}%`
-                      : 'N/A'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-
           {/* Prioritized Jobs List */}
           <View style={[styles.jobsCard, { backgroundColor: colors.card }, shadows.subtle(colorScheme)]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
@@ -304,24 +270,6 @@ export default function DispatcherConfirmationScreen() {
               ))
             )}
           </View>
-
-          {/* Recommendations */}
-          {dispatcherOutput?.recommendations && dispatcherOutput.recommendations.length > 0 && (
-            <View style={[styles.recommendationsCard, { backgroundColor: colors.card }, shadows.subtle(colorScheme)]}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                📝 Recommendations
-              </Text>
-              {dispatcherOutput.recommendations.map((recommendation, index) => (
-                <View key={index} style={styles.recommendationItem}>
-                  <FontAwesome name="lightbulb-o" size={16} color={colors.primary} />
-                  <Text style={[styles.recommendationText, { color: colors.text }]}>
-                    {recommendation}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
         </ScrollView>
 
         {/* Action Buttons */}
