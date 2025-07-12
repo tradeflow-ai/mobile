@@ -6,8 +6,8 @@
  * a clear entry point to start planning.
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -15,7 +15,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { typography, spacing, radius } from '@/constants/Theme';
+import { typography, spacing, radius, touchTargets } from '@/constants/Theme';
 import type { JobLocation } from '@/hooks/useJobs';
 
 interface StartPlanningUIProps {
@@ -43,6 +43,7 @@ export const StartPlanningUI: React.FC<StartPlanningUIProps> = ({
 }) => {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [isJobsExpanded, setIsJobsExpanded] = useState(false);
 
   // If no jobs available, show empty state
   if (availableJobs.length === 0) {
@@ -55,6 +56,10 @@ export const StartPlanningUI: React.FC<StartPlanningUIProps> = ({
       />
     );
   }
+
+  // Determine which jobs to display
+  const displayJobs = isJobsExpanded ? availableJobs : availableJobs.slice(0, 3);
+  const hasMoreJobs = availableJobs.length > 3;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -94,7 +99,7 @@ export const StartPlanningUI: React.FC<StartPlanningUIProps> = ({
         </View>
 
         <View style={styles.jobsList}>
-          {availableJobs.slice(0, 3).map((job) => (
+          {displayJobs.map((job) => (
             <View key={job.id} style={styles.jobItem}>
               <View style={styles.jobContent}>
                 <Text style={[styles.jobTitle, { color: colors.text }]}>
@@ -105,7 +110,7 @@ export const StartPlanningUI: React.FC<StartPlanningUIProps> = ({
                 </Text>
               </View>
               
-                             <View style={[styles.priorityBadge, { 
+              <View style={[styles.priorityBadge, { 
                  backgroundColor: job.priority === 'high' ? colors.error : 
                                 job.priority === 'medium' ? colors.warning : colors.success 
                }]}>
@@ -116,12 +121,22 @@ export const StartPlanningUI: React.FC<StartPlanningUIProps> = ({
             </View>
           ))}
           
-          {availableJobs.length > 3 && (
-            <View style={styles.moreJobs}>
+          {hasMoreJobs && (
+            <TouchableOpacity
+              style={styles.moreJobsButton}
+              onPress={() => setIsJobsExpanded(!isJobsExpanded)}
+              activeOpacity={0.7}
+            >
               <Text style={[styles.moreJobsText, { color: colors.secondary }]}>
-                +{availableJobs.length - 3} more jobs
+                {isJobsExpanded ? 'Show less' : `+${availableJobs.length - 3} more jobs`}
               </Text>
-            </View>
+              <FontAwesome 
+                name={isJobsExpanded ? "chevron-up" : "chevron-down"} 
+                size={12} 
+                color={colors.secondary}
+                style={styles.chevronIcon}
+              />
+            </TouchableOpacity>
           )}
         </View>
       </Card>
@@ -287,13 +302,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 10,
   },
-  moreJobs: {
+  moreJobsButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.s,
+    ...spacing.helpers.padding('s'),
   },
   moreJobsText: {
     ...typography.caption,
     fontStyle: 'italic',
+    marginRight: spacing.xs,
+  },
+  chevronIcon: {
+    opacity: 0.7,
   },
   processCard: {
     marginBottom: spacing.l,

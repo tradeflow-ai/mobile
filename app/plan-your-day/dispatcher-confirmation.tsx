@@ -5,17 +5,126 @@
  * confirm or modify the job prioritization before proceeding to inventory.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
-import { typography, spacing, shadows } from '@/constants/Theme';
+import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
+import { useJob } from '@/hooks/useJobs';
 import { Button } from '@/components/ui';
 import { FontAwesome } from '@expo/vector-icons';
 import { LoadingStepUI } from '@/components/LoadingStepUI';
+
+// Component to display individual job information
+const JobDisplayCard = ({ job, index, colors, colorScheme }: { 
+  job: any, 
+  index: number, 
+  colors: any, 
+  colorScheme: string 
+}) => {
+  const { data: jobDetails, isLoading: jobLoading } = useJob(job.job_id);
+  
+  // Format time display
+  const formatTime = (timeString: string) => {
+    try {
+      return new Date(timeString).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return timeString;
+    }
+  };
+
+  if (jobLoading) {
+    return (
+      <View style={styles.jobItem}>
+        <View style={styles.jobHeader}>
+          <View style={[styles.jobNumber, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.jobNumberText, { color: colors.background }]}>
+              {job.priority_rank}
+            </Text>
+          </View>
+          <View style={styles.jobInfo}>
+            <Text style={[styles.jobTitle, { color: colors.text, opacity: 0.6 }]}>
+              Loading job details...
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (!jobDetails) {
+    return (
+      <View style={styles.jobItem}>
+        <View style={styles.jobHeader}>
+          <View style={[styles.jobNumber, { backgroundColor: colors.error }]}>
+            <Text style={[styles.jobNumberText, { color: colors.background }]}>
+              {job.priority_rank}
+            </Text>
+          </View>
+          <View style={styles.jobInfo}>
+            <Text style={[styles.jobTitle, { color: colors.error }]}>
+              Job not found
+            </Text>
+            <Text style={[styles.jobTime, { color: colors.text }]}>
+              ID: {job.job_id.substring(0, 8)}...
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.jobItem}>
+      <View style={styles.jobHeader}>
+        <View style={[styles.jobNumber, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.jobNumberText, { color: colors.background }]}>
+            {job.priority_rank}
+          </Text>
+        </View>
+        <View style={styles.jobInfo}>
+          <Text style={[styles.jobTitle, { color: colors.text }]}>
+            {jobDetails.title}
+          </Text>
+          {jobDetails.customer_name && (
+            <Text style={[styles.jobCustomer, { color: colors.text }]}>
+              👤 {jobDetails.customer_name}
+            </Text>
+          )}
+          <Text style={[styles.jobAddress, { color: colors.text }]}>
+            📍 {jobDetails.address}
+          </Text>
+          <Text style={[styles.jobTime, { color: colors.text }]}>
+            ⏰ {formatTime(job.estimated_start_time)} - {formatTime(job.estimated_end_time)}
+          </Text>
+        </View>
+        <View style={[styles.jobTypeBadge, { backgroundColor: getJobTypeColor(job.job_type, colors) }]}>
+          <Text style={[styles.jobTypeText, { color: colors.background }]}>
+            {job.job_type}
+          </Text>
+        </View>
+      </View>
+      
+      {/* Priority reasoning */}
+      <View style={styles.jobDetails}>
+        <Text style={[styles.jobReason, { color: colors.text }]}>
+          💡 {job.priority_reason}
+        </Text>
+        {job.geographic_reasoning && (
+          <Text style={[styles.jobGeographic, { color: colors.text }]}>
+            🗺️ {job.geographic_reasoning}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+};
 
 export default function DispatcherConfirmationScreen() {
   const router = useRouter();
@@ -72,15 +181,8 @@ export default function DispatcherConfirmationScreen() {
   if (isLoading || !dailyPlan) {
     return (
       <LoadingStepUI
-        title="Optimizing Schedule"
+        step="Optimizing Schedule"
         subtitle="AI is prioritizing your jobs and optimizing your route for maximum efficiency"
-        step="dispatcher"
-        steps={[
-          { label: "Analyzing job priorities", completed: false, current: true },
-          { label: "Optimizing travel routes", completed: false, current: false },
-          { label: "Checking time constraints", completed: false, current: false },
-          { label: "Finalizing schedule", completed: false, current: false },
-        ]}
       />
     );
   }
@@ -132,19 +234,19 @@ export default function DispatcherConfirmationScreen() {
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { color: colors.text }]}>Emergency Jobs</Text>
                   <Text style={[styles.summaryValue, { color: colors.error }]}>
-                    {optimizationSummary.emergency_jobs}
+                    {optimizationSummary.emergency_jobs || 0}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { color: colors.text }]}>Inspection Jobs</Text>
                   <Text style={[styles.summaryValue, { color: colors.primary }]}>
-                    {optimizationSummary.inspection_jobs}
+                    {optimizationSummary.inspection_jobs || 0}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
                   <Text style={[styles.summaryLabel, { color: colors.text }]}>Service Jobs</Text>
                   <Text style={[styles.summaryValue, { color: colors.text }]}>
-                    {optimizationSummary.service_jobs}
+                    {optimizationSummary.service_jobs || 0}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -165,38 +267,23 @@ export default function DispatcherConfirmationScreen() {
               Your Optimized Schedule
             </Text>
             
-            {prioritizedJobs.map((job, index) => (
-              <View key={job.job_id} style={styles.jobItem}>
-                <View style={styles.jobHeader}>
-                  <View style={styles.jobNumber}>
-                    <Text style={[styles.jobNumberText, { color: colors.background }]}>
-                      {job.priority_rank}
-                    </Text>
-                  </View>
-                  <View style={styles.jobInfo}>
-                    <Text style={[styles.jobTitle, { color: colors.text }]}>
-                      {job.job_id}
-                    </Text>
-                    <Text style={[styles.jobTime, { color: colors.text }]}>
-                      {job.estimated_start_time} - {job.estimated_end_time}
-                    </Text>
-                  </View>
-                  <View style={[styles.jobTypeBadge, { backgroundColor: getJobTypeColor(job.job_type, colors) }]}>
-                    <Text style={[styles.jobTypeText, { color: colors.background }]}>
-                      {job.job_type}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.jobReason, { color: colors.text }]}>
-                  {job.priority_reason}
+            {prioritizedJobs.length === 0 ? (
+              <View style={styles.noJobsContainer}>
+                <Text style={[styles.noJobsText, { color: colors.text }]}>
+                  No jobs scheduled for today
                 </Text>
-                {job.geographic_reasoning && (
-                  <Text style={[styles.jobGeographic, { color: colors.text }]}>
-                    🗺️ {job.geographic_reasoning}
-                  </Text>
-                )}
               </View>
-            ))}
+            ) : (
+              prioritizedJobs.map((job, index) => (
+                <JobDisplayCard
+                  key={job.job_id}
+                  job={job}
+                  index={index}
+                  colors={colors}
+                  colorScheme={colorScheme}
+                />
+              ))
+            )}
           </View>
 
           {/* Recommendations */}
@@ -246,6 +333,8 @@ function getJobTypeColor(jobType: string, colors: any) {
       return colors.primary;
     case 'service':
       return colors.success;
+    case 'hardware_store':
+      return colors.warning;
     default:
       return colors.text;
   }
@@ -261,16 +350,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...spacing.helpers.padding('m'),
-  },
-  loadingText: {
-    ...typography.body1,
-    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
@@ -298,17 +377,17 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   summaryCard: {
-    borderRadius: 12,
+    borderRadius: radius.m,
     ...spacing.helpers.padding('m'),
     marginBottom: spacing.m,
   },
   jobsCard: {
-    borderRadius: 12,
+    borderRadius: radius.m,
     ...spacing.helpers.padding('m'),
     marginBottom: spacing.m,
   },
   recommendationsCard: {
-    borderRadius: 12,
+    borderRadius: radius.m,
     ...spacing.helpers.padding('m'),
     marginBottom: spacing.m,
   },
@@ -332,6 +411,15 @@ const styles = StyleSheet.create({
   summaryValue: {
     ...typography.h3,
   },
+  noJobsContainer: {
+    padding: spacing.l,
+    alignItems: 'center',
+  },
+  noJobsText: {
+    ...typography.body1,
+    textAlign: 'center',
+    opacity: 0.6,
+  },
   jobItem: {
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -340,14 +428,13 @@ const styles = StyleSheet.create({
   },
   jobHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.s,
   },
   jobNumber: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.m,
@@ -362,29 +449,40 @@ const styles = StyleSheet.create({
   jobTitle: {
     ...typography.body1,
     fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  jobCustomer: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
+  },
+  jobAddress: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
   },
   jobTime: {
     ...typography.caption,
-    marginTop: spacing.xs,
+    opacity: 0.8,
   },
   jobTypeBadge: {
     paddingHorizontal: spacing.s,
     paddingVertical: spacing.xs,
-    borderRadius: 8,
+    borderRadius: radius.s,
+    alignSelf: 'flex-start',
   },
   jobTypeText: {
     ...typography.caption,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
+  jobDetails: {
+    marginLeft: 44,
+  },
   jobReason: {
     ...typography.body2,
-    marginLeft: 44,
     marginBottom: spacing.xs,
   },
   jobGeographic: {
     ...typography.caption,
-    marginLeft: 44,
     opacity: 0.8,
   },
   recommendationItem: {
