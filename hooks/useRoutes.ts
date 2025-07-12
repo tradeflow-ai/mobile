@@ -4,6 +4,7 @@
  * MVP Feature: Route planning and navigation for job locations
  */
 
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAtom } from 'jotai';
 import { userAtom } from '@/store/atoms';
@@ -615,6 +616,198 @@ export const useRouteStats = () => {
   };
 
   return stats;
+};
+
+// ==================== ROUTE PROGRESS HOOKS ====================
+
+/**
+ * Hook for updating route progress with offline-first approach
+ * Uses critical operations service for immediate UI updates and offline support
+ */
+export const useUpdateRouteProgress = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      routeId, 
+      locationId, 
+      status, 
+      location 
+    }: { 
+      routeId: string; 
+      locationId: string; 
+      status: 'visited' | 'in_progress' | 'skipped'; 
+      location: { latitude: number; longitude: number };
+    }) => {
+      // Use critical operations service for offline-first update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateRouteProgress({
+        routeId,
+        locationId,
+        status,
+        timestamp: new Date(),
+        location,
+      });
+
+      return { routeId, locationId, status, location };
+    },
+    onSuccess: ({ routeId }) => {
+      // Invalidate route queries
+      queryClient.invalidateQueries({ queryKey: queryKeys.route(routeId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.activeRoute() });
+      invalidateQueries.allRoutes();
+    },
+  });
+};
+
+/**
+ * Hook for marking a waypoint as visited
+ * Common action during route navigation
+ */
+export const useVisitWaypoint = () => {
+  const updateRouteProgress = useUpdateRouteProgress();
+
+  return useMutation({
+    mutationFn: async ({ 
+      routeId, 
+      waypointIndex,
+      location 
+    }: { 
+      routeId: string; 
+      waypointIndex: number;
+      location: { latitude: number; longitude: number };
+    }) => {
+      return updateRouteProgress.mutateAsync({
+        routeId,
+        locationId: `waypoint_${waypointIndex}`,
+        status: 'visited',
+        location,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for marking a waypoint as in progress
+ * Indicates arrival at a location but work not yet completed
+ */
+export const useStartWaypoint = () => {
+  const updateRouteProgress = useUpdateRouteProgress();
+
+  return useMutation({
+    mutationFn: async ({ 
+      routeId, 
+      waypointIndex,
+      location 
+    }: { 
+      routeId: string; 
+      waypointIndex: number;
+      location: { latitude: number; longitude: number };
+    }) => {
+      return updateRouteProgress.mutateAsync({
+        routeId,
+        locationId: `waypoint_${waypointIndex}`,
+        status: 'in_progress',
+        location,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for skipping a waypoint
+ * Used when a location cannot be visited or is no longer needed
+ */
+export const useSkipWaypoint = () => {
+  const updateRouteProgress = useUpdateRouteProgress();
+
+  return useMutation({
+    mutationFn: async ({ 
+      routeId, 
+      waypointIndex,
+      location 
+    }: { 
+      routeId: string; 
+      waypointIndex: number;
+      location: { latitude: number; longitude: number };
+    }) => {
+      return updateRouteProgress.mutateAsync({
+        routeId,
+        locationId: `waypoint_${waypointIndex}`,
+        status: 'skipped',
+        location,
+      });
+    },
+  });
+};
+
+/**
+ * Hook for getting route progress statistics
+ * Useful for progress indicators and completion tracking
+ */
+export const useRouteProgress = (routeId?: string) => {
+  const { data: route } = useRoute(routeId || '');
+  const { criticalOperationsService } = require('@/services/criticalOperationsService');
+  
+  const [progressStats, setProgressStats] = useState({
+    totalWaypoints: 0,
+    visitedWaypoints: 0,
+    inProgressWaypoints: 0,
+    skippedWaypoints: 0,
+    pendingWaypoints: 0,
+    completionPercentage: 0,
+  });
+
+  useEffect(() => {
+    if (!route || !routeId) return;
+
+    const updateStats = () => {
+      const routeProgressOps = criticalOperationsService
+        .getPendingOperationsByType('route_progress')
+        .filter((op: any) => op.entityId === routeId);
+
+      const totalWaypoints = route.waypoints.length;
+      let visitedWaypoints = 0;
+      let inProgressWaypoints = 0;
+      let skippedWaypoints = 0;
+
+      // Count progress from pending operations (for offline scenarios)
+      routeProgressOps.forEach((op: any) => {
+        switch (op.optimisticData.status) {
+          case 'visited':
+            visitedWaypoints++;
+            break;
+          case 'in_progress':
+            inProgressWaypoints++;
+            break;
+          case 'skipped':
+            skippedWaypoints++;
+            break;
+        }
+      });
+
+      const completedWaypoints = visitedWaypoints + skippedWaypoints;
+      const pendingWaypoints = totalWaypoints - completedWaypoints - inProgressWaypoints;
+      const completionPercentage = totalWaypoints > 0 ? (completedWaypoints / totalWaypoints) * 100 : 0;
+
+      setProgressStats({
+        totalWaypoints,
+        visitedWaypoints,
+        inProgressWaypoints,
+        skippedWaypoints,
+        pendingWaypoints,
+        completionPercentage,
+      });
+    };
+
+    updateStats();
+    const interval = setInterval(updateStats, 2000); // Update every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [route, routeId, criticalOperationsService]);
+
+  return progressStats;
 };
 
 /**

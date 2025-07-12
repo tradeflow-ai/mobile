@@ -1,9 +1,109 @@
 /**
  * TanStack Query Client Configuration
  * Centralized configuration for all data fetching and caching
+ * ENHANCED: Includes persistence for critical data
  */
 
 import { QueryClient } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ==================== PERSISTENCE CONFIGURATION ====================
+
+/**
+ * Critical data that should be persisted for offline access
+ * These are high-priority queries that users need access to offline
+ */
+const CRITICAL_QUERY_PATTERNS = [
+  'jobs',          // All job data
+  'inventory',     // Inventory items and quantities
+  'routes',        // Route information
+  'daily-plan',    // Daily plans
+  'profile',       // User profile data
+];
+
+/**
+ * Check if a query should be persisted based on its key
+ */
+const shouldPersistQuery = (queryKey: readonly unknown[]): boolean => {
+  const keyString = queryKey.join('.');
+  return CRITICAL_QUERY_PATTERNS.some(pattern => keyString.includes(pattern));
+};
+
+/**
+ * Custom persister for critical TanStack Query data
+ * Stores only essential data offline using AsyncStorage
+ */
+const queryPersister = {
+  persistClient: async (client: any) => {
+    try {
+      const criticalData = {
+        clientState: {
+          queries: Array.from(client.queries.entries())
+            .filter((entry: any) => shouldPersistQuery(entry[0]))
+            .map((entry: any) => {
+              const [queryKey, query] = entry;
+              return {
+                queryKey,
+                queryHash: query.queryHash,
+                data: query.state.data,
+                dataUpdatedAt: query.state.dataUpdatedAt,
+                isStale: query.isStale(),
+              };
+            })
+            .slice(0, 50), // Limit to 50 most important queries
+          timestamp: Date.now(),
+        },
+      };
+
+      await AsyncStorage.setItem(
+        'tanstack-query-offline-cache', 
+        JSON.stringify(criticalData)
+      );
+      
+      console.log(`QueryClient: Persisted ${criticalData.clientState.queries.length} critical queries`);
+    } catch (error) {
+      console.error('QueryClient: Error persisting critical data:', error);
+    }
+  },
+
+  restoreClient: async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('tanstack-query-offline-cache');
+      
+      if (!storedData) {
+        console.log('QueryClient: No persisted data found');
+        return undefined;
+      }
+
+      const parsedData = JSON.parse(storedData);
+      const age = Date.now() - parsedData.clientState.timestamp;
+      
+      // Only restore data that's less than 24 hours old
+      if (age > 24 * 60 * 60 * 1000) {
+        console.log('QueryClient: Persisted data too old, ignoring');
+        await AsyncStorage.removeItem('tanstack-query-offline-cache');
+        return undefined;
+      }
+
+      console.log(`QueryClient: Restored ${parsedData.clientState.queries.length} critical queries`);
+      return parsedData.clientState;
+    } catch (error) {
+      console.error('QueryClient: Error restoring critical data:', error);
+      return undefined;
+    }
+  },
+
+  removeClient: async () => {
+    try {
+      await AsyncStorage.removeItem('tanstack-query-offline-cache');
+      console.log('QueryClient: Cleared persisted cache');
+    } catch (error) {
+      console.error('QueryClient: Error clearing persisted cache:', error);
+    }
+  },
+};
+
+// ==================== QUERY CLIENT CONFIGURATION ====================
 
 // Create a query client with optimized defaults
 export const queryClient = new QueryClient({
@@ -282,45 +382,412 @@ export const backgroundSync = {
   },
 };
 
+// ==================== ENHANCED OPTIMISTIC UPDATES ====================
+
 /**
- * Optimistic updates helpers
- * Provide instant feedback for better UX
+ * Types for optimistic update tracking
  */
-export const optimisticUpdates = {
-  // Optimistically update job status
-  updateJobStatus: (jobId: string, newStatus: string) => {
-    queryClient.setQueryData(queryKeys.job(jobId), (old: any) => {
-      if (!old) return old;
-      return { ...old, status: newStatus, updated_at: new Date().toISOString() };
+export interface OptimisticOperation {
+  id: string;
+  type: string;
+  status: 'pending' | 'success' | 'error';
+  entity: any;
+  originalData: any;
+  timestamp: Date;
+  error?: any;
+}
+
+/**
+ * Enhanced optimistic updates with rollback capabilities and status tracking
+ * Provides instant feedback with proper error recovery
+ */
+export class EnhancedOptimisticUpdates {
+  private operations: Map<string, OptimisticOperation> = new Map();
+  private listeners: ((operations: OptimisticOperation[]) => void)[] = [];
+
+  /**
+   * Create a new optimistic operation
+   */
+  private createOperation(
+    type: string, 
+    entity: any, 
+    originalData: any
+  ): OptimisticOperation {
+    return {
+      id: `${type}_${entity.id}_${Date.now()}`,
+      type,
+      status: 'pending',
+      entity,
+      originalData,
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * Notify listeners of operation changes
+   */
+  private notifyListeners() {
+    const operations = Array.from(this.operations.values());
+    this.listeners.forEach(listener => {
+      try {
+        listener(operations);
+      } catch (error) {
+        console.error('Error notifying optimistic update listener:', error);
+      }
     });
+  }
+
+  /**
+   * Subscribe to optimistic operation changes
+   */
+  subscribe(listener: (operations: OptimisticOperation[]) => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      const index = this.listeners.indexOf(listener);
+      if (index > -1) {
+        this.listeners.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Get current operations
+   */
+  getOperations(): OptimisticOperation[] {
+    return Array.from(this.operations.values());
+  }
+
+  /**
+   * Get pending operations count
+   */
+  getPendingCount(): number {
+    return Array.from(this.operations.values()).filter(op => op.status === 'pending').length;
+  }
+
+  /**
+   * Mark operation as successful
+   */
+  markSuccess(operationId: string) {
+    const operation = this.operations.get(operationId);
+    if (operation) {
+      operation.status = 'success';
+      this.notifyListeners();
+      
+      // Remove successful operations after a delay
+      setTimeout(() => {
+        this.operations.delete(operationId);
+        this.notifyListeners();
+      }, 3000);
+    }
+  }
+
+  /**
+   * Mark operation as failed and trigger rollback
+   */
+  markError(operationId: string, error: any) {
+    const operation = this.operations.get(operationId);
+    if (operation) {
+      operation.status = 'error';
+      operation.error = error;
+      
+      // Trigger rollback
+      this.rollbackOperation(operation);
+      this.notifyListeners();
+      
+      // Remove failed operations after a delay
+      setTimeout(() => {
+        this.operations.delete(operationId);
+        this.notifyListeners();
+      }, 5000);
+    }
+  }
+
+  /**
+   * Rollback an operation to its original state
+   */
+  private rollbackOperation(operation: OptimisticOperation) {
+    const { type, entity, originalData } = operation;
     
-    // Update in jobs list too
+    try {
+      switch (type) {
+        case 'createJob':
+          this.rollbackJobCreation(entity.id);
+          break;
+        case 'updateJob':
+          this.rollbackJobUpdate(entity.id, originalData);
+          break;
+        case 'updateClient':
+          this.rollbackClientUpdate(entity.id, originalData);
+          break;
+        case 'updateRoute':
+          this.rollbackRouteUpdate(entity.id, originalData);
+          break;
+        case 'updateInventory':
+          this.rollbackInventoryUpdate(entity.id, originalData);
+          break;
+        default:
+          console.warn(`No rollback handler for operation type: ${type}`);
+      }
+      
+      console.log(`Rolled back optimistic operation: ${type}`);
+    } catch (error) {
+      console.error(`Error rolling back operation ${type}:`, error);
+    }
+  }
+
+  /**
+   * Rollback job creation
+   */
+  private rollbackJobCreation(jobId: string) {
+    // Remove job from cache
+    queryClient.removeQueries({ queryKey: queryKeys.job(jobId) });
+    
+    // Remove from jobs list
     queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
       if (!old) return old;
-      return old.map(job => 
-        job.id === jobId 
-          ? { ...job, status: newStatus, updated_at: new Date().toISOString() }
-          : job
-      );
+      return old.filter(job => job.id !== jobId);
     });
-  },
-  
-  // Optimistically update inventory quantity
-  updateInventoryQuantity: (itemId: string, newQuantity: number) => {
-    queryClient.setQueryData(queryKeys.inventoryItem(itemId), (old: any) => {
-      if (!old) return old;
-      return { ...old, quantity: newQuantity, updated_at: new Date().toISOString() };
-    });
+  }
+
+  /**
+   * Rollback job update
+   */
+  private rollbackJobUpdate(jobId: string, originalData: any) {
+    // Restore original job data
+    queryClient.setQueryData(queryKeys.job(jobId), originalData);
     
-    // Update in inventory list too
+    // Restore in jobs list
+    queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(job => job.id === jobId ? originalData : job);
+    });
+  }
+
+  /**
+   * Rollback client update
+   */
+  private rollbackClientUpdate(clientId: string, originalData: any) {
+    // Restore original client data
+    queryClient.setQueryData(queryKeys.client(clientId), originalData);
+    
+    // Restore in clients list
+    queryClient.setQueryData(queryKeys.clients(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(client => client.id === clientId ? originalData : client);
+    });
+  }
+
+  /**
+   * Rollback route update
+   */
+  private rollbackRouteUpdate(routeId: string, originalData: any) {
+    // Restore original route data
+    queryClient.setQueryData(queryKeys.route(routeId), originalData);
+    
+    // Restore in routes list
+    queryClient.setQueryData(queryKeys.routes(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(route => route.id === routeId ? originalData : route);
+    });
+  }
+
+  /**
+   * Rollback inventory update
+   */
+  private rollbackInventoryUpdate(itemId: string, originalData: any) {
+    // Restore original inventory data
+    queryClient.setQueryData(queryKeys.inventoryItem(itemId), originalData);
+    
+    // Restore in inventory list
     queryClient.setQueryData(queryKeys.inventory(), (old: any[]) => {
       if (!old) return old;
-      return old.map(item => 
-        item.id === itemId 
-          ? { ...item, quantity: newQuantity, updated_at: new Date().toISOString() }
-          : item
-      );
+      return old.map(item => item.id === itemId ? originalData : item);
     });
+  }
+
+  // ==================== OPTIMISTIC UPDATE METHODS ====================
+
+  /**
+   * Optimistically create a job
+   */
+  createJob(jobData: any): string {
+    const tempId = `temp_${Date.now()}`;
+    const newJob = {
+      ...jobData,
+      id: tempId,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const operation = this.createOperation('createJob', newJob, null);
+    this.operations.set(operation.id, operation);
+
+    // Add to jobs list optimistically
+    queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+      return old ? [newJob, ...old] : [newJob];
+    });
+
+    // Add to individual job cache
+    queryClient.setQueryData(queryKeys.job(tempId), newJob);
+
+    this.notifyListeners();
+    return operation.id;
+  }
+
+  /**
+   * Optimistically update a job
+   */
+  updateJob(jobId: string, updates: any): string {
+    // Get original data for rollback
+    const originalData = queryClient.getQueryData(queryKeys.job(jobId));
+    
+    if (!originalData) {
+      console.warn(`No data found for job ${jobId}, skipping optimistic update`);
+      return '';
+    }
+    
+    const updatedJob = {
+      ...originalData,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    const operation = this.createOperation('updateJob', updatedJob, originalData);
+    this.operations.set(operation.id, operation);
+
+    // Update job optimistically
+    queryClient.setQueryData(queryKeys.job(jobId), updatedJob);
+    
+    // Update in jobs list
+    queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(job => job.id === jobId ? updatedJob : job);
+    });
+
+    this.notifyListeners();
+    return operation.id;
+  }
+
+  /**
+   * Optimistically update a client
+   */
+  updateClient(clientId: string, updates: any): string {
+    // Get original data for rollback
+    const originalData = queryClient.getQueryData(queryKeys.client(clientId));
+    
+    if (!originalData) {
+      console.warn(`No data found for client ${clientId}, skipping optimistic update`);
+      return '';
+    }
+    
+    const updatedClient = {
+      ...originalData,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    const operation = this.createOperation('updateClient', updatedClient, originalData);
+    this.operations.set(operation.id, operation);
+
+    // Update client optimistically
+    queryClient.setQueryData(queryKeys.client(clientId), updatedClient);
+    
+    // Update in clients list
+    queryClient.setQueryData(queryKeys.clients(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(client => client.id === clientId ? updatedClient : client);
+    });
+
+    this.notifyListeners();
+    return operation.id;
+  }
+
+  /**
+   * Optimistically update a route
+   */
+  updateRoute(routeId: string, updates: any): string {
+    // Get original data for rollback
+    const originalData = queryClient.getQueryData(queryKeys.route(routeId));
+    
+    if (!originalData) {
+      console.warn(`No data found for route ${routeId}, skipping optimistic update`);
+      return '';
+    }
+    
+    const updatedRoute = {
+      ...originalData,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    const operation = this.createOperation('updateRoute', updatedRoute, originalData);
+    this.operations.set(operation.id, operation);
+
+    // Update route optimistically
+    queryClient.setQueryData(queryKeys.route(routeId), updatedRoute);
+    
+    // Update in routes list
+    queryClient.setQueryData(queryKeys.routes(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(route => route.id === routeId ? updatedRoute : route);
+    });
+
+    this.notifyListeners();
+    return operation.id;
+  }
+
+  /**
+   * Optimistically update inventory
+   */
+  updateInventory(itemId: string, updates: any): string {
+    // Get original data for rollback
+    const originalData = queryClient.getQueryData(queryKeys.inventoryItem(itemId));
+    
+    if (!originalData) {
+      console.warn(`No data found for inventory item ${itemId}, skipping optimistic update`);
+      return '';
+    }
+    
+    const updatedItem = {
+      ...originalData,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    const operation = this.createOperation('updateInventory', updatedItem, originalData);
+    this.operations.set(operation.id, operation);
+
+    // Update inventory item optimistically
+    queryClient.setQueryData(queryKeys.inventoryItem(itemId), updatedItem);
+    
+    // Update in inventory list
+    queryClient.setQueryData(queryKeys.inventory(), (old: any[]) => {
+      if (!old) return old;
+      return old.map(item => item.id === itemId ? updatedItem : item);
+    });
+
+    this.notifyListeners();
+    return operation.id;
+  }
+}
+
+// Create singleton instance
+export const enhancedOptimisticUpdates = new EnhancedOptimisticUpdates();
+
+/**
+ * Legacy optimistic updates helpers (maintained for backward compatibility)
+ * @deprecated Use enhancedOptimisticUpdates instead
+ */
+export const optimisticUpdates = {
+  // Optimistically update job status (legacy)
+  updateJobStatus: (jobId: string, newStatus: string) => {
+    return enhancedOptimisticUpdates.updateJob(jobId, { status: newStatus });
+  },
+  
+  // Optimistically update inventory quantity (legacy)
+  updateInventoryQuantity: (itemId: string, newQuantity: number) => {
+    return enhancedOptimisticUpdates.updateInventory(itemId, { quantity: newQuantity });
   },
 };
 
@@ -358,6 +825,129 @@ export const cacheWarming = {
     );
     
     await Promise.all(promises);
+  },
+};
+
+// ==================== ENHANCED PERSISTENCE UTILITIES ====================
+
+/**
+ * Initialize query persistence on app startup
+ * Call this when the app starts to restore persisted critical data
+ */
+export const initializeQueryPersistence = async () => {
+  try {
+    const restoredState = await queryPersister.restoreClient();
+    
+    if (restoredState?.queries) {
+      // Restore critical queries to the cache
+      restoredState.queries.forEach((queryData: any) => {
+        if (queryData.data) {
+          queryClient.setQueryData(queryData.queryKey, queryData.data);
+        }
+      });
+      
+      console.log(`QueryClient: Initialized with ${restoredState.queries.length} persisted queries`);
+    }
+  } catch (error) {
+    console.error('QueryClient: Error initializing persistence:', error);
+  }
+};
+
+/**
+ * Manually persist current critical data
+ * Useful for explicit save points or before app backgrounding
+ */
+export const persistCriticalData = async () => {
+  try {
+    await queryPersister.persistClient(queryClient);
+  } catch (error) {
+    console.error('QueryClient: Error persisting critical data:', error);
+  }
+};
+
+/**
+ * Clear all persisted query data
+ * Useful for logout or data reset scenarios
+ */
+export const clearPersistedData = async () => {
+  try {
+    await queryPersister.removeClient();
+  } catch (error) {
+    console.error('QueryClient: Error clearing persisted data:', error);
+  }
+};
+
+/**
+ * Enhanced cache utilities for critical operations
+ */
+export const criticalCacheUtils = {
+  /**
+   * Ensure critical data is available offline
+   * Prefetches and pins critical queries to cache
+   */
+  prefetchCriticalData: async (userId: string) => {
+    const criticalQueries = [
+      // User's jobs
+      { queryKey: queryKeys.jobs(), enabled: true },
+      // Today's jobs specifically
+      { queryKey: ['jobs', 'today'], enabled: true },
+      // User inventory
+      { queryKey: queryKeys.inventory(), enabled: true },
+      // Active route
+      { queryKey: queryKeys.activeRoute(), enabled: true },
+      // User profile
+      { queryKey: queryKeys.profile(userId), enabled: true },
+    ];
+
+    const prefetchPromises = criticalQueries.map(({ queryKey }) =>
+      queryClient.prefetchQuery({
+        queryKey,
+        staleTime: 1000 * 60 * 30, // 30 minutes
+        gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      }).catch(error => {
+        console.warn(`Failed to prefetch ${queryKey.join('.')}:`, error);
+      })
+    );
+
+    await Promise.allSettled(prefetchPromises);
+    console.log('QueryClient: Critical data prefetch completed');
+  },
+
+  /**
+   * Get offline-available data for critical operations
+   * Returns cached data even if stale for offline scenarios
+   */
+  getOfflineData: <T>(queryKey: readonly unknown[]): T | undefined => {
+    const query = queryClient.getQueryCache().find({ queryKey });
+    return query?.state.data as T;
+  },
+
+  /**
+   * Mark data as critical and persist immediately
+   */
+  setCriticalData: async <T>(queryKey: readonly unknown[], data: T) => {
+    queryClient.setQueryData(queryKey, data);
+    
+    // If this is critical data, persist immediately
+    if (shouldPersistQuery(queryKey)) {
+      await persistCriticalData();
+    }
+  },
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  getCacheStats: () => {
+    const queries = queryClient.getQueryCache().getAll();
+    const criticalQueries = queries.filter(q => shouldPersistQuery(q.queryKey));
+    
+    return {
+      totalQueries: queries.length,
+      criticalQueries: criticalQueries.length,
+      cachedData: queries.filter(q => q.state.data !== undefined).length,
+      staleQueries: queries.filter(q => q.isStale()).length,
+      errorQueries: queries.filter(q => q.state.error !== null).length,
+    };
   },
 };
 

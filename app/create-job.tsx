@@ -27,9 +27,6 @@ interface JobFormData {
   estimated_duration?: number;
   // Optional fields
   notes?: string;
-  customer_name?: string;
-  customer_phone?: string;
-  customer_email?: string;
 }
 
 // Create inventory item form interface
@@ -52,9 +49,6 @@ const defaultFormValues: JobFormData = {
   required_items: [],
   estimated_duration: 60,
   notes: '',
-  customer_name: '',
-  customer_phone: '',
-  customer_email: '',
 };
 
 // Job type options - expanded to match Job Details
@@ -124,19 +118,7 @@ export default function CreateJobScreen() {
     minLength: { value: 5, message: 'Address must be at least 5 characters' },
   };
 
-  const phoneRules: FormValidationRules = {
-    pattern: {
-      value: /^[\+]?[1-9][\d]{0,15}$/,
-      message: 'Please enter a valid phone number'
-    }
-  };
 
-  const emailRules: FormValidationRules = {
-    pattern: {
-      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-      message: 'Please enter a valid email address'
-    }
-  };
 
   // Inventory management functions
   const getInventoryItem = (itemId: string) => {
@@ -264,13 +246,9 @@ export default function CreateJobScreen() {
         required_items: data.required_items.length > 0 ? data.required_items : undefined,
         notes: data.notes?.trim() || undefined,
         use_ai_scheduling: data.use_ai_scheduling,
-        // Customer information
-        customer_name: data.customer_name?.trim() || undefined,
-        customer_phone: data.customer_phone?.trim() || undefined,
-        customer_email: data.customer_email?.trim() || undefined,
       };
 
-      const newJob = await createJobMutation.mutateAsync(createData);
+      const newJob = await createJobMutation.mutateAsync({ jobData: createData });
       
       Alert.alert('Success', 'Job created successfully!', [
         { text: 'OK', onPress: () => router.back() }
@@ -449,31 +427,7 @@ export default function CreateJobScreen() {
                 numberOfLines={3}
               />
 
-              {/* Customer Information */}
-              <Text style={[styles.subsectionTitle, { color: colors.text, marginTop: spacing.l }]}>Customer Information</Text>
 
-              <FormTextInput
-                name="customer_name"
-                label="Customer Name"
-                placeholder="Enter customer name"
-              />
-
-              <FormTextInput
-                name="customer_phone"
-                label="Phone Number"
-                placeholder="Enter customer phone number"
-                keyboardType="phone-pad"
-                rules={phoneRules}
-              />
-
-              <FormTextInput
-                name="customer_email"
-                label="Email Address"
-                placeholder="Enter customer email address"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                rules={emailRules}
-              />
             </View>
 
             <FormActions

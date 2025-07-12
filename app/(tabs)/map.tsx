@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Platform, Modal, Animated, Dimensions, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
+import { OfflineExperienceBar } from '@/components/ui';
 import { useAtom, useAtomValue } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -212,6 +213,9 @@ export default function MapScreen() {
 
       {/* Floating Controls */}
       <SafeAreaView style={styles.floatingControls}>
+        {/* Offline Experience Bar */}
+        <OfflineExperienceBar variant="compact" />
+        
         {/* My Location Button */}
         <TouchableOpacity
           style={[styles.myLocationButton, { backgroundColor: colors.background }]}

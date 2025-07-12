@@ -22,7 +22,7 @@ export interface JobLocation {
   longitude: number;
   job_type: 'delivery' | 'pickup' | 'service' | 'inspection' | 'maintenance' | 'emergency' | 'hardware_store';
   business_category?: 'Demand' | 'Maintenance';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'paused';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   scheduled_start?: string;
   scheduled_end?: string;
@@ -207,7 +207,7 @@ export const useJobsByBusinessCategory = (business_category: JobLocation['busine
 // ==================== MUTATION HOOKS ====================
 
 /**
- * Create a new job
+ * Create a new job with enhanced optimistic updates
  * Jack needs this for adding new jobs in CRUD UI
  */
 export const useCreateJob = () => {
@@ -215,33 +215,116 @@ export const useCreateJob = () => {
   const [user] = useAtom(userAtom);
 
   return useMutation({
-    mutationFn: async (jobData: CreateJobData): Promise<JobLocation> => {
+    mutationFn: async ({ 
+      jobData, 
+      operationId 
+    }: { 
+      jobData: CreateJobData; 
+      operationId?: string 
+    }): Promise<JobLocation> => {
       if (!user?.id) {
         throw new Error('No authenticated user');
       }
 
-      const { data, error } = await supabase
-        .from('job_locations')
-        .insert({
-          ...jobData,
+      // Map CreateJobData fields to database schema once
+      const { scheduled_start, scheduled_end, notes, ...restJobData } = jobData;
+      const dbData = {
+        ...restJobData,
+        user_id: user.id,
+        status: 'pending' as const,
+        instructions: notes,
+      };
+
+      // Check if we're offline or should batch this operation
+      const { offlineStatusService } = await import('@/services/offlineStatusService');
+      const { batchOperationsService } = await import('@/services/batchOperationsService');
+      
+      if (!offlineStatusService.isOnline()) {
+        // Queue operation for batch processing when back online
+        const batchOperationId = batchOperationsService.queueOperation(
+          'create',
+          'job',
+          dbData,
+          undefined,
+          'critical' // Job operations are critical
+        );
+        
+        console.log(`Job creation queued for batch processing: ${batchOperationId}`);
+        
+        // Create a temporary response for optimistic updates
+        const tempJob: JobLocation = {
+          id: `temp_${Date.now()}`,
+          ...restJobData,
           user_id: user.id,
           status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw error;
+          // Map fields to match JobLocation interface (which mirrors database schema)
+          scheduled_start: scheduled_start,
+          scheduled_end: scheduled_end,
+          notes: notes,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        return tempJob;
       }
 
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('job_locations')
+          .insert(dbData)
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        // Mark optimistic operation as successful
+        if (operationId) {
+          offlineStatusService.handleSyncSuccess(operationId);
+        }
+
+        return data;
+      } catch (error) {
+        // If online but operation failed, queue for batch retry
+        const batchOperationId = batchOperationsService.queueOperation(
+          'create',
+          'job',
+          dbData,
+          undefined,
+          'critical'
+        );
+        
+        console.log(`Job creation failed, queued for batch retry: ${batchOperationId}`);
+        
+        // Mark optimistic operation as failed
+        if (operationId) {
+          offlineStatusService.handleSyncFailure(error, operationId);
+        }
+        throw error;
+      }
     },
-    onSuccess: (newJob) => {
-      // Invalidate and refetch jobs list
-      invalidateQueries.allJobs();
+    onSuccess: (newJob, { operationId }) => {
+      // Replace the temporary optimistic job with the real one
+      if (operationId) {
+        // Find and replace temporary job in cache
+        queryClient.setQueryData(queryKeys.jobs(), (old: any[]) => {
+          if (!old) return [newJob];
+          return old.map(job => 
+            job.id?.startsWith('temp_') ? newJob : job
+          );
+        });
+      } else {
+        // Invalidate and refetch jobs list (fallback for non-optimistic updates)
+        invalidateQueries.allJobs();
+      }
       
-      // Add the new job to the cache
+      // Add the real job to the cache
       queryClient.setQueryData(queryKeys.job(newJob.id), newJob);
+    },
+    onError: (error, { operationId }) => {
+      console.error('Job creation failed:', error);
+      // Optimistic rollback is handled automatically in the mutation function
     },
   });
 };
@@ -334,22 +417,40 @@ export const useDeleteJob = () => {
 /**
  * Mark job as completed
  * Special mutation for completing jobs with completion notes
+ * ENHANCED: Uses critical operations service for offline-first updates
  */
 export const useCompleteJob = () => {
   const updateJobMutation = useUpdateJob();
 
   return useMutation({
-    mutationFn: async ({ jobId, completionNotes, actualEnd }: { 
+    mutationFn: async ({ jobId, completionNotes, actualEnd, location }: { 
       jobId: string; 
       completionNotes?: string;
       actualEnd?: string;
+      location?: { latitude: number; longitude: number };
     }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'completed',
+        previousStatus: 'in_progress', // Assume it was in progress
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation for additional fields
       return updateJobMutation.mutateAsync({
         jobId,
         updates: {
           status: 'completed',
           completion_notes: completionNotes,
           actual_end: actualEnd || new Date().toISOString(),
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
         },
       });
     },
@@ -359,20 +460,76 @@ export const useCompleteJob = () => {
 /**
  * Start job (mark as in_progress)
  * Special mutation for starting jobs
+ * ENHANCED: Uses critical operations service for offline-first updates
  */
 export const useStartJob = () => {
   const updateJobMutation = useUpdateJob();
 
   return useMutation({
-    mutationFn: async ({ jobId, actualStart }: { 
+    mutationFn: async ({ jobId, actualStart, location }: { 
       jobId: string; 
       actualStart?: string;
+      location?: { latitude: number; longitude: number };
     }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'in_progress',
+        previousStatus: 'pending', // Assume it was pending
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation for additional fields
       return updateJobMutation.mutateAsync({
         jobId,
         updates: {
           status: 'in_progress',
           actual_start: actualStart || new Date().toISOString(),
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
+        },
+      });
+    },
+  });
+};
+
+/**
+ * Pause job (mark as paused)
+ * Special mutation for pausing jobs with offline-first support
+ */
+export const usePauseJob = () => {
+  const updateJobMutation = useUpdateJob();
+
+  return useMutation({
+    mutationFn: async ({ jobId, location }: { 
+      jobId: string; 
+      location?: { latitude: number; longitude: number };
+    }) => {
+      // Use critical operations service for offline-first status update
+      const { criticalOperationsService } = await import('@/services/criticalOperationsService');
+      
+      await criticalOperationsService.updateJobStatus({
+        jobId,
+        newStatus: 'paused',
+        previousStatus: 'in_progress', // Assume it was in progress
+        timestamp: new Date(),
+        location,
+      });
+
+      // Also update via traditional mutation
+      return updateJobMutation.mutateAsync({
+        jobId,
+        updates: {
+          status: 'paused',
+          ...(location && {
+            current_latitude: location.latitude,
+            current_longitude: location.longitude,
+          }),
         },
       });
     },

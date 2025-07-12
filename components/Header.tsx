@@ -5,6 +5,7 @@ import { useAtom } from 'jotai';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { Avatar } from './Avatar';
+import { OfflineStatusIndicator } from './ui/OfflineStatusIndicator';
 import { userProfileAtom } from '@/store/atoms';
 import { ProfileManager } from '@/services/profileManager';
 import { useAppNavigation } from '@/hooks/useNavigation';
@@ -98,7 +99,14 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={styles.header}>
-      {renderProfileImage()}
+      <View style={styles.leftSection}>
+        {renderProfileImage()}
+        <OfflineStatusIndicator 
+          size="small" 
+          showQueueCount={true}
+          style={styles.statusIndicator}
+        />
+      </View>
       
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
         {title}
@@ -115,6 +123,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.l,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   title: {
     ...typography.h3,
@@ -144,5 +156,8 @@ const styles = StyleSheet.create({
     ...touchTargets.styles.minimum,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statusIndicator: {
+    marginLeft: spacing.xs,
   },
 }); 

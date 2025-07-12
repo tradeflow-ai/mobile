@@ -15,8 +15,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { DeepLinkHandler } from '@/components/DeepLinkHandler';
 import { AuthManager } from '@/services/authManager';
 import { ProfileManager } from '@/services/profileManager';
-
-import { queryClient } from '@/services/queryClient';
+import { queryClient, initializeQueryPersistence } from '@/services/queryClient';
 
 import { typography, spacing, touchTargets } from '@/constants/Theme';
 
@@ -49,6 +48,8 @@ export default function RootLayout() {
       AuthManager.getInstance();
       // Initialize ProfileManager to start syncing profile data with auth state
       ProfileManager.getInstance();
+      // Initialize OfflineStatusService to start monitoring network status
+      initializeQueryPersistence();
     }
   }, [loaded]);
 

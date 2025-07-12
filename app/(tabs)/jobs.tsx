@@ -6,7 +6,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius, touchTargets } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { SearchBar, EmptyState, TabSelector, TabOption } from '@/components/ui';
+import { SearchBar, EmptyState, TabSelector, TabOption, OfflineExperienceBar } from '@/components/ui';
 import { useJobs, useTodaysJobs, JobLocation } from '@/hooks/useJobs';
 import { formatDate, formatDateOnly } from '@/utils/dateUtils';
 import { useAtomValue } from 'jotai';
@@ -103,15 +103,15 @@ export default function JobsScreen() {
             </View>
           </View>
         </View>
-        <View style={styles.jobHeaderRight}>
-          <Text style={[styles.jobType, { color: colors.placeholder }]}>
-            {item.job_type.replace('_', ' ').toUpperCase()}
-          </Text>
-          <Text style={[styles.estimatedDuration, { color: colors.placeholder }]}>
-            {item.estimated_duration || 60}min
-          </Text>
+          <View style={styles.jobHeaderRight}>
+            <Text style={[styles.jobType, { color: colors.placeholder }]}>
+              {item.job_type.replace('_', ' ').toUpperCase()}
+            </Text>
+            <Text style={[styles.estimatedDuration, { color: colors.placeholder }]}>
+              {item.estimated_duration || 60}min
+            </Text>
+          </View>
         </View>
-      </View>
 
       {item.description && (
         <Text style={[styles.jobDescription, { color: colors.text }]} numberOfLines={2}>
@@ -193,6 +193,9 @@ export default function JobsScreen() {
             onPress: handleCreateJob,
           }}
         />
+
+        {/* Offline Experience Bar */}
+        <OfflineExperienceBar variant="compact" />
 
         <View style={styles.content}>
           {/* Active Job Card */}

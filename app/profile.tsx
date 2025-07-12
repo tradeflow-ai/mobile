@@ -19,6 +19,7 @@ import { ProfileManager } from '@/services/profileManager';
 import { userProfileAtom, themeModeAtom, activeJobAtom, type ThemeMode } from '@/store/atoms';
 import { Avatar } from '@/components/Avatar';
 import { useAppNavigation } from '@/hooks/useNavigation';
+import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
 import { DailyPlanService } from '@/services/dailyPlanService';
 import { useQueryClient } from '@tanstack/react-query';
@@ -41,14 +42,40 @@ export default function ProfileScreen() {
   // Daily plan hook for reset functionality
   const { resetPlan, refreshPlan, dailyPlan } = useTodaysPlan();
 
+  // Offline status for manual offline mode
+  const { isManualOfflineMode, enableManualOfflineMode, disableManualOfflineMode } = useOfflineStatus();
+
+  // Local state for immediate UI updates
+  const [localDarkMode, setLocalDarkMode] = useState(themeMode === 'dark');
+  const [localOfflineMode, setLocalOfflineMode] = useState(isManualOfflineMode);
+
+  // Sync local state with global state
+  React.useEffect(() => {
+    setLocalDarkMode(themeMode === 'dark');
+  }, [themeMode]);
+
+  React.useEffect(() => {
+    setLocalOfflineMode(isManualOfflineMode);
+  }, [isManualOfflineMode]);
+
   // Get display information
   const displayName = profileManager.getDisplayName();
   const userEmail = profileManager.getUserEmail();
   const userRole = profileManager.getUserRole();
 
   const handleThemeToggle = (value: boolean) => {
+    setLocalDarkMode(value); // Immediate UI update
     const newThemeMode: ThemeMode = value ? 'dark' : 'light';
     setThemeMode(newThemeMode);
+  };
+
+  const handleOfflineModeToggle = (value: boolean) => {
+    setLocalOfflineMode(value); // Immediate UI update
+    if (value) {
+      enableManualOfflineMode();
+    } else {
+      disableManualOfflineMode();
+    }
   };
 
   const handleLocationSettings = async () => {
@@ -191,10 +218,11 @@ export default function ProfileScreen() {
             <FontAwesome name="moon-o" size={20} color={colors.placeholder} />
             <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
             <Switch
-              value={themeMode === 'dark'}
+              value={localDarkMode}
               onValueChange={handleThemeToggle}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={themeMode === 'dark' ? colors.background : colors.placeholder}
+              thumbColor={'#FFFFFF'}
+              ios_backgroundColor={colors.border}
             />
           </View>
 
@@ -207,8 +235,18 @@ export default function ProfileScreen() {
             <FontAwesome name="chevron-right" size={16} color={colors.placeholder} />
           </TouchableOpacity>
 
-
-
+          {/* Offline Mode Toggle */}
+          <View style={[styles.menuItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome name="signal" size={20} color={colors.placeholder} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Offline Mode</Text>
+            <Switch
+              value={localOfflineMode}
+              onValueChange={handleOfflineModeToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={'#FFFFFF'}
+              ios_backgroundColor={colors.border}
+            />
+          </View>
 
 
           <TouchableOpacity

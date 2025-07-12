@@ -646,10 +646,10 @@ export const useDailyPlan = (
 };
 
 /**
- * Convenience hook for today's daily plan
- * Most common use case for the Plan Your Day feature
+ * Hook for managing today's daily plan
+ * This is a convenience wrapper around useDailyPlan for the current day
  */
 export const useTodaysPlan = (options?: UseDailyPlanOptions) => {
   const today = new Date().toISOString().split('T')[0];
   return useDailyPlan(today, options);
-}; 
+};

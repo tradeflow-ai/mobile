@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { typography, spacing, shadows, radius } from '@/constants/Theme';
 import { Header } from '@/components/Header';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, OptimisticStatusBar, BatchProgressBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 
 import { useTodaysPlan } from '@/hooks/useDailyPlan';
@@ -262,8 +262,15 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </View>
-
         </ScrollView>
+        
+        {/* Optimistic Status Bar */}
+        <OptimisticStatusBar position="bottom" />
+        
+        {/* Batch Progress Bar */}
+        <BatchProgressBar position="bottom" detailed={true} />
+        
+
       </View>
     </SafeAreaView>
   );
@@ -384,5 +391,5 @@ const styles = StyleSheet.create({
   },
   scheduleDetails: {
     ...typography.caption,
-  },
+  }
 });
