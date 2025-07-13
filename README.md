@@ -1,6 +1,32 @@
 # TradeFlow: The AI-First OS for Tradespeople
 
+[![GitHub issues](https://img.shields.io/github/issues/tradeflow-ai/mobile)](https://github.com/tradeflow-ai/mobile/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/tradeflow-ai/mobile)](https://github.com/tradeflow-ai/mobile/pulls)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Contributors](https://img.shields.io/github/contributors/tradeflow-ai/mobile)](https://github.com/tradeflow-ai/mobile/graphs/contributors)
+[![Last commit](https://img.shields.io/github/last-commit/tradeflow-ai/mobile)](https://github.com/tradeflow-ai/mobile/commits/main)
+
 TradeFlow is an industry-specific AI agent that brings the "Cursor experience" to independent tradespeople. It acts as an "AI Admin," intelligently automating and optimizing the complex, dynamic context of a contractor's day to maximize their revenue-generating "wrench time" and minimize administrative overhead.
+
+## 📊 Project Insights
+
+<div align="center">
+
+![GitHub repo size](https://img.shields.io/github/repo-size/tradeflow-ai/mobile)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/tradeflow-ai/mobile)
+![GitHub top language](https://img.shields.io/github/languages/top/tradeflow-ai/mobile)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/tradeflow-ai/mobile)
+
+</div>
+
+| Metric | Value |
+|--------|-------|
+| **👥 Contributors** | ![GitHub contributors](https://img.shields.io/github/contributors/tradeflow-ai/mobile) |
+| **📝 Open Issues** | ![GitHub issues](https://img.shields.io/github/issues/tradeflow-ai/mobile) |
+| **🔀 Pull Requests** | ![GitHub pull requests](https://img.shields.io/github/issues-pr/tradeflow-ai/mobile) |
+| **⭐ Stars** | ![GitHub stars](https://img.shields.io/github/stars/tradeflow-ai/mobile) |
+| **🍴 Forks** | ![GitHub forks](https://img.shields.io/github/forks/tradeflow-ai/mobile) |
+| **📅 Last Updated** | ![GitHub last commit](https://img.shields.io/github/last-commit/tradeflow-ai/mobile) |
 
 ## 🎯 The Problem
 Independent contractors are often bogged down by non-revenue-generating activities like scheduling, routing, and inventory management. This disorganization directly reduces their earning potential. TradeFlow is a lightweight, intelligent solution that optimizes their daily workflow without the complexity of enterprise-grade software.
@@ -221,10 +247,18 @@ Meet the passionate team behind TradeFlow and learn how to get involved!
 
 📋 **[View Full Team & Contributors →](TEAM.md)**
 
+### 📈 Contributor Activity
+
+[![Contributors](https://contributors-img.web.app/image?repo=tradeflow-ai/mobile)](https://github.com/tradeflow-ai/mobile/graphs/contributors)
+
+### 📊 Team Organization
+
 Our team is organized into three key domains:
 - **Frontend & UX**: Building beautiful, performant React Native experiences
 - **Backend & Data**: Managing data flows and backend systems  
 - **AI & Systems**: Developing intelligent routing and optimization systems
+
+📈 **[View Detailed Contributor Analytics →](https://github.com/tradeflow-ai/mobile/graphs/contributors)**
 
 _Want to join our team? See our [Contributing Guide](CONTRIBUTING.md) and [Team Page](TEAM.md) to get started!_
 
