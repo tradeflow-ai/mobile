@@ -60,6 +60,14 @@ This is an AI-first codebase, which means it is built to be modular, scalable, a
 
 For a complete overview of our coding standards, UI/theme rules, and development phases, please review the documents in the `/_docs` directory.
 
+## 📱 Download & Installation
+
+### Alternative Distribution Only
+TradeFlow is distributed through alternative app stores that prioritize mobile open source software:
+
+- **Android:** F-Droid
+- **iOS:** AltStore
+
 ## 🚀 Getting Started
 
 ### Prerequisites
