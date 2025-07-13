@@ -215,8 +215,31 @@ The daily planning workflow uses these states:
 - **Emergency Case**: If emergency job needs immediate parts, hardware store goes first
 - **Cost Optimization**: Consolidate multiple parts requirements into single store visit
 
+## 👥 Team & Contributors
+
+Meet the passionate team behind TradeFlow and learn how to get involved! 
+
+📋 **[View Full Team & Contributors →](TEAM.md)**
+
+Our team is organized into three key domains:
+- **Frontend & UX**: Building beautiful, performant React Native experiences
+- **Backend & Data**: Managing data flows and backend systems  
+- **AI & Systems**: Developing intelligent routing and optimization systems
+
+_Want to join our team? See our [Contributing Guide](CONTRIBUTING.md) and [Team Page](TEAM.md) to get started!_
+
 ## 🤝 Contributing
-Please see `_docs/project-rules.md` for details on our version control conventions and pull request process. We welcome contributions that adhere to our established standards.
+We welcome contributions from developers of all skill levels! Please see our [Contributing Guide](CONTRIBUTING.md) for details on our development process, coding standards, and how to submit pull requests.
+
+**Quick Start for Contributors:**
+1. 🍴 Fork the repository
+2. 🔧 Set up your development environment
+3. 🌿 Create a feature branch
+4. 💻 Make your changes
+5. 🧪 Test thoroughly
+6. 📝 Submit a pull request
+
+For detailed guidelines, check our [Contributing Guide](CONTRIBUTING.md).
 
 ## 📄 License
 This project is licensed under the MIT License. 

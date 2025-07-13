@@ -75,7 +75,7 @@ We follow a **feature-branch workflow** with the following conventions:
 
 ### Team Roles & Responsibilities
 
-Our team is organized into four distinct domains:
+Our team is organized into three distinct domains:
 
 | **Role** | **Core Responsibilities** | **Description** |
 | :--- | :--- | :--- |
@@ -161,9 +161,17 @@ While E2E testing is deferred to Phase 3, we encourage:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🙏 Recognition
+## 🙏 Recognition & Community
 
-We appreciate all contributions, large and small. Contributors will be recognized in our README and release notes.
+### How We Recognize Contributors
+
+We believe in celebrating everyone who contributes to TradeFlow:
+
+#### Automatic Recognition
+- **First PR merged**: Welcome message and mention in release notes
+- **Bug fixes**: Acknowledged in issue comments and release notes
+- **Documentation improvements**: Highlighted in community updates
+- **Code contributions**: Added to README contributors section
 
 ---
 
