@@ -14,13 +14,28 @@ import { Header } from '@/components/Header';
 import { SearchBar, Avatar, EmptyState, TabSelector, TabOption, OfflineExperienceBar } from '@/components/ui';
 import { useAppNavigation } from '@/hooks/useNavigation';
 import { useInventory, InventoryItem } from '@/hooks/useInventory';
+import { useDailyPlan } from '@/hooks/useDailyPlan';
 import { createDataUri } from '@/utils/imageUtils';
+
+// Interface for required inventory items from inventory agent
+interface RequiredInventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  category: string;
+  priority: 'critical' | 'important' | 'optional';
+  estimatedCost: number;
+  preferredSupplier: string;
+  alternativeSuppliers: string[];
+}
 
 export default function InventoryScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   
   const { data: inventoryItems = [] } = useInventory();
+  const { dailyPlan } = useDailyPlan();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('current');
 
@@ -32,11 +47,37 @@ export default function InventoryScreen() {
     { key: 'required', label: 'Required' },
   ];
 
+  // Transform shopping list from inventory analysis into required inventory items
+  const requiredInventoryItems = useMemo((): RequiredInventoryItem[] => {
+    if (!dailyPlan?.inventory_output?.inventory_analysis?.shopping_list) {
+      return [];
+    }
+
+    return dailyPlan.inventory_output.inventory_analysis.shopping_list.map((item, index) => ({
+      id: `required-${index}`,
+      name: item.item_name,
+      quantity: item.quantity_to_buy,
+      unit: 'pcs', // Default unit since not provided in shopping list
+      category: 'general', // Default category since not provided in shopping list
+      priority: item.priority,
+      estimatedCost: item.estimated_cost,
+      preferredSupplier: item.preferred_supplier,
+      alternativeSuppliers: item.alternative_suppliers || [],
+    }));
+  }, [dailyPlan?.inventory_output?.inventory_analysis?.shopping_list]);
+
   // Filter items based on search query and selected tab
   const filteredItems = useMemo(() => {
-    // For required tab, always return empty array until user starts their day
     if (selectedTab === 'required') {
-      return [];
+      // Filter required items by search query
+      if (!searchQuery.trim()) {
+        return requiredInventoryItems;
+      }
+      
+      const query = searchQuery.toLowerCase();
+      return requiredInventoryItems.filter(item => 
+        item.name.toLowerCase().includes(query)
+      );
     }
 
     // For current tab, filter by search query
@@ -48,17 +89,30 @@ export default function InventoryScreen() {
     return inventoryItems.filter(item => 
       item.name.toLowerCase().includes(query)
     );
-  }, [inventoryItems, searchQuery, selectedTab]);
+  }, [inventoryItems, requiredInventoryItems, searchQuery, selectedTab]);
 
   const handleAddItem = () => {
     navigate('/add-item');
   };
 
-  const handleItemPress = (item: InventoryItem) => {
-    navigate(`/edit-item?item=${encodeURIComponent(JSON.stringify(item))}`);
+  const handleItemPress = (item: InventoryItem | RequiredInventoryItem) => {
+    if (selectedTab === 'current') {
+      // Only allow editing current inventory items
+      navigate(`/edit-item?item=${encodeURIComponent(JSON.stringify(item))}`);
+    }
+    // For required items, we could implement a different action or show details
   };
 
-  const renderItem = ({ item }: { item: InventoryItem }) => (
+  const getPriorityColor = (priority: 'critical' | 'important' | 'optional') => {
+    switch (priority) {
+      case 'critical': return colors.error;
+      case 'important': return colors.warning;
+      case 'optional': return colors.success;
+      default: return colors.text;
+    }
+  };
+
+  const renderCurrentItem = ({ item }: { item: InventoryItem }) => (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => handleItemPress(item)}
@@ -90,13 +144,73 @@ export default function InventoryScreen() {
     </TouchableOpacity>
   );
 
+  const renderRequiredItem = ({ item }: { item: RequiredInventoryItem }) => (
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+      onPress={() => handleItemPress(item)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardContent}>
+        <View style={styles.leftSection}>
+          <Avatar
+            name={item.name}
+            size="m"
+            style={styles.avatarSpacing}
+          />
+          <View style={styles.itemInfo}>
+            <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={[styles.supplierText, { color: colors.secondary }]} numberOfLines={1}>
+              {item.preferredSupplier.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} • ${item.estimatedCost.toFixed(2)}
+            </Text>
+          </View>
+        </View>
+        
+        <View style={styles.rightSection}>
+          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(item.priority) }]}>
+            <Text style={[styles.priorityText, { color: colors.background }]}>
+              {item.priority.toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.quantityContainer}>
+            <Text style={[styles.quantity, { color: colors.text }]}>
+              {item.quantity}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderItem = ({ item }: { item: InventoryItem | RequiredInventoryItem }) => {
+    if (selectedTab === 'current') {
+      return renderCurrentItem({ item: item as InventoryItem });
+    } else {
+      return renderRequiredItem({ item: item as RequiredInventoryItem });
+    }
+  };
+
   const renderEmptyState = () => {
     if (selectedTab === 'required') {
+      // Check if user has started their day and has inventory analysis
+      const hasInventoryAnalysis = dailyPlan?.inventory_output?.inventory_analysis?.shopping_list;
+      
+      if (!hasInventoryAnalysis) {
+        return (
+          <EmptyState
+            icon="list"
+            title="No required items"
+            description="Start your day to see items you need for today's jobs"
+          />
+        );
+      }
+
       return (
         <EmptyState
-          icon="list"
-          title="No required items"
-          description="Start your day to see items you need for today's jobs"
+          icon="search"
+          title="No required items found"
+          description="Try adjusting your search terms"
         />
       );
     }
@@ -131,7 +245,7 @@ export default function InventoryScreen() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search inventory..."
+            placeholder={selectedTab === 'current' ? 'Search inventory...' : 'Search required items...'}
             style={styles.searchBar}
           />
 
@@ -208,9 +322,24 @@ const styles = StyleSheet.create({
   itemName: {
     ...typography.h4,
   },
+  supplierText: {
+    ...typography.caption,
+    marginTop: spacing.xs,
+  },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  priorityBadge: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.s,
+    marginRight: spacing.s,
+  },
+  priorityText: {
+    ...typography.caption,
+    fontWeight: '600',
+    fontSize: 10,
   },
   quantityContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
